@@ -1,3 +1,218 @@
 <resources>
     <string name="app_name">Orbita</string>
+
+    <!-- Common actions -->
+    <string name="action_back">Volver</string>
+    <string name="action_close">Cerrar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_retry">Reintentar</string>
+    <string name="action_see_all">Ver todos</string>
+    <string name="action_choose">Elegir</string>
+    <string name="action_transfer">Transferir</string>
+    <string name="action_save_changes">Guardar cambios</string>
+    <string name="action_archive">Archivar</string>
+    <string name="action_delete">Eliminar</string>
+    <string name="action_logout">Cerrar sesión</string>
+
+    <!-- Common fields -->
+    <string name="field_name">Nombre</string>
+    <string name="field_type">Tipo</string>
+    <string name="field_currency">Moneda</string>
+    <string name="field_amount">Monto</string>
+    <string name="field_category">Categoría</string>
+    <string name="field_description">Descripción</string>
+    <string name="field_date">Fecha</string>
+    <string name="field_note">Nota (opcional)</string>
+    <string name="field_from">Desde</string>
+    <string name="field_until">Hasta</string>
+    <string name="field_color">Color</string>
+    <string name="field_email">Correo</string>
+    <string name="field_password">Contraseña</string>
+
+    <!-- Currencies and kinds -->
+    <string name="currency_option_pen">Soles (S/)</string>
+    <string name="currency_option_usd">Dólares (US$)</string>
+    <string name="currency_name_pen">soles</string>
+    <string name="currency_name_usd">dólares</string>
+    <string name="approx_amount">≈ %1$s</string>
+    <string name="kind_expense">Egreso</string>
+    <string name="kind_income">Ingreso</string>
+    <string name="kind_transfer">Transferencia</string>
+    <string name="account_type_cash">Efectivo</string>
+    <string name="account_type_debit">Débito</string>
+    <string name="account_type_savings">Ahorro</string>
+    <string name="account_type_other">Otra</string>
+
+    <!-- Bottom bar -->
+    <string name="tab_home">Inicio</string>
+    <string name="tab_accounts">Cuentas</string>
+    <string name="tab_reports">Reportes</string>
+    <string name="tab_credit">Crédito</string>
+
+    <!-- Errors -->
+    <string name="error_load_title">No se pudo cargar</string>
+    <string name="error_load_message">Revisa tu conexión e inténtalo de nuevo.</string>
+
+    <!-- Login / sign-up -->
+    <string name="auth_login_title">Inicia sesión</string>
+    <string name="auth_login_subtitle">Registra tus ingresos y gastos, y mira cuánto tienes ahorrado.</string>
+    <string name="auth_register_title">Crea tu cuenta</string>
+    <string name="auth_register_subtitle">Cada persona solo ve sus propios datos.</string>
+    <string name="auth_email_placeholder">tucorreo@ejemplo.com</string>
+    <string name="auth_password_hint">Mínimo 8 caracteres.</string>
+    <string name="auth_show_password">Mostrar contraseña</string>
+    <string name="auth_hide_password">Ocultar contraseña</string>
+    <string name="auth_login_action">Ingresar</string>
+    <string name="auth_register_action">Crear cuenta</string>
+    <string name="auth_no_account">¿No tienes cuenta?</string>
+    <string name="auth_go_register">Regístrate</string>
+    <string name="auth_have_account">¿Ya tienes cuenta?</string>
+    <string name="auth_go_login">Inicia sesión</string>
+    <string name="auth_error_credentials">Correo o contraseña incorrectos.</string>
+
+    <!-- Home -->
+    <string name="home_overline">Resumen</string>
+    <string name="home_title">Inicio</string>
+    <string name="savings_total">Ahorro total</string>
+    <string name="savings_equivalent_manual">≈ %1$s · cambio %2$s (manual)</string>
+    <string name="savings_equivalent">≈ %1$s · cambio %2$s</string>
+    <string name="savings_accounts_included">%1$d de %2$d cuentas incluidas</string>
+    <string name="home_month_income">Ingresos · %1$s</string>
+    <string name="home_month_expense">Gastos · %1$s</string>
+    <string name="home_month_note">Las transferencias y las compras de tarjeta pendientes no entran aquí.</string>
+    <string name="home_credit_pending">%1$d compras pendientes · vence %2$s</string>
+    <string name="home_recent">Últimos movimientos</string>
+    <string name="home_empty_title">Registra tu primer movimiento</string>
+    <string name="home_empty_message">Toca el botón + para anotar un ingreso o un egreso.</string>
+
+    <!-- Accounts -->
+    <string name="accounts_title">Cuentas</string>
+    <string name="accounts_total_label">Total en ahorros · %1$d de %2$d cuentas</string>
+    <string name="account_subtitle">%1$s · %2$s</string>
+    <string name="account_include_in_savings">Contar en el total de ahorros</string>
+    <string name="accounts_new">Nueva cuenta</string>
+    <string name="accounts_hint">Cada cuenta tiene su propia moneda y un nombre que puedes cambiar. Apaga el interruptor en las cuentas que no quieras sumar a tus ahorros.</string>
+    <string name="account_new_title">Nueva cuenta</string>
+    <string name="account_edit_title">Editar cuenta</string>
+    <string name="account_name_placeholder">Ej. Débito principal</string>
+    <string name="account_currency_locked">La moneda no se puede cambiar porque la cuenta ya tiene movimientos.</string>
+    <string name="account_initial_balance">Saldo inicial (opcional)</string>
+    <string name="account_save">Guardar cuenta</string>
+    <string name="account_archive">Archivar cuenta</string>
+    <string name="account_archive_hint">La cuenta deja de aparecer en las listas, pero conserva sus movimientos.</string>
+    <string name="dialog_archive_account_title">¿Archivar esta cuenta?</string>
+
+    <!-- Movements -->
+    <string name="movement_new_title">Nuevo movimiento</string>
+    <string name="movement_edit_title">Editar movimiento</string>
+    <string name="movement_from_account">Sale de la cuenta</string>
+    <string name="movement_to_account">Ingresa a la cuenta</string>
+    <string name="movement_description_placeholder">Ej. Almuerzo con equipo</string>
+    <string name="movement_credit_toggle">Compra con tarjeta de crédito</string>
+    <string name="movement_credit_hint">No descuenta de tus cuentas. Queda pendiente hasta que la pagues.</string>
+    <string name="movement_save_expense">Guardar egreso</string>
+    <string name="movement_save_income">Guardar ingreso</string>
+    <string name="movement_save_credit">Guardar compra pendiente</string>
+    <string name="dialog_delete_movement_title">¿Eliminar este movimiento?</string>
+    <string name="dialog_delete_text">Dejará de contar en tus saldos y reportes.</string>
+    <string name="movements_title">Movimientos</string>
+    <string name="movements_search">Buscar por descripción</string>
+    <string name="filter_all_accounts">Todas las cuentas</string>
+    <string name="filter_category_all">Categoría: todas</string>
+    <string name="filter_dates_all">Fechas: todas</string>
+    <string name="movements_empty">No hay movimientos con estos filtros</string>
+
+    <!-- Transfer -->
+    <string name="transfer_title">Transferir</string>
+    <string name="transfer_edit_title">Editar transferencia</string>
+    <string name="transfer_from">Desde</string>
+    <string name="transfer_to">Hacia</string>
+    <string name="transfer_balance">Saldo %1$s</string>
+    <string name="transfer_amount_out">Monto que sale</string>
+    <string name="transfer_rate_label">Tipo de cambio · editable</string>
+    <string name="transfer_reference">Referencia</string>
+    <string name="transfer_rate_prefix">1 %1$s = %2$s</string>
+    <string name="transfer_reference_manual">manual %1$s</string>
+    <string name="transfer_amount_in">Monto que entra · editable</string>
+    <string name="transfer_hint">Si el banco aplicó otro cambio, edita el tipo de cambio o el monto que entra y el otro valor se recalcula.</string>
+    <string name="transfer_balances_after">Saldos después de transferir</string>
+    <string name="transfer_negative_warning">El saldo de %1$s quedaría en negativo.</string>
+    <string name="transfer_note_placeholder">Ej. Cambio de dólares</string>
+    <string name="transfer_save">Guardar transferencia</string>
+    <string name="dialog_delete_transfer_title">¿Eliminar esta transferencia?</string>
+
+    <!-- Reports -->
+    <string name="reports_title">Reportes</string>
+    <string name="reports_pdf_soon">PDF · próximamente</string>
+    <string name="reports_by_month">Por mes</string>
+    <string name="reports_by_range">Rango de fechas</string>
+    <string name="reports_prev_month">Mes anterior</string>
+    <string name="reports_next_month">Mes siguiente</string>
+    <string name="reports_income">Ingresos</string>
+    <string name="reports_expense">Gastos</string>
+    <string name="reports_balance">Balance del periodo</string>
+    <string name="reports_top_expenses">Dónde gastas más</string>
+    <string name="reports_income_sources">Tus fuentes de ingreso</string>
+    <string name="reports_hint">Las compras con tarjeta aparecen aquí solo cuando las marcas como pagadas. Las transferencias entre tus cuentas no cuentan como ingreso ni gasto.</string>
+    <string name="reports_empty">No hay movimientos en este periodo</string>
+
+    <!-- Credit card (v1.1) -->
+    <string name="credit_card">Tarjeta de crédito</string>
+    <string name="credit_overline">Compras pendientes de pago</string>
+    <string name="credit_to_pay">Por pagar</string>
+    <string name="credit_note">No cuenta en tus saldos ni en tus reportes hasta que la marques como pagada.</string>
+    <string name="credit_register">Registrar compra con tarjeta</string>
+    <string name="credit_sorted">Ordenadas por fecha límite</string>
+    <string name="credit_purchase_subtitle">%1$s · compra %2$s</string>
+    <string name="credit_due_date">Fecha límite de pago</string>
+    <string name="credit_due_in_days">Vence %1$s · en %2$d días</string>
+    <string name="credit_due_tomorrow">Vence %1$s · mañana</string>
+    <string name="credit_due_today">Vence hoy</string>
+    <string name="credit_overdue_one_day">Vencida hace 1 día</string>
+    <string name="credit_overdue_days">Vencida hace %1$d días</string>
+    <string name="credit_mark_paid">Marcar como pagada</string>
+    <string name="credit_empty">No tienes compras pendientes</string>
+    <string name="pay_purchase_subtitle">%1$s · compra %2$s · vence %3$s</string>
+    <string name="pay_from">Pagar desde</string>
+    <string name="pay_real_amount">Monto realmente descontado</string>
+    <string name="pay_real_amount_hint">Si la compra fue en dólares, escribe aquí los soles que te cobró el banco.</string>
+    <string name="pay_date">Fecha de pago · hoy, editable</string>
+    <string name="pay_preview_title">Se creará este egreso</string>
+    <string name="pay_balance_of">Saldo de %1$s</string>
+    <string name="pay_confirm">Confirmar pago</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_currencies">Monedas</string>
+    <string name="settings_default_currency">Moneda predeterminada</string>
+    <string name="settings_display_currency">Ver ahorro total en</string>
+    <string name="settings_fx">Tipo de cambio</string>
+    <string name="settings_fx_manual">Manual</string>
+    <string name="settings_fx_auto_soon">Automático · pronto</string>
+    <string name="settings_fx_prefix">1 US$ = S/</string>
+    <string name="settings_fx_inverse">Equivale a 1 S/ = US$ %1$s</string>
+    <string name="settings_fx_hint">Se usa para el total de ahorros y como valor sugerido en las transferencias. Puedes cambiarlo cuando quieras.</string>
+    <string name="settings_manage_categories">Gestionar categorías</string>
+    <string name="settings_manage_categories_hint">Crear, renombrar, cambiar color o archivar.</string>
+    <string name="settings_security">Seguridad</string>
+    <string name="settings_security_text">Inicias sesión con tu correo y contraseña. Cada persona solo ve sus propios datos.</string>
+    <string name="settings_session">Sesión</string>
+    <string name="settings_soon">Próximamente</string>
+    <string name="soon_pdf">Exportar a PDF</string>
+    <string name="soon_offline">Modo sin internet</string>
+    <string name="soon_auto_fx">Cambio automático diario</string>
+    <string name="soon_google">Acceso con Google</string>
+
+    <!-- Categories -->
+    <string name="categories_title">Categorías</string>
+    <string name="categories_expenses">Egresos</string>
+    <string name="categories_incomes">Ingresos</string>
+    <string name="category_new">Nueva categoría</string>
+    <string name="category_edit_title">Editar categoría</string>
+    <string name="category_name_placeholder">Ej. Mascotas</string>
+    <string name="category_color_option">Color %1$d</string>
+    <string name="category_save">Guardar categoría</string>
+    <string name="category_archive">Archivar categoría</string>
+    <string name="category_archive_hint">Deja de aparecer al registrar movimientos, pero los anteriores se conservan.</string>
+    <string name="dialog_archive_category_title">¿Archivar esta categoría?</string>
 </resources>
