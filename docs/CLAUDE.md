@@ -15,6 +15,7 @@ App **Android nativa** (Kotlin + Jetpack Compose) para registrar ingresos y egre
 4. `docs/04-guia-supabase.md` — paso a paso para crear y operar la base de datos.
 5. `docs/05-pantallas-y-flujos.md` — las 8 pantallas maquetadas, flujos y tokens de diseño.
 6. `docs/06-plan-y-pruebas.md` — fases, criterios de aceptación y pruebas.
+7. `docs/ORBITA_SPEC.md` — especificación funcional completa e independiente de la plataforma (base para iOS).
 
 ## Stack (resumen)
 - Android nativo: Kotlin, Jetpack Compose + Material 3, Navigation Compose, Hilt, Coroutines/Flow, kotlinx.serialization.
@@ -50,6 +51,7 @@ npx supabase db dump -f backup.sql      # respaldo manual
 ```
 
 ## Cómo trabajar
+- **`docs/ORBITA_SPEC.md` es la especificación funcional viva** (pantalla por pantalla y flujos) con la que se construirá la versión iOS. Cada vez que agregues o cambies un módulo, pantalla, regla o flujo, actualízalo **en el mismo cambio**: sección de la pantalla, tabla de estado de módulos y registro de cambios.
 - Una fase a la vez. Al terminar: corre las pruebas de la fase, resume qué quedó hecho y **pide revisión al usuario** antes de pasar a la siguiente.
 - Si algo del plano es ambiguo o falta una pantalla, **pregunta**; no inventes reglas de negocio.
 - Versiones de librerías: usa las estables más recientes al crear el proyecto (Gradle version catalog) y verifica la API en la documentación oficial; no te fíes de versiones copiadas de estos documentos.

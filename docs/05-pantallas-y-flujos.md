@@ -106,10 +106,11 @@ Cada cuenta tiene su propia moneda y un nombre que puedes cambiar…
 │ S/  45.52                              │
 └────────────────────────────────────────┘
 Sale de la cuenta        (Ingresa a la cuenta si es ingreso)
-( Efectivo ) (■ Débito principal ■) ( Ahorros ) ( Cuenta Dólares )
+[ (icono) Débito principal        S/ 1,245.80  ▾ ]   ← desplegable: cuenta + saldo
 Categoría
-( ■ Alimentación ■ ) ( Transporte ) ( Vivienda ) ( Salud ) ( Ocio ) ( Otros )
-Descripción   [ Almuerzo con equipo           ]
+[ ● Alimentación                               ▾ ]   ← desplegable: punto de color + nombre
+Descripción   ┌ Almuerzo con equipo             ┐   ← caja de texto de varias líneas
+              └                          19/500 ┘
 Fecha         [ 2 oct 2026                    ]
 ┌ Compra con tarjeta de crédito          (━●) ┐   (solo egreso, v1.1)
 │ No descuenta de tus cuentas. Queda pendiente│

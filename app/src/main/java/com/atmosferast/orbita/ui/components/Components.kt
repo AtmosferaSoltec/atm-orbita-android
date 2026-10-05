@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -25,6 +26,8 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +35,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,6 +50,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
@@ -482,6 +490,7 @@ fun StatusChip(
 private fun FieldBox(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    role: Role? = null,
     content: @Composable RowScope.() -> Unit,
 ) {
     Row(
@@ -491,11 +500,154 @@ private fun FieldBox(
             .clip(OrbitaShapes.Field)
             .background(Surface)
             .border(BorderStroke(1.dp, Outline), OrbitaShapes.Field)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(
+                if (onClick != null) Modifier.clickable(role = role, onClick = onClick)
+                else Modifier,
+            )
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         content = content,
     )
+}
+
+/**
+ * Field that opens a menu to pick one of [options]. [detail] is a secondary text shown on the
+ * right (e.g. the account balance) and [leading] an icon or color dot per option.
+ */
+@Composable
+fun <T> DropdownField(
+    options: List<T>,
+    selected: T,
+    onSelect: (T) -> Unit,
+    label: (T) -> String,
+    modifier: Modifier = Modifier,
+    detail: ((T) -> String)? = null,
+    leading: @Composable ((T) -> Unit)? = null,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        FieldBox(onClick = { expanded = true }, role = Role.DropdownList) {
+            if (leading != null) {
+                leading(selected)
+                Spacer(Modifier.width(10.dp))
+            }
+            Text(
+                label(selected),
+                style = MaterialTheme.typography.bodyLarge,
+                color = Ink,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (detail != null) {
+                Spacer(Modifier.width(8.dp))
+                Text(detail(selected), style = MaterialTheme.typography.bodySmall, color = Muted)
+            }
+            Spacer(Modifier.width(8.dp))
+            Icon(
+                OrbitaIcons.ChevronDown,
+                contentDescription = null,
+                tint = Muted,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.width(maxWidth),
+            containerColor = Surface,
+            shape = OrbitaShapes.Field,
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                label(option),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Ink,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (detail != null) {
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    detail(option),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Muted,
+                                )
+                            }
+                        }
+                    },
+                    onClick = {
+                        onSelect(option)
+                        expanded = false
+                    },
+                    leadingIcon = if (leading == null) null else {
+                        { leading(option) }
+                    },
+                    trailingIcon = if (option != selected) null else {
+                        {
+                            Icon(
+                                OrbitaIcons.Check,
+                                contentDescription = null,
+                                tint = Primary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+/** Multi-line text box with an optional character counter. */
+@Composable
+fun OrbitaTextArea(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    placeholder: String = "",
+    maxLength: Int? = null,
+    minHeight: Dp = 96.dp,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(OrbitaShapes.Field)
+            .background(Surface)
+            .border(BorderStroke(1.dp, Outline), OrbitaShapes.Field)
+            .padding(14.dp),
+    ) {
+        BasicTextField(
+            value = value,
+            onValueChange = { if (maxLength == null || it.length <= maxLength) onValueChange(it) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = minHeight),
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = Ink),
+            cursorBrush = SolidColor(Primary),
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            decorationBox = { inner ->
+                Box(contentAlignment = Alignment.TopStart) {
+                    if (value.isEmpty()) {
+                        Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = SwitchOff)
+                    }
+                    inner()
+                }
+            },
+        )
+        if (maxLength != null) {
+            Text(
+                "${value.length}/$maxLength",
+                style = MaterialTheme.typography.labelSmall,
+                color = Muted,
+                modifier = Modifier.align(Alignment.End),
+            )
+        }
+    }
 }
 
 @Composable

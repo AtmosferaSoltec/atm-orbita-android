@@ -1,6 +1,11 @@
 package com.atmosferast.orbita.ui.feature.movement
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -11,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -19,22 +25,23 @@ import com.atmosferast.orbita.core.PEN
 import com.atmosferast.orbita.core.currencySymbol
 import com.atmosferast.orbita.core.formatAmount
 import com.atmosferast.orbita.core.formatDate
+import com.atmosferast.orbita.core.formatMoney
 import com.atmosferast.orbita.ui.components.AmountInput
-import com.atmosferast.orbita.ui.components.ChipGroup
 import com.atmosferast.orbita.ui.components.CircleIconButton
 import com.atmosferast.orbita.ui.components.ConfirmDialog
+import com.atmosferast.orbita.ui.components.DropdownField
 import com.atmosferast.orbita.ui.components.FieldLabel
 import com.atmosferast.orbita.ui.components.HintText
 import com.atmosferast.orbita.ui.components.ModalTopBar
 import com.atmosferast.orbita.ui.components.OrbitaCard
-import com.atmosferast.orbita.ui.components.OrbitaChip
 import com.atmosferast.orbita.ui.components.OrbitaIcons
-import com.atmosferast.orbita.ui.components.OrbitaTextField
+import com.atmosferast.orbita.ui.components.OrbitaTextArea
 import com.atmosferast.orbita.ui.components.PickerField
 import com.atmosferast.orbita.ui.components.PrimaryButton
 import com.atmosferast.orbita.ui.components.ScreenScaffold
 import com.atmosferast.orbita.ui.components.SegmentedControl
 import com.atmosferast.orbita.ui.components.SwitchRow
+import com.atmosferast.orbita.ui.components.accountIcon
 import com.atmosferast.orbita.ui.mock.MockAccount
 import com.atmosferast.orbita.ui.mock.MockMovement
 import com.atmosferast.orbita.ui.mock.MovementKind
@@ -45,6 +52,7 @@ import com.atmosferast.orbita.ui.theme.Income
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
 import com.atmosferast.orbita.ui.theme.OrbitaTheme
+import com.atmosferast.orbita.ui.theme.Primary
 
 private enum class FormTab { EXPENSE, INCOME, TRANSFER }
 
@@ -162,30 +170,46 @@ fun MovementFormScreen(
                     if (isExpense) R.string.movement_from_account else R.string.movement_to_account,
                 ),
             )
-            ChipGroup {
-                accounts.forEach { option ->
-                    OrbitaChip(option.name, option.id == account.id, { account = option })
-                }
-            }
+            DropdownField(
+                options = accounts,
+                // The list may hold a newer copy of the account (e.g. savings switch changed).
+                selected = accounts.firstOrNull { it.id == account.id } ?: account,
+                onSelect = { account = it },
+                label = { it.name },
+                detail = { formatMoney(it.balance, it.currency) },
+                leading = { option ->
+                    Icon(
+                        accountIcon(option),
+                        contentDescription = null,
+                        tint = Primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                },
+            )
         }
 
         FieldLabel(stringResource(R.string.field_category))
-        ChipGroup {
-            SampleData.categoriesOf(kind).forEach { option ->
-                OrbitaChip(
-                    option.name,
-                    option == category,
-                    { category = option },
-                    dotColor = option.color,
+        DropdownField(
+            options = SampleData.categoriesOf(kind),
+            selected = category,
+            onSelect = { category = it },
+            label = { it.name },
+            leading = { option ->
+                Box(
+                    Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(option.color),
                 )
-            }
-        }
+            },
+        )
 
         FieldLabel(stringResource(R.string.field_description))
-        OrbitaTextField(
+        OrbitaTextArea(
             value = description,
             onValueChange = { description = it },
             placeholder = stringResource(R.string.movement_description_placeholder),
+            maxLength = 500,
         )
 
         FieldLabel(stringResource(R.string.field_date))
