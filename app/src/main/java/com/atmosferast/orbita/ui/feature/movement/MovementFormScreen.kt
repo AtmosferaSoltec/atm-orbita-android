@@ -1,6 +1,10 @@
 package com.atmosferast.orbita.ui.feature.movement
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
@@ -15,18 +19,24 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atmosferast.orbita.R
 import com.atmosferast.orbita.core.PEN
+import com.atmosferast.orbita.core.amountToCents
+import com.atmosferast.orbita.core.appendAmountDigits
 import com.atmosferast.orbita.core.currencySymbol
-import com.atmosferast.orbita.core.formatAmount
+import com.atmosferast.orbita.core.removeAmountDigit
 import com.atmosferast.orbita.core.formatDate
 import com.atmosferast.orbita.core.formatMoney
-import com.atmosferast.orbita.ui.components.AmountInput
+import com.atmosferast.orbita.ui.components.AmountDisplay
+import com.atmosferast.orbita.ui.components.AmountKeypad
 import com.atmosferast.orbita.ui.components.CircleIconButton
 import com.atmosferast.orbita.ui.components.ConfirmDialog
 import com.atmosferast.orbita.ui.components.DropdownField
@@ -51,6 +61,7 @@ import com.atmosferast.orbita.ui.theme.ExpenseSoft
 import com.atmosferast.orbita.ui.theme.Income
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
+import com.atmosferast.orbita.ui.theme.OrbitaShapes
 import com.atmosferast.orbita.ui.theme.OrbitaTheme
 import com.atmosferast.orbita.ui.theme.Primary
 
@@ -72,22 +83,23 @@ fun MovementFormScreen(
     onDelete: () -> Unit = {},
 ) {
     var kind by remember { mutableStateOf(editing?.kind ?: MovementKind.EXPENSE) }
-    var amount by remember {
-        mutableStateOf(editing?.let { formatAmount(it.amount) } ?: "45.52")
-    }
+    var amountCents by remember { mutableStateOf(editing?.let { amountToCents(it.amount) } ?: 0L) }
+    // A new movement starts on the amount, with the in-app keypad open.
+    var keypadOpen by remember { mutableStateOf(editing == null) }
     var account by remember { mutableStateOf(editing?.account ?: SampleData.debitAccount) }
     var category by remember {
         mutableStateOf(editing?.category ?: SampleData.categoriesOf(kind).first())
     }
-    var description by remember {
-        mutableStateOf(editing?.description ?: "Almuerzo con equipo")
-    }
+    var description by remember { mutableStateOf(editing?.description.orEmpty()) }
     var credit by remember { mutableStateOf(initialCredit) }
     var confirmDelete by remember { mutableStateOf(false) }
 
     val isExpense = kind == MovementKind.EXPENSE
     val onCredit = credit && isExpense && editing == null
     val symbol = currencySymbol(if (onCredit) PEN else account.currency)
+    val focusManager = LocalFocusManager.current
+
+    BackHandler(enabled = keypadOpen) { keypadOpen = false }
 
     ScreenScaffold(
         modifier = modifier,
@@ -114,17 +126,26 @@ fun MovementFormScreen(
             )
         },
         footer = {
-            PrimaryButton(
-                stringResource(
-                    when {
-                        editing != null -> R.string.action_save_changes
-                        onCredit -> R.string.movement_save_credit
-                        isExpense -> R.string.movement_save_expense
-                        else -> R.string.movement_save_income
-                    },
-                ),
-                onSave,
-            )
+            if (keypadOpen) {
+                AmountKeypad(
+                    onDigits = { amountCents = appendAmountDigits(amountCents, it) },
+                    onBackspace = { amountCents = removeAmountDigit(amountCents) },
+                    onClear = { amountCents = 0L },
+                    onDone = { keypadOpen = false },
+                )
+            } else {
+                PrimaryButton(
+                    stringResource(
+                        when {
+                            editing != null -> R.string.action_save_changes
+                            onCredit -> R.string.movement_save_credit
+                            isExpense -> R.string.movement_save_expense
+                            else -> R.string.movement_save_income
+                        },
+                    ),
+                    onSave,
+                )
+            }
         },
     ) {
         val tabs = buildList {
@@ -149,18 +170,25 @@ fun MovementFormScreen(
         )
 
         Spacer(Modifier.height(14.dp))
-        OrbitaCard {
+        OrbitaCard(
+            modifier = if (keypadOpen) Modifier.border(1.5.dp, Primary, OrbitaShapes.Card) else Modifier,
+            onClick = {
+                // The amount never uses the system keyboard.
+                focusManager.clearFocus()
+                keypadOpen = true
+            },
+        ) {
             Text(
                 stringResource(R.string.field_amount),
                 style = MaterialTheme.typography.labelMedium,
                 color = Muted,
             )
             Spacer(Modifier.height(4.dp))
-            AmountInput(
+            AmountDisplay(
                 symbol = symbol,
-                value = amount,
-                onValueChange = { amount = it },
+                cents = amountCents,
                 color = if (isExpense) Ink else Income,
+                active = keypadOpen,
             )
         }
 
@@ -210,10 +238,29 @@ fun MovementFormScreen(
             onValueChange = { description = it },
             placeholder = stringResource(R.string.movement_description_placeholder),
             maxLength = 500,
+            modifier = Modifier.onFocusChanged { if (it.hasFocus) keypadOpen = false },
         )
 
-        FieldLabel(stringResource(R.string.field_date))
-        PickerField(formatDate(editing?.date ?: SampleData.today), onClick = {})
+        // A new movement takes the date and time of the moment it is saved; the date can only
+        // be changed later, when editing.
+        if (editing != null) {
+            FieldLabel(stringResource(R.string.field_date))
+            PickerField(formatDate(editing.date), onClick = {})
+        } else {
+            Row(
+                modifier = Modifier.padding(top = 14.dp, start = 4.dp, end = 4.dp),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Icon(
+                    OrbitaIcons.Clock,
+                    contentDescription = null,
+                    tint = Muted,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                HintText(stringResource(R.string.movement_now_hint))
+            }
+        }
 
         // Only for new expenses (v1.1)
         if (isExpense && editing == null) {

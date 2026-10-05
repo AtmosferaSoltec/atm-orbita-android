@@ -1,5 +1,6 @@
 package com.atmosferast.orbita.ui.feature.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -7,10 +8,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -21,26 +22,34 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.atmosferast.orbita.R
 import com.atmosferast.orbita.core.PEN
 import com.atmosferast.orbita.core.USD
+import com.atmosferast.orbita.core.currencySymbol
+import com.atmosferast.orbita.core.formatAmount
 import com.atmosferast.orbita.core.formatDayMonth
 import com.atmosferast.orbita.core.formatMoney
 import com.atmosferast.orbita.core.formatRate
 import com.atmosferast.orbita.core.formatSignedMoney
 import com.atmosferast.orbita.core.monthName
-import com.atmosferast.orbita.ui.components.CardDivider
 import com.atmosferast.orbita.ui.components.CircleIconButton
 import com.atmosferast.orbita.ui.components.EntryList
-import com.atmosferast.orbita.ui.components.HeroAmount
 import com.atmosferast.orbita.ui.components.HeroCard
+import com.atmosferast.orbita.ui.components.HeroGlass
 import com.atmosferast.orbita.ui.components.HeroLabel
+import com.atmosferast.orbita.ui.components.HeroPill
 import com.atmosferast.orbita.ui.components.HintText
 import com.atmosferast.orbita.ui.components.IconBadge
 import com.atmosferast.orbita.ui.components.OrbitaCard
@@ -57,12 +66,9 @@ import com.atmosferast.orbita.ui.mock.SampleData
 import com.atmosferast.orbita.ui.mock.savingsTotal
 import com.atmosferast.orbita.ui.theme.Expense
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
-import com.atmosferast.orbita.ui.theme.HeroDivider
 import com.atmosferast.orbita.ui.theme.Income
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
-import com.atmosferast.orbita.ui.theme.OnHero
-import com.atmosferast.orbita.ui.theme.OnHeroMuted
 import com.atmosferast.orbita.ui.theme.OrbitaTheme
 import java.math.BigDecimal
 
@@ -152,6 +158,7 @@ private fun SavingsHeroCard(
     onOpenAccounts: () -> Unit,
 ) {
     val otherCurrency = if (displayCurrency == PEN) USD else PEN
+    val total = accounts.savingsTotal(displayCurrency)
     HeroCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             HeroLabel(stringResource(R.string.savings_total), Modifier.weight(1f))
@@ -163,26 +170,49 @@ private fun SavingsHeroCard(
                 onHero = true,
             )
         }
-        Spacer(Modifier.height(6.dp))
-        HeroAmount(formatMoney(accounts.savingsTotal(displayCurrency), displayCurrency))
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(16.dp))
+        // Smaller, softer currency symbol so the figure leads.
         Text(
+            buildAnnotatedString {
+                withStyle(
+                    SpanStyle(
+                        color = Color.White.copy(alpha = 0.72f),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                ) { append(currencySymbol(displayCurrency) + " ") }
+                append(formatAmount(total))
+            },
+            style = MaterialTheme.typography.displaySmall.copy(fontSize = 42.sp, lineHeight = 48.sp),
+            color = Color.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(10.dp))
+        HeroPill(
             stringResource(
                 R.string.savings_equivalent_manual,
                 formatMoney(accounts.savingsTotal(otherCurrency), otherCurrency),
                 formatRate(SampleData.usdToPen),
             ),
-            style = MaterialTheme.typography.bodySmall,
-            color = OnHeroMuted,
         )
-        CardDivider(color = HeroDivider)
+        Spacer(Modifier.height(18.dp))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 40.dp)
-                .clickable(role = Role.Button, onClick = onOpenAccounts),
+                .clip(RoundedCornerShape(16.dp))
+                .background(HeroGlass)
+                .clickable(role = Role.Button, onClick = onOpenAccounts)
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Icon(
+                OrbitaIcons.Wallet,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.width(10.dp))
             Text(
                 stringResource(
                     R.string.savings_accounts_included,
@@ -190,18 +220,18 @@ private fun SavingsHeroCard(
                     accounts.size,
                 ),
                 style = MaterialTheme.typography.bodyMedium,
-                color = OnHeroMuted,
+                color = Color.White,
                 modifier = Modifier.weight(1f),
             )
             Text(
                 stringResource(R.string.action_choose),
                 style = MaterialTheme.typography.labelLarge,
-                color = OnHero,
+                color = Color.White,
             )
             Icon(
                 OrbitaIcons.ChevronRight,
                 contentDescription = null,
-                tint = OnHero,
+                tint = Color.White,
                 modifier = Modifier.size(18.dp),
             )
         }

@@ -108,6 +108,10 @@
     <string name="movement_from_account">Sale de la cuenta</string>
     <string name="movement_to_account">Ingresa a la cuenta</string>
     <string name="movement_description_placeholder">Ej. Almuerzo con equipo</string>
+    <string name="movement_now_hint">Se guarda con la fecha y hora de este momento. Podrás cambiarla después, al editar el movimiento.</string>
+    <string name="keypad_done">Listo</string>
+    <string name="keypad_backspace">Borrar</string>
+    <string name="keypad_clear">Borrar todo</string>
     <string name="movement_credit_toggle">Compra con tarjeta de crédito</string>
     <string name="movement_credit_hint">No descuenta de tus cuentas. Queda pendiente hasta que la pagues.</string>
     <string name="movement_save_expense">Guardar egreso</string>

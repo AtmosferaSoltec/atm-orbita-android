@@ -42,6 +42,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
@@ -57,8 +60,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.atmosferast.orbita.ui.theme.ChipBorder
+import com.atmosferast.orbita.ui.theme.CreditGradientEnd
+import com.atmosferast.orbita.ui.theme.CreditGradientMid
+import com.atmosferast.orbita.ui.theme.CreditGradientStart
 import com.atmosferast.orbita.ui.theme.DividerSoft
-import com.atmosferast.orbita.ui.theme.Hero
+import com.atmosferast.orbita.ui.theme.HeroGlow
+import com.atmosferast.orbita.ui.theme.HeroGradientEnd
+import com.atmosferast.orbita.ui.theme.HeroGradientMid
+import com.atmosferast.orbita.ui.theme.HeroGradientStart
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
 import com.atmosferast.orbita.ui.theme.NeutralSoft
@@ -229,18 +238,68 @@ fun OrbitaCard(
     )
 }
 
-/** Dark highlighted card (savings total, credit to pay). */
+/** Savings cards are violet-blue-teal with white text; credit is yellow-amber with dark text. */
+enum class HeroTone(val gradient: List<Color>, val glow: Color, val content: Color) {
+    SAVINGS(listOf(HeroGradientStart, HeroGradientMid, HeroGradientEnd), HeroGlow, Color.White),
+    CREDIT(listOf(CreditGradientStart, CreditGradientMid, CreditGradientEnd), Color.White, Ink),
+}
+
+/** Highlighted card (savings total, credit to pay) over a three-color gradient. */
 @Composable
 fun HeroCard(
     modifier: Modifier = Modifier,
+    tone: HeroTone = HeroTone.SAVINGS,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    OrbitaCard(
-        modifier = modifier,
-        shape = OrbitaShapes.HeroCard,
-        container = Hero,
-        contentPadding = PaddingValues(20.dp),
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(OrbitaShapes.HeroCard)
+            .drawBehind {
+                // Diagonal gradient plus two soft glows for depth.
+                drawRect(
+                    Brush.linearGradient(
+                        colors = tone.gradient,
+                        start = Offset.Zero,
+                        end = Offset(size.width, size.height),
+                    ),
+                )
+                drawRect(
+                    Brush.radialGradient(
+                        colors = listOf(tone.glow.copy(alpha = 0.30f), Color.Transparent),
+                        center = Offset(size.width * 0.95f, 0f),
+                        radius = size.width * 0.7f,
+                    ),
+                )
+                drawRect(
+                    Brush.radialGradient(
+                        colors = listOf(tone.gradient.first().copy(alpha = 0.55f), Color.Transparent),
+                        center = Offset(0f, size.height),
+                        radius = size.width * 0.7f,
+                    ),
+                )
+            }
+            .padding(20.dp),
         content = content,
+    )
+}
+
+/** Translucent surface used inside a [HeroCard]. */
+val HeroGlass = Color.White.copy(alpha = 0.14f)
+
+/** Secondary line of a [HeroCard] inside a translucent pill. */
+@Composable
+fun HeroPill(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelSmall,
+        color = Color.White.copy(alpha = 0.9f),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
+            .clip(OrbitaShapes.Pill)
+            .background(HeroGlass)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
     )
 }
 
@@ -775,16 +834,21 @@ fun LabelValueRow(
 }
 
 @Composable
-fun HeroLabel(text: String, modifier: Modifier = Modifier) {
-    Text(text, style = MaterialTheme.typography.labelMedium, color = OnHeroMuted, modifier = modifier)
+fun HeroLabel(text: String, modifier: Modifier = Modifier, color: Color = Color.White) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelLarge,
+        color = color.copy(alpha = 0.85f),
+        modifier = modifier,
+    )
 }
 
 @Composable
-fun HeroAmount(text: String, modifier: Modifier = Modifier) {
+fun HeroAmount(text: String, modifier: Modifier = Modifier, color: Color = OnHero) {
     Text(
         text,
         style = MaterialTheme.typography.displaySmall,
-        color = OnHero,
+        color = color,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier,

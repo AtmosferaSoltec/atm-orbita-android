@@ -41,6 +41,7 @@ import com.atmosferast.orbita.ui.components.CardDivider
 import com.atmosferast.orbita.ui.components.HeroAmount
 import com.atmosferast.orbita.ui.components.HeroCard
 import com.atmosferast.orbita.ui.components.HeroLabel
+import com.atmosferast.orbita.ui.components.HeroPill
 import com.atmosferast.orbita.ui.components.HintText
 import com.atmosferast.orbita.ui.components.IconBadge
 import com.atmosferast.orbita.ui.components.OrbitaCard
@@ -58,7 +59,6 @@ import com.atmosferast.orbita.ui.mock.savingsTotal
 import com.atmosferast.orbita.ui.theme.ChipBorder
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
-import com.atmosferast.orbita.ui.theme.OnHeroMuted
 import com.atmosferast.orbita.ui.theme.OrbitaShapes
 import com.atmosferast.orbita.ui.theme.OrbitaTheme
 import com.atmosferast.orbita.ui.theme.Primary
@@ -121,15 +121,13 @@ private fun SavingsSummaryCard(accounts: List<MockAccount>, displayCurrency: Str
         )
         Spacer(Modifier.height(6.dp))
         HeroAmount(formatMoney(accounts.savingsTotal(displayCurrency), displayCurrency))
-        Spacer(Modifier.height(4.dp))
-        Text(
+        Spacer(Modifier.height(10.dp))
+        HeroPill(
             stringResource(
                 R.string.savings_equivalent,
                 formatMoney(accounts.savingsTotal(otherCurrency), otherCurrency),
                 formatRate(SampleData.usdToPen),
             ),
-            style = MaterialTheme.typography.bodySmall,
-            color = OnHeroMuted,
         )
     }
 }

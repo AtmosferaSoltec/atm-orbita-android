@@ -11,10 +11,20 @@ val Outline = Color(0xFFE3E8EE)
 val DividerSoft = Color(0xFFEEF1F5)
 val Primary = Color(0xFF1D4ED8)
 val PrimarySoft = Color(0xFFE8EEFD)
-val Hero = Color(0xFF0E1A2B)
 val OnHero = Color(0xFFFFFFFF)
 val OnHeroMuted = Color(0xFFC7D2E3)
-val HeroDivider = Color(0xFF26354B)
+
+// Gradient of the highlighted cards (Inicio, Cuentas, Crédito): violet -> blue -> teal
+val HeroGradientStart = Color(0xFF3B1D8F)
+val HeroGradientMid = Color(0xFF1D4ED8)
+val HeroGradientEnd = Color(0xFF0E7490)
+val HeroGlow = Color(0xFF67E8F9)
+
+// Gradient of the credit card (Crédito): yellow -> amber -> orange, with dark text
+val CreditGradientStart = Color(0xFFFDE047)
+val CreditGradientMid = Color(0xFFFBBF24)
+val CreditGradientEnd = Color(0xFFF59E0B)
+
 val Income = Color(0xFF0B7A5A)
 val IncomeSoft = Color(0xFFE3F4EE)
 val Expense = Color(0xFFB93815)

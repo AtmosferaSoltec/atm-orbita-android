@@ -25,6 +25,7 @@ import com.atmosferast.orbita.core.formatMoney
 import com.atmosferast.orbita.ui.components.HeroAmount
 import com.atmosferast.orbita.ui.components.HeroCard
 import com.atmosferast.orbita.ui.components.HeroLabel
+import com.atmosferast.orbita.ui.components.HeroTone
 import com.atmosferast.orbita.ui.components.OrbitaCard
 import com.atmosferast.orbita.ui.components.OrbitaIcons
 import com.atmosferast.orbita.ui.components.PillButton
@@ -41,8 +42,6 @@ import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
 import com.atmosferast.orbita.ui.theme.Neutral
 import com.atmosferast.orbita.ui.theme.NeutralSoft
-import com.atmosferast.orbita.ui.theme.OnHero
-import com.atmosferast.orbita.ui.theme.OnHeroMuted
 import com.atmosferast.orbita.ui.theme.OrbitaTheme
 import com.atmosferast.orbita.ui.theme.Primary
 import com.atmosferast.orbita.ui.theme.PrimarySoft
@@ -100,22 +99,24 @@ private fun ToPayCard(purchases: List<MockCreditPurchase>) {
         .fold(BigDecimal.ZERO) { acc, purchase -> acc + purchase.amount }
 
     val usd = totalOf(USD)
-    HeroCard {
-        HeroLabel(stringResource(R.string.credit_to_pay))
+    // Yellow tones tell credit (money owed) apart from the blue savings cards.
+    val tone = HeroTone.CREDIT
+    HeroCard(tone = tone) {
+        HeroLabel(stringResource(R.string.credit_to_pay), color = tone.content)
         Spacer(Modifier.height(6.dp))
-        HeroAmount(formatMoney(totalOf(PEN), PEN))
+        HeroAmount(formatMoney(totalOf(PEN), PEN), color = tone.content)
         if (usd.signum() > 0) {
             Text(
                 "+ ${formatMoney(usd, USD)}",
                 style = MaterialTheme.typography.titleLarge,
-                color = OnHero,
+                color = tone.content,
             )
         }
         Spacer(Modifier.height(10.dp))
         Text(
             stringResource(R.string.credit_note),
             style = MaterialTheme.typography.bodySmall,
-            color = OnHeroMuted,
+            color = tone.content.copy(alpha = 0.8f),
         )
     }
 }

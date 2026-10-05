@@ -33,7 +33,7 @@ private val LightColorScheme = lightColorScheme(
 
 object OrbitaShapes {
     val Card = RoundedCornerShape(20.dp)
-    val HeroCard = RoundedCornerShape(24.dp)
+    val HeroCard = RoundedCornerShape(28.dp)
     val Pill = RoundedCornerShape(22.dp)
     val Button = RoundedCornerShape(18.dp)
     val Field = RoundedCornerShape(14.dp)

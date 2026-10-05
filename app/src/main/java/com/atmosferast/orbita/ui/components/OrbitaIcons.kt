@@ -46,7 +46,12 @@ object OrbitaIcons {
     val ArrowLeft = lineIcon("ArrowLeft", "M19 12 H5 M11 6 l-6 6 6 6")
     val Swap = lineIcon("Swap", "M4 8 h15 M15 4 l4 4 -4 4 M20 16 H5 M9 12 l-4 4 4 4")
     val ChevronRight = lineIcon("ChevronRight", "M9 6 l6 6 -6 6")
-    val ChevronDown = lineIcon("ChevronDown", "M6 9 l6 6 6 -6")
+    val Backspace = lineIcon(
+        "Backspace",
+        "M9 5 h11 a1 1 0 0 1 1 1 v12 a1 1 0 0 1 -1 1 H9 l-6 -7 Z",
+        "M12 9.5 l5 5 M17 9.5 l-5 5",
+    )
+    val ChevronDown =lineIcon("ChevronDown", "M6 9 l6 6 6 -6")
     val ChevronLeft =lineIcon("ChevronLeft", "M15 6 l-6 6 6 6")
     val Close = lineIcon("Close", "M6 6 l12 12 M18 6 L6 18")
     val Check = lineIcon("Check", "M5 12.5 l4.5 4.5 L19 7.5")

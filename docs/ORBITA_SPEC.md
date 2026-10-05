@@ -35,7 +35,7 @@ Estados: **Maqueta** = pantalla navegable con datos de ejemplo, sin backend · *
 | Tarjeta de crédito | Crédito, Marcar como pagada | v1.1 | Maqueta |
 | Base de datos (Supabase) | — | MVP | Pendiente (Fase 0) |
 
-**Qué significa "Maqueta" hoy.** Todo vive en memoria con los [datos de ejemplo](#11-datos-de-ejemplo). Funcionan de verdad: la navegación, el selector S/ ↔ US$, los interruptores de ahorro (recalculan el total), los tres campos enlazados de la transferencia, el filtro por cuenta y la búsqueda en la lista, y quitar de pendientes una compra al pagarla. **No** funcionan todavía: guardar/eliminar (solo cierran la pantalla), los selectores de fecha, los filtros de categoría y fechas, el selector de cuenta de la transferencia, las validaciones y el inicio de sesión real.
+**Qué significa "Maqueta" hoy.** Todo vive en memoria con los [datos de ejemplo](#11-datos-de-ejemplo). Funcionan de verdad: la navegación, el selector S/ ↔ US$, los interruptores de ahorro (recalculan el total), los tres campos enlazados de la transferencia, el teclado de monto de Nuevo movimiento, el filtro por cuenta y la búsqueda en la lista, y quitar de pendientes una compra al pagarla. **No** funcionan todavía: guardar/eliminar (solo cierran la pantalla), los selectores de fecha, los filtros de categoría y fechas, el selector de cuenta de la transferencia, las validaciones y el inicio de sesión real.
 
 Las pantallas de Autenticación, Lista de movimientos, Editar movimiento/transferencia, Nueva/Editar cuenta y Categorías **no estaban en la maqueta original** (`docs/05`, sección 9): su diseño es una propuesta pendiente de confirmación.
 
@@ -74,7 +74,7 @@ Reglas que no cambian entre plataformas:
 | Mes | nombre con mayúscula inicial + año | `Septiembre 2026` |
 | Porcentaje | un decimal | `37.2%` |
 
-- Entrada de montos: teclado decimal; acepta `.` o `,` como separador; máximo 2 decimales; siempre mayor que 0.
+- Entrada de montos: en Nuevo/Editar movimiento, con el teclado de monto propio (sección 7.5). En el resto de campos, teclado decimal del sistema: acepta `.` o `,` como separador, máximo 2 decimales. Siempre mayor que 0.
 - El color nunca es la única señal: ingresos y egresos llevan siempre su signo.
 - Errores breves y accionables: "No se pudo guardar. Revisa tu conexión e inténtalo de nuevo."
 
@@ -82,7 +82,9 @@ Reglas que no cambian entre plataformas:
 
 Los valores exactos (colores, tipografía Manrope, radios) están en `docs/05`, sección 1. Resumen de lo que debe sentirse igual en iOS:
 
-- Fondo gris muy claro `#F3F5F7`, tarjetas blancas con esquinas de 20, tarjeta destacada oscura `#0E1A2B` con esquinas de 24.
+- Fondo gris muy claro `#F3F5F7` y tarjetas blancas con esquinas de 20.
+- **Tarjeta destacada** (Ahorro total en Inicio, Total en ahorros en Cuentas): esquinas de 28 y fondo en **degradado diagonal de tres colores**, de arriba-izquierda a abajo-derecha: violeta `#3B1D8F` → azul `#1D4ED8` → verde azulado `#0E7490`. Encima lleva un brillo celeste (`#67E8F9` al 30 %) que nace en la esquina superior derecha y una sombra violeta en la inferior izquierda. Texto blanco; etiquetas al 85–90 % de opacidad. Las superficies interiores (píldoras, franjas) son blanco al 14 %.
+- **El color distingue ahorro de crédito.** Ese degradado violeta-azul es el de las tarjetas de **ahorro** (Inicio y Cuentas). La tarjeta "Por pagar" de **Crédito** usa la misma forma y brillo pero en **amarillos**: amarillo `#FDE047` → ámbar `#FBBF24` → naranja ámbar `#F59E0B`, con brillo blanco y **texto oscuro** `#0E1A2B` (secundario al 80 %), porque el blanco no se lee sobre amarillo.
 - Azul `#1D4ED8` para acciones y selección; verde `#0B7A5A` ingresos; rojo ladrillo `#B93815` egresos y urgencias; gris azulado `#3B4A60` transferencias.
 - Botón principal: ancho completo, 56 de alto, radio 18, fijo al pie de los formularios.
 - Campos: 52 de alto, radio 14, borde fino. Controles tipo píldora con radio 22.
@@ -95,6 +97,7 @@ Componentes reutilizados en toda la app:
 | **Control segmentado** | Píldora con 2–3 opciones, una seleccionada (fondo blanco). Variante de ancho completo (pestañas) y compacta (S/ \| US$). |
 | **Desplegable** | Campo que muestra la opción elegida con un icono o punto de color a la izquierda, un detalle opcional a la derecha (p. ej. el saldo) y una flecha hacia abajo. Al tocarlo abre un menú del ancho del campo; la opción actual lleva un check. Elegir cierra el menú. |
 | **Caja de texto** | Campo de varias líneas (alto mínimo ~4 líneas) con contador `n/máx` abajo a la derecha; no deja escribir más del máximo. |
+| **Teclado de monto** | Teclado numérico propio (sin tecla de punto): los dígitos entran por la derecha y el decimal se coloca solo. Detalle en 7.5. Hoy solo lo usa Nuevo/Editar movimiento; los demás montos (transferencia, pago de crédito, saldo inicial, tipo de cambio) aún usan el teclado decimal del sistema. |
 | **Chip** | Píldora seleccionable; seleccionada = fondo azul y texto blanco. |
 | **Fila con interruptor** | Texto + interruptor; toda la fila es táctil. |
 | **Campo selector** | Campo de solo lectura con icono (calendario) que abre un selector nativo. |
@@ -154,7 +157,12 @@ Cada pantalla indica: qué muestra, cómo se comporta, validaciones, estados y q
 **Muestra, de arriba abajo:**
 
 1. Encabezado: "Resumen" (pequeño) y "Inicio" (título); a la derecha el botón de Ajustes.
-2. **Tarjeta oscura "Ahorro total"**: selector `S/ | US$`, el total en grande, una línea con el equivalente en la otra moneda y el cambio usado (`≈ US$ 2,239.47 · cambio 3.20 (manual)`), divisor, y la fila "4 de 5 cuentas incluidas · Elegir ›".
+2. **Tarjeta "Ahorro total"**, la pieza principal de la pantalla:
+   - Fondo: la **tarjeta destacada con degradado** de tres colores (violeta → azul → verde azulado) descrita en la sección 5. Todo el texto es blanco.
+   - Arriba: "Ahorro total" y, a la derecha, el selector `S/ | US$` sobre una pista translúcida (opción elegida en blanco).
+   - El total en grande (42, peso 800): el símbolo de moneda va más pequeño (24) y con 72 % de opacidad para que destaque la cifra.
+   - Debajo, en una **píldora translúcida** (blanco al 14 %): el equivalente en la otra moneda y el cambio usado (`≈ US$ 2,239.47 · cambio 3.20 (manual)`).
+   - Al pie, una **franja translúcida** táctil con icono de billetera: "4 de 5 cuentas incluidas" y "Elegir ›".
 3. Dos tarjetas: **"Ingresos · octubre"** (`+S/ 3,500.00`, verde) y **"Gastos · octubre"** (`−S/ 30.50`, rojo).
 4. Nota: "Las transferencias y las compras de tarjeta pendientes no entran aquí."
 5. **Tarjeta "Tarjeta de crédito"** (v1.1, solo si hay pendientes): "4 compras pendientes · vence 5 oct" (la fecha límite más próxima).
@@ -174,7 +182,7 @@ Cada pantalla indica: qué muestra, cómo se comporta, validaciones, estados y q
 
 ### 7.3 Cuentas
 
-**Muestra:** título "Cuentas" y botón "Transferir"; tarjeta oscura "Total en ahorros · 4 de 5 cuentas" con el total y el equivalente; una tarjeta por cuenta; botón de borde punteado "+ Nueva cuenta"; texto de ayuda.
+**Muestra:** título "Cuentas" y botón "Transferir"; tarjeta destacada con degradado "Total en ahorros · 4 de 5 cuentas" con el total y, en una píldora translúcida, el equivalente (`≈ US$ 2,239.47 · cambio 3.20`); una tarjeta por cuenta; botón de borde punteado "+ Nueva cuenta"; texto de ayuda.
 
 **Tarjeta de cuenta:** icono según tipo (billete = efectivo, banco = débito/ahorro, signo de dólar = cualquier cuenta en USD, billetera = otra), nombre, subtítulo `tipo · moneda` ("Ahorro · dólares"), saldo a la derecha y, si la cuenta no está en soles, `≈ S/ 800.00` debajo. Bajo un divisor, la fila "Contar en el total de ahorros" con su interruptor.
 
@@ -202,13 +210,27 @@ Botón al pie: "Guardar cuenta" / "Guardar cambios". En Editar hay además **"Ar
 
 1. Barra superior: **X** y el título ("Nuevo movimiento" / "Editar movimiento"). En Editar, a la derecha, un botón de papelera rojo.
 2. Control segmentado **Egreso | Ingreso | Transferencia**. En Editar solo Egreso | Ingreso.
-3. Tarjeta **Monto**: símbolo de moneda y el monto en grande, editable con teclado decimal.
+3. Tarjeta **Monto**: símbolo de moneda y el monto en grande. Se escribe con el **teclado propio de la app** (ver "Teclado de monto" más abajo), nunca con el teclado del sistema.
 4. **"Sale de la cuenta"** (egreso) o **"Ingresa a la cuenta"** (ingreso): **desplegable** con las cuentas no archivadas. Cada opción muestra el icono de la cuenta, su nombre y su saldo a la derecha.
 5. **Categoría**: **desplegable** con las categorías del tipo elegido. Cada opción muestra el punto de color de la categoría y su nombre.
 6. **Descripción**: **caja de texto de varias líneas**, opcional, máximo 500 caracteres, con contador `n/500`.
-7. **Fecha**: campo selector, hoy por defecto.
+7. **Fecha**:
+   - **Nuevo movimiento: no hay campo de fecha.** El movimiento toma la **fecha y hora del momento en que se guarda**. En su lugar se muestra, con un icono de reloj, el texto "Se guarda con la fecha y hora de este momento. Podrás cambiarla después, al editar el movimiento."
+   - **Editar movimiento:** campo selector **Fecha** con la fecha del movimiento, editable.
 8. Tarjeta **"Compra con tarjeta de crédito"** con interruptor (solo egreso nuevo, v1.1) y el texto "No descuenta de tus cuentas. Queda pendiente hasta que la pagues."
-9. Botón al pie.
+9. Al pie: el teclado de monto mientras está abierto; si no, el botón de guardar.
+
+**Teclado de monto:**
+
+- Es un panel blanco de esquinas redondeadas fijo al pie de la pantalla, con teclas grandes gris claro en 3 columnas: `1 2 3` / `4 5 6` / `7 8 9` / `(vacío) 0 ⌫` (el `0` va centrado bajo el `8`; el hueco inferior izquierdo queda libre), y debajo un botón azul de ancho completo **"✓ Listo"**. **No tiene tecla de punto decimal.**
+- **Los dígitos entran por la derecha y el punto se coloca solo** (como en Yape): el monto parte en `0.00` y al pulsar 4, 5, 5, 2 se ve `0.04` → `0.45` → `4.55` → `45.52`. El monto se muestra siempre con 2 decimales y separador de miles.
+- **⌫** quita el último dígito (`45.52` → `4.55`); **mantenerla pulsada** deja el monto en `0.00`.
+- Máximo `9,999,999.99`; los dígitos que lo superarían se ignoran.
+- Cada tecla da una vibración corta.
+- Mientras el monto vale `0.00` se ve en gris claro; al escribir toma su color (tinta en egreso, verde en ingreso).
+- **Cuándo se abre:** al entrar a Nuevo movimiento ya está abierto; en Editar empieza cerrado. Tocar la tarjeta Monto lo abre (y cierra el teclado del sistema si estaba visible). Con el teclado abierto, la tarjeta Monto lleva borde azul y un cursor que parpadea tras el monto.
+- **Cuándo se cierra:** con "Listo", con el botón atrás del sistema (el primer atrás cierra el teclado, el segundo la pantalla) o al tocar la caja de Descripción (que sí usa el teclado del sistema). Al cerrarse reaparece el botón de guardar.
+- Internamente el monto se guarda como entero en céntimos mientras se escribe y se convierte a decimal al guardar.
 
 **Comportamiento:**
 
@@ -220,9 +242,9 @@ Botón al pie: "Guardar cuenta" / "Guardar cambios". En Editar hay además **"Ar
 - La papelera pide confirmación: "¿Eliminar este movimiento?" — "Dejará de contar en tus saldos y reportes."
 - Al guardar o eliminar se vuelve a la pantalla anterior y se actualizan saldos y listas.
 
-**Validaciones:** monto > 0 y con 2 decimales como máximo; cuenta obligatoria (salvo crédito); categoría obligatoria; descripción ≤ 500; fecha límite ≥ fecha de compra.
+**Validaciones:** monto > 0 (el teclado ya garantiza 2 decimales); cuenta obligatoria (salvo crédito); categoría obligatoria; descripción ≤ 500; fecha límite ≥ fecha de compra.
 
-**Backend:** `insert` / `update` en `transactions`; borrado lógico con `deleted_at`; con crédito, `insert` en `credit_purchases` (estado `pending`). Un trigger rechaza una categoría de tipo distinto al del movimiento.
+**Backend:** `insert` / `update` en `transactions`; borrado lógico con `deleted_at`; con crédito, `insert` en `credit_purchases` (estado `pending`). Un trigger rechaza una categoría de tipo distinto al del movimiento. Al crear, la app no envía fecha: `occurred_on` toma el día actual y `created_at` guarda la fecha y hora exactas. **Pendiente de decidir:** `occurred_on` es solo fecha, así que hoy la **hora** queda registrada (`created_at`) pero no se puede editar; si se quiere editar también la hora hace falta una migración que agregue ese dato.
 
 ### 7.6 Transferir / Editar transferencia
 
@@ -281,7 +303,7 @@ Botón al pie: "Guardar cuenta" / "Guardar cambios". En Editar hay además **"Ar
 
 ### 7.9 Tarjeta de crédito (v1.1)
 
-**Muestra:** "Compras pendientes de pago" (pequeño) y "Tarjeta de crédito"; tarjeta oscura **"Por pagar"** con el total en soles en grande, `+ US$ 12.00` debajo si hay compras en dólares, y la nota "No cuenta en tus saldos ni en tus reportes hasta que la marques como pagada."; botón "+ Registrar compra con tarjeta"; "Ordenadas por fecha límite"; una tarjeta por compra.
+**Muestra:** "Compras pendientes de pago" (pequeño) y "Tarjeta de crédito"; tarjeta destacada en **degradado amarillo con texto oscuro** (sección 5) **"Por pagar"** con el total en soles en grande, `+ US$ 12.00` debajo si hay compras en dólares, y la nota "No cuenta en tus saldos ni en tus reportes hasta que la marques como pagada."; botón "+ Registrar compra con tarjeta"; "Ordenadas por fecha límite"; una tarjeta por compra.
 
 **Tarjeta de compra:** descripción y monto; `categoría · compra 10 sep`; chip de vencimiento; botón "✓ Marcar como pagada".
 
@@ -339,7 +361,7 @@ Botón al pie: "Guardar cuenta" / "Guardar cambios". En Editar hay además **"Ar
 ## 8. Flujos completos
 
 1. **Primer uso.** Registro → Inicio vacío ("Registra tu primer movimiento") con la cuenta "Efectivo" ya creada → Cuentas → Nueva cuenta → **+** → Nuevo movimiento (ingreso) → Inicio muestra el saldo, el ingreso del mes y el movimiento.
-2. **Registrar un egreso.** **+** → Egreso → monto → cuenta en el desplegable → categoría en el desplegable → descripción → Guardar egreso → vuelve a la pantalla anterior; baja el saldo de la cuenta, sube "Gastos" del mes y aparece en Últimos movimientos y en Reportes.
+2. **Registrar un egreso.** **+** → Egreso → teclear el monto en el teclado de la app (solo dígitos) → Listo → cuenta en el desplegable → categoría en el desplegable → descripción → Guardar egreso → vuelve a la pantalla anterior; baja el saldo de la cuenta, sube "Gastos" del mes y aparece en Últimos movimientos y en Reportes.
 3. **Ver el ahorro en dólares.** Inicio → tocar `US$` → el total pasa a dólares y la línea secundaria muestra los soles. Se refleja en Cuentas y en Ajustes.
 4. **Excluir una cuenta del ahorro.** Cuentas → apagar el interruptor → el total baja al instante y el conteo pasa a "3 de 5".
 5. **Transferir entre monedas.** Cuentas → Transferir → Desde Cuenta Dólares, Hacia Débito principal → sale US$ 20.00 → se propone 3.20 y entra S/ 64.00 → el banco dio S/ 63.40: se escribe ese monto y el cambio pasa a 3.17 → Guardar. Bajan los dólares, suben los soles; no cambia ningún reporte.
@@ -415,6 +437,7 @@ Los usan las maquetas y las pruebas. "Hoy" = **2 oct 2026**; cambio manual **1 U
 | ViewModel + `StateFlow<UiState>` | `@Observable` / `ObservableObject` por pantalla |
 | Navigation Compose, barra inferior | `TabView` + `NavigationStack`; formularios como `fullScreenCover` |
 | `DropdownMenu` | `Menu` o `Picker` con estilo de menú |
+| Teclado de monto (composable propio) | Vista propia en SwiftUI anclada al pie (no `keyboardType`); vibración con `UIImpactFeedbackGenerator` |
 | Selector de fecha de Material 3 | `DatePicker` |
 | `strings.xml` | String Catalog (`Localizable.xcstrings`) |
 | Fuente en `res/font/manrope.ttf` | Manrope incluida en el bundle |
@@ -429,3 +452,8 @@ Los usan las maquetas y las pruebas. "Hoy" = **2 oct 2026**; cambio manual **1 U
 |---|---|
 | 5 oct 2026 | Creación del documento. Maquetas navegables de todos los módulos en Android (datos de ejemplo, sin backend). |
 | 5 oct 2026 | Nuevo movimiento: cuenta y categoría pasan de chips a **desplegables** (la cuenta muestra su saldo); la descripción pasa a **caja de texto de varias líneas** con contador `n/500`. |
+| 5 oct 2026 | Nuevo movimiento: se quita el campo de fecha (toma la fecha y hora del momento de guardar; la fecha solo se cambia al editar). El monto se escribe con un **teclado propio** sin tecla de punto: los dígitos entran por la derecha y el decimal se coloca solo. |
+| 5 oct 2026 | Teclado de monto: se elimina la tecla `00`; la fila inferior queda `(vacío) 0 ⌫`. |
+| 5 oct 2026 | Inicio: la tarjeta "Ahorro total" pasa de fondo oscuro plano a **degradado azul** con brillos, píldora translúcida para el equivalente y franja translúcida para "cuentas incluidas". |
+| 5 oct 2026 | Tarjeta destacada: el degradado pasa a tres colores (violeta `#3B1D8F` → azul `#1D4ED8` → verde azulado `#0E7490`) y se aplica también a Cuentas y Crédito; el fondo oscuro plano `#0E1A2B` deja de usarse. |
+| 5 oct 2026 | Crédito: la tarjeta "Por pagar" pasa a degradado **amarillo** (`#FDE047` → `#FBBF24` → `#F59E0B`) con texto oscuro, para distinguir crédito (amarillo) de ahorro (violeta-azul). |

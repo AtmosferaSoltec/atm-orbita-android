@@ -15,7 +15,8 @@ Los wireframes son orientativos. Las medidas de la maqueta están en px de un li
 | `outline` | `#E3E8EE` | Bordes y divisores (`#EEF1F5` divisor suave) |
 | `primary` | `#1D4ED8` | Acciones, selección, botón principal |
 | `primarySoft` | `#E8EEFD` | Fondos suaves de iconos/botones secundarios |
-| `hero` | `#0E1A2B` | Tarjetas destacadas (ahorro total, por pagar); texto `#FFFFFF`, secundario `#C7D2E3` |
+| `heroGradientStart` / `Mid` / `End` / `heroGlow` | `#3B1D8F` / `#1D4ED8` / `#0E7490` / `#67E8F9` | Degradado diagonal (violeta → azul → verde azulado) y brillo de las tarjetas de **ahorro** (Inicio y Cuentas); texto `#FFFFFF`, superficies translúcidas blanco 14 % |
+| `creditGradientStart` / `Mid` / `End` | `#FDE047` / `#FBBF24` / `#F59E0B` | Degradado diagonal (amarillo → ámbar → naranja ámbar) de la tarjeta "Por pagar" de **Crédito**; brillo blanco y texto oscuro `#0E1A2B` |
 | `income` / `incomeSoft` | `#0B7A5A` / `#E3F4EE` | Ingresos |
 | `expense` / `expenseSoft` | `#B93815` / `#FBEAE4` | Egresos y vencimientos urgentes |
 | `neutral` / `neutralSoft` | `#3B4A60` / `#EEF1F5` | Transferencias, chips inactivos |
@@ -26,7 +27,7 @@ Colores de categoría: Vivienda `#1D4ED8`, Alimentación `#0E7490`, Transporte `
 
 **Tipografía**: Manrope (400, 500, 600, 700, 800) — vía Google Fonts descargables o incluida en `res/font`. Títulos de pantalla 26 sp/800; monto destacado 38 sp/800; montos de tarjeta 16–20 sp/800; cuerpo 14–16 sp; etiquetas 12–13 sp/600.
 
-**Formas**: tarjetas 18–20 dp; tarjeta destacada 24 dp; chips y botones tipo píldora 22 dp; botón principal 18 dp de radio y 56 dp de alto; campos 14 dp de radio y 52 dp de alto.
+**Formas**: tarjetas 18–20 dp; tarjeta destacada 28 dp; chips y botones tipo píldora 22 dp; botón principal 18 dp de radio y 56 dp de alto; campos 14 dp de radio y 52 dp de alto.
 
 **Reglas**: objetivos táctiles ≥ 48 dp; ingresos con `+`, egresos con `−` (U+2212) además del color; iconos de línea (stroke ~1.9) sin emojis; sin tema oscuro en el MVP.
 
@@ -111,7 +112,7 @@ Categoría
 [ ● Alimentación                               ▾ ]   ← desplegable: punto de color + nombre
 Descripción   ┌ Almuerzo con equipo             ┐   ← caja de texto de varias líneas
               └                          19/500 ┘
-Fecha         [ 2 oct 2026                    ]
+(reloj) Se guarda con la fecha y hora de este momento…   ← sin campo de fecha al crear; "Fecha" solo al editar
 ┌ Compra con tarjeta de crédito          (━●) ┐   (solo egreso, v1.1)
 │ No descuenta de tus cuentas. Queda pendiente│
 │ hasta que la pagues.                        │
@@ -123,7 +124,8 @@ Fecha         [ 2 oct 2026                    ]
 - El símbolo del monto sigue la moneda de la cuenta elegida (`S/` o `US$`).
 - Con "Compra con tarjeta de crédito" **activado**: se ocultan las cuentas, aparece "Fecha límite de pago", y el botón dice **"Guardar compra pendiente"** (crea una fila en `credit_purchases`, no un movimiento). Solo aplica a egresos.
 - Botón: "Guardar egreso" / "Guardar ingreso" / "Guardar compra pendiente".
-- Fecha: por defecto hoy; selector de fecha de Material 3.
+- Fecha: al crear no se elige; se toma la fecha y hora del momento de guardar. Solo al **editar** aparece el selector de fecha de Material 3.
+- Monto: se escribe con un teclado numérico propio de la app (sin tecla de punto; los dígitos entran por la derecha y el decimal se coloca solo). Detalle en `ORBITA_SPEC.md`, sección 7.5.
 - Validaciones: monto > 0 y ≤ 2 decimales; cuenta (salvo crédito) y categoría obligatorias; descripción opcional ≤ 500; fecha límite ≥ fecha de compra.
 - Al guardar: vuelve a Inicio y se actualizan saldos y listas.
 
