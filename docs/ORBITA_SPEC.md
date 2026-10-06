@@ -5,7 +5,7 @@
 > **Regla de mantenimiento.** Este archivo se actualiza **en el mismo cambio** en que se agrega o modifica un módulo, pantalla, regla o flujo en Android. Al terminar, se añade una fila al [registro de cambios](#13-registro-de-cambios) y se ajusta la columna *Estado* de la [tabla de módulos](#2-estado-de-los-módulos). Si el código y este archivo no coinciden, es un error que hay que corregir.
 
 - App: **Orbita** · `applicationId` Android: `com.atmosferast.orbita`
-- Última actualización: **5 oct 2026**
+- Última actualización: **6 oct 2026**
 - Documentos relacionados: `01` visión y alcance · `02` arquitectura Android · `03` modelo de datos y SQL · `04` guía Supabase · `05` maquetas y tokens · `06` plan y pruebas
 
 ---
@@ -85,7 +85,7 @@ Los valores exactos (colores, tipografía Manrope, radios) están en `docs/05`, 
 - Fondo gris muy claro `#F3F5F7` y tarjetas blancas con esquinas de 20.
 - **Tarjeta destacada** (Ahorro total en Inicio, Total en ahorros en Cuentas): esquinas de 28 y fondo en **degradado diagonal de tres colores**, de arriba-izquierda a abajo-derecha: violeta `#3B1D8F` → azul `#1D4ED8` → verde azulado `#0E7490`. Encima lleva un brillo celeste (`#67E8F9` al 30 %) que nace en la esquina superior derecha y una sombra violeta en la inferior izquierda. Texto blanco; etiquetas al 85–90 % de opacidad. Las superficies interiores (píldoras, franjas) son blanco al 14 %.
 - **El color distingue ahorro de crédito.** Ese degradado violeta-azul es el de las tarjetas de **ahorro** (Inicio y Cuentas). La tarjeta "Por pagar" de **Crédito** usa la misma forma y brillo pero en **amarillos**: amarillo `#FDE047` → ámbar `#FBBF24` → naranja ámbar `#F59E0B`, con brillo blanco y **texto oscuro** `#0E1A2B` (secundario al 80 %), porque el blanco no se lee sobre amarillo.
-- Azul `#1D4ED8` para acciones y selección; verde `#0B7A5A` ingresos; rojo ladrillo `#B93815` egresos y urgencias; gris azulado `#3B4A60` transferencias.
+- Azul `#1D4ED8` para acciones y selección; verde `#0B7A5A` ingresos; rojo intenso `#E53935` (fondo suave `#FDECEA`) egresos, errores, acciones destructivas y urgencias; gris azulado `#3B4A60` transferencias.
 - Botón principal: ancho completo, 56 de alto, radio 18, fijo al pie de los formularios.
 - Campos: 52 de alto, radio 14, borde fino. Controles tipo píldora con radio 22.
 - Iconos de línea (trazo ~1.9), sin emojis. Áreas táctiles de al menos 48.
@@ -142,7 +142,9 @@ Cada pantalla indica: qué muestra, cómo se comporta, validaciones, estados y q
 
 ### 7.1 Iniciar sesión y Registro
 
-**Muestra:** icono de la app, nombre "Orbita", título ("Inicia sesión" / "Crea tu cuenta"), subtítulo, campo **Correo**, campo **Contraseña** con botón de ojo para mostrar/ocultar, botón principal ("Ingresar" / "Crear cuenta") y enlace a la otra pantalla ("¿No tienes cuenta? Regístrate" / "¿Ya tienes cuenta? Inicia sesión"). En Registro, bajo la contraseña: "Mínimo 8 caracteres."
+**Muestra:** todo el contenido va **centrado verticalmente** en la pantalla (si no cabe, se desplaza). Arriba, las **tarjetas flotantes** (ver abajo); luego título ("Inicia sesión" / "Crea tu cuenta"), subtítulo, campo **Correo**, campo **Contraseña** con botón de ojo para mostrar/ocultar, botón principal ("Ingresar" / "Crear cuenta") y enlace a la otra pantalla ("¿No tienes cuenta? Regístrate" / "¿Ya tienes cuenta? Inicia sesión"). En Registro, bajo la contraseña: "Mínimo 8 caracteres."
+
+**Tarjetas flotantes:** dos tarjetas decorativas de 264 × 166 con esquinas de 28, centradas sobre el formulario en una franja de 220 de alto: una con el degradado de **ahorro** (violeta-azul, texto blanco) y otra con el de **crédito** (amarillo, texto oscuro), ambas de la sección 5. **No llevan datos**: solo el nombre "Orbita" en la esquina superior izquierda y, en la superior derecha, un **chip metálico** dibujado (40 × 30, esquinas de 6, degradado blanco → gris `#E2E8F0` → `#B6C0CE`, con líneas finas oscuras que simulan los contactos) para que se lea como tarjeta bancaria. Están apiladas y desfasadas: la de delante inclinada −4° y la de atrás +7°, al 92 % de tamaño, desplazada arriba a la derecha. Flotan suavemente (±6 de vaivén vertical, ciclo de 2.6 s, en sentidos opuestos) y **cada 3.2 s se alternan**: la de delante pasa atrás y la otra al frente, separándose hacia los lados a mitad del cambio (transición de 0.9 s). Llevan sombra del color de su degradado. No son táctiles.
 
 **Comportamiento:** el ojo alterna la visibilidad de la contraseña. Los errores aparecen sobre el botón, con icono de alerta y texto rojo.
 
@@ -457,3 +459,6 @@ Los usan las maquetas y las pruebas. "Hoy" = **2 oct 2026**; cambio manual **1 U
 | 5 oct 2026 | Inicio: la tarjeta "Ahorro total" pasa de fondo oscuro plano a **degradado azul** con brillos, píldora translúcida para el equivalente y franja translúcida para "cuentas incluidas". |
 | 5 oct 2026 | Tarjeta destacada: el degradado pasa a tres colores (violeta `#3B1D8F` → azul `#1D4ED8` → verde azulado `#0E7490`) y se aplica también a Cuentas y Crédito; el fondo oscuro plano `#0E1A2B` deja de usarse. |
 | 5 oct 2026 | Crédito: la tarjeta "Por pagar" pasa a degradado **amarillo** (`#FDE047` → `#FBBF24` → `#F59E0B`) con texto oscuro, para distinguir crédito (amarillo) de ahorro (violeta-azul). |
+| 6 oct 2026 | Iniciar sesión / Registro: el icono y el nombre de la app se reemplazan por dos **tarjetas flotantes** (ahorro y crédito) sin datos, solo con "Orbita" arriba a la izquierda, que se alternan al frente cada 3.2 s. |
+| 6 oct 2026 | Iniciar sesión / Registro: las tarjetas flotantes llevan un **chip metálico** arriba a la derecha y el contenido de la pantalla pasa a estar **centrado verticalmente**. |
+| 6 oct 2026 | Color: el rojo de la app pasa de ladrillo `#B93815` a **rojo intenso `#E53935`**, y su fondo suave de `#FBEAE4` a `#FDECEA`. Afecta a egresos, errores, acciones destructivas y vencimientos. |

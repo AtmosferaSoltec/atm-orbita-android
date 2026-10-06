@@ -67,6 +67,7 @@ fun ScreenScaffold(
     modifier: Modifier = Modifier,
     header: @Composable () -> Unit = {},
     footer: @Composable (() -> Unit)? = null,
+    verticalArrangement: Arrangement.Vertical = Arrangement.Top,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
@@ -81,6 +82,7 @@ fun ScreenScaffold(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = ScreenPadding)
                 .padding(bottom = 24.dp),
+            verticalArrangement = verticalArrangement,
             content = content,
         )
         if (footer != null) {
