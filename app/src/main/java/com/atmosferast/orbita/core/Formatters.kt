@@ -21,11 +21,28 @@ private val monthsLong = listOf(
     "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
 )
 
-fun currencySymbol(currency: String): String = when (currency) {
-    PEN -> "S/"
-    USD -> "US$"
-    else -> currency
+/** A currency the user can pick: ISO 4217 code, symbol shown next to amounts, Spanish name. */
+data class CurrencyInfo(val code: String, val symbol: String, val name: String) {
+    /** `Soles (S/)` */
+    val label: String get() = "$name ($symbol)"
 }
+
+val supportedCurrencies = listOf(
+    CurrencyInfo(PEN, "S/", "Soles"),
+    CurrencyInfo(USD, "US$", "Dólares"),
+    CurrencyInfo("EUR", "€", "Euros"),
+    CurrencyInfo("MXN", "MX$", "Pesos mexicanos"),
+    CurrencyInfo("COP", "COL$", "Pesos colombianos"),
+    CurrencyInfo("CLP", "CLP$", "Pesos chilenos"),
+    CurrencyInfo("ARS", "AR$", "Pesos argentinos"),
+    CurrencyInfo("BOB", "Bs", "Bolivianos"),
+    CurrencyInfo("BRL", "R$", "Reales"),
+)
+
+fun currencyInfo(code: String): CurrencyInfo =
+    supportedCurrencies.firstOrNull { it.code == code } ?: CurrencyInfo(code, code, code)
+
+fun currencySymbol(currency: String): String = currencyInfo(currency).symbol
 
 private fun decimalFormat(pattern: String) =
     DecimalFormat(pattern, DecimalFormatSymbols(Locale.US)).apply {

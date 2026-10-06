@@ -34,14 +34,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atmosferast.orbita.R
 import com.atmosferast.orbita.core.PEN
-import com.atmosferast.orbita.core.USD
+import com.atmosferast.orbita.core.currencyInfo
 import com.atmosferast.orbita.core.formatMoney
 import com.atmosferast.orbita.core.formatRate
 import com.atmosferast.orbita.ui.components.CardDivider
 import com.atmosferast.orbita.ui.components.HeroAmount
 import com.atmosferast.orbita.ui.components.HeroCard
 import com.atmosferast.orbita.ui.components.HeroLabel
-import com.atmosferast.orbita.ui.components.HeroPill
 import com.atmosferast.orbita.ui.components.HintText
 import com.atmosferast.orbita.ui.components.IconBadge
 import com.atmosferast.orbita.ui.components.OrbitaCard
@@ -53,12 +52,12 @@ import com.atmosferast.orbita.ui.components.SwitchRow
 import com.atmosferast.orbita.ui.components.accountIcon
 import com.atmosferast.orbita.ui.components.accountTypeLabel
 import com.atmosferast.orbita.ui.mock.MockAccount
+import com.atmosferast.orbita.ui.mock.MockFx
 import com.atmosferast.orbita.ui.mock.SampleData
-import com.atmosferast.orbita.ui.mock.convert
-import com.atmosferast.orbita.ui.mock.savingsTotal
 import com.atmosferast.orbita.ui.theme.ChipBorder
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
+import com.atmosferast.orbita.ui.theme.OnHero
 import com.atmosferast.orbita.ui.theme.OrbitaShapes
 import com.atmosferast.orbita.ui.theme.OrbitaTheme
 import com.atmosferast.orbita.ui.theme.Primary
@@ -67,6 +66,7 @@ import com.atmosferast.orbita.ui.theme.PrimarySoft
 @Composable
 fun AccountsScreen(
     accounts: List<MockAccount>,
+    fx: MockFx,
     displayCurrency: String,
     onToggleSavings: (MockAccount, Boolean) -> Unit,
     onTransfer: () -> Unit,
@@ -89,17 +89,18 @@ fun AccountsScreen(
             )
         },
     ) {
-        SavingsSummaryCard(accounts, displayCurrency)
+        SavingsSummaryCard(accounts, fx, displayCurrency)
         Spacer(Modifier.height(12.dp))
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             accounts.forEach { account ->
                 AccountCard(
                     account = account,
+                    fx = fx,
                     onClick = { onAccountClick(account) },
                     onToggleSavings = { onToggleSavings(account, it) },
                 )
             }
-            NewAccountButton(onNewAccount)
+            DashedAddButton(stringResource(R.string.accounts_new), onNewAccount)
         }
         HintText(
             stringResource(R.string.accounts_hint),
@@ -109,9 +110,9 @@ fun AccountsScreen(
 }
 
 @Composable
-private fun SavingsSummaryCard(accounts: List<MockAccount>, displayCurrency: String) {
-    val otherCurrency = if (displayCurrency == PEN) USD else PEN
-    HeroCard {
+private fun SavingsSummaryCard(accounts: List<MockAccount>, fx: MockFx, displayCurrency: String) {
+    val otherCurrency = fx.other(displayCurrency)
+    HeroCard(scrim = true) {
         HeroLabel(
             stringResource(
                 R.string.accounts_total_label,
@@ -120,14 +121,19 @@ private fun SavingsSummaryCard(accounts: List<MockAccount>, displayCurrency: Str
             ),
         )
         Spacer(Modifier.height(6.dp))
-        HeroAmount(formatMoney(accounts.savingsTotal(displayCurrency), displayCurrency))
-        Spacer(Modifier.height(10.dp))
-        HeroPill(
+        HeroAmount(formatMoney(fx.savingsTotal(accounts, displayCurrency), displayCurrency))
+        Spacer(Modifier.height(4.dp))
+        // Plain supporting line: the same total in the other currency.
+        Text(
             stringResource(
                 R.string.savings_equivalent,
-                formatMoney(accounts.savingsTotal(otherCurrency), otherCurrency),
-                formatRate(SampleData.usdToPen),
+                formatMoney(fx.savingsTotal(accounts, otherCurrency), otherCurrency),
+                formatRate(fx.rate),
             ),
+            style = MaterialTheme.typography.bodyMedium,
+            color = OnHero.copy(alpha = 0.85f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -135,12 +141,14 @@ private fun SavingsSummaryCard(accounts: List<MockAccount>, displayCurrency: Str
 @Composable
 private fun AccountCard(
     account: MockAccount,
+    fx: MockFx,
     onClick: () -> Unit,
     onToggleSavings: (Boolean) -> Unit,
 ) {
-    val currencyName = stringResource(
-        if (account.currency == USD) R.string.currency_name_usd else R.string.currency_name_pen,
-    )
+    val currencyName = currencyInfo(account.currency).name.lowercase()
+    // Equivalent in the main currency, when the account is in another one with a known rate.
+    val inMain = if (account.currency == fx.main) null
+    else fx.convert(account.balance, account.currency, fx.main)
     OrbitaCard {
         Row(
             modifier = Modifier
@@ -176,12 +184,9 @@ private fun AccountCard(
                     style = MaterialTheme.typography.titleMedium,
                     color = Ink,
                 )
-                if (account.currency != PEN) {
+                if (inMain != null) {
                     Text(
-                        stringResource(
-                            R.string.approx_amount,
-                            formatMoney(convert(account.balance, account.currency, PEN), PEN),
-                        ),
+                        stringResource(R.string.approx_amount, formatMoney(inMain, fx.main)),
                         style = MaterialTheme.typography.bodySmall,
                         color = Muted,
                     )
@@ -198,8 +203,9 @@ private fun AccountCard(
     }
 }
 
+/** Dashed "add" row closing a list of cards (accounts, credit cards). */
 @Composable
-private fun NewAccountButton(onClick: () -> Unit) {
+fun DashedAddButton(label: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -230,7 +236,7 @@ private fun NewAccountButton(onClick: () -> Unit) {
         Icon(OrbitaIcons.Plus, contentDescription = null, tint = Primary, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(8.dp))
         Text(
-            stringResource(R.string.accounts_new),
+            label,
             style = MaterialTheme.typography.labelLarge,
             color = Primary,
         )
@@ -244,6 +250,7 @@ private fun AccountsPreview() {
     OrbitaTheme {
         AccountsScreen(
             accounts = accounts,
+            fx = MockFx(),
             displayCurrency = PEN,
             onToggleSavings = { account, include ->
                 accounts = accounts.map {

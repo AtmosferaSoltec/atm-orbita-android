@@ -60,6 +60,8 @@ import com.atmosferast.orbita.ui.theme.OrbitaShapes
 import com.atmosferast.orbita.ui.theme.Outline
 import com.atmosferast.orbita.ui.theme.Primary
 import com.atmosferast.orbita.ui.theme.Surface
+import com.atmosferast.orbita.ui.theme.Transfer
+import com.atmosferast.orbita.ui.theme.TransferSoft
 
 /** Scrollable screen body with the standard horizontal padding and an optional pinned footer. */
 @Composable
@@ -113,7 +115,7 @@ fun accountTypeLabel(type: AccountType): String = stringResource(
     },
 )
 
-/** Row of the movement lists: income (↙), expense (↗) or transfer (⇄). */
+/** Row of the movement lists: income (↗, up), expense (↙, down) or transfer (⇄). */
 @Composable
 fun EntryRow(entry: MockEntry, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val date = formatDayMonth(entry.date)
@@ -123,7 +125,7 @@ fun EntryRow(entry: MockEntry, onClick: () -> Unit, modifier: Modifier = Modifie
             val kindLabel = stringResource(if (income) R.string.kind_income else R.string.kind_expense)
             val redundant = entry.description.isBlank() || entry.description == entry.category.name
             EntryRowLayout(
-                icon = if (income) OrbitaIcons.ArrowDownLeft else OrbitaIcons.ArrowUpRight,
+                icon = if (income) OrbitaIcons.ArrowUpRight else OrbitaIcons.ArrowDownLeft,
                 tint = if (income) Income else Expense,
                 container = if (income) IncomeSoft else ExpenseSoft,
                 title = entry.description.ifBlank { entry.category.name },
@@ -145,8 +147,8 @@ fun EntryRow(entry: MockEntry, onClick: () -> Unit, modifier: Modifier = Modifie
             else "$out → ${formatMoney(entry.toAmount, entry.to.currency)}"
             EntryRowLayout(
                 icon = OrbitaIcons.Swap,
-                tint = Neutral,
-                container = NeutralSoft,
+                tint = Transfer,
+                container = TransferSoft,
                 title = entry.note.ifBlank { stringResource(R.string.kind_transfer) },
                 subtitle = "${entry.from.name} → ${entry.to.name} · $date",
                 amount = amount,

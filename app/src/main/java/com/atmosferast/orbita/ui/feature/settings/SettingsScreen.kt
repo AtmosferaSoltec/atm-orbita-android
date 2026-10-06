@@ -25,9 +25,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atmosferast.orbita.R
 import com.atmosferast.orbita.core.PEN
-import com.atmosferast.orbita.core.USD
+import com.atmosferast.orbita.core.currencySymbol
+import com.atmosferast.orbita.core.currencyInfo
 import com.atmosferast.orbita.core.formatRate
+import com.atmosferast.orbita.core.supportedCurrencies
 import com.atmosferast.orbita.ui.components.CardDivider
+import com.atmosferast.orbita.ui.components.DropdownField
 import com.atmosferast.orbita.ui.components.HintText
 import com.atmosferast.orbita.ui.components.IconBadge
 import com.atmosferast.orbita.ui.components.LabelValueRow
@@ -39,6 +42,7 @@ import com.atmosferast.orbita.ui.components.PillButton
 import com.atmosferast.orbita.ui.components.ScreenScaffold
 import com.atmosferast.orbita.ui.components.SectionTitle
 import com.atmosferast.orbita.ui.components.SegmentedControl
+import com.atmosferast.orbita.ui.mock.MockFx
 import com.atmosferast.orbita.ui.mock.SampleData
 import com.atmosferast.orbita.ui.theme.Expense
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
@@ -56,6 +60,8 @@ private enum class FxMode { MANUAL, AUTO }
 
 @Composable
 fun SettingsScreen(
+    fx: MockFx,
+    onFxChange: (MockFx) -> Unit,
     displayCurrency: String,
     onDisplayCurrencyChange: (String) -> Unit,
     onBack: () -> Unit,
@@ -63,12 +69,15 @@ fun SettingsScreen(
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var rate by remember { mutableStateOf(formatRate(SampleData.usdToPen)) }
+    // The text restarts whenever the pair of currencies changes.
+    var rate by remember(fx.main, fx.secondary) { mutableStateOf(formatRate(fx.rate)) }
+    val parsedRate = rate.replace(',', '.').toBigDecimalOrNull()?.takeIf { it.signum() > 0 }
     // Shown with 4 decimals; the rate must be > 0.
-    val inverse = rate.replace(',', '.').toBigDecimalOrNull()
-        ?.takeIf { it.signum() > 0 }
+    val inverse = parsedRate
         ?.let { BigDecimal.ONE.divide(it, 4, RoundingMode.HALF_UP).toPlainString() }
         ?: "—"
+    val mainSymbol = currencySymbol(fx.main)
+    val secondarySymbol = currencySymbol(fx.secondary)
 
     ScreenScaffold(
         modifier = modifier,
@@ -83,10 +92,37 @@ fun SettingsScreen(
     ) {
         SectionTitle(stringResource(R.string.settings_currencies))
         OrbitaCard {
-            LabelValueRow(
+            Text(
                 stringResource(R.string.settings_default_currency),
-                stringResource(R.string.currency_option_pen),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Muted,
             )
+            Spacer(Modifier.height(8.dp))
+            DropdownField(
+                options = supportedCurrencies,
+                selected = currencyInfo(fx.main),
+                onSelect = { onFxChange(fx.withMain(it.code)) },
+                label = { it.label },
+                detail = { it.code },
+            )
+            Spacer(Modifier.height(8.dp))
+            HintText(stringResource(R.string.settings_default_currency_hint))
+            CardDivider()
+            Text(
+                stringResource(R.string.settings_secondary_currency),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Muted,
+            )
+            Spacer(Modifier.height(8.dp))
+            DropdownField(
+                options = supportedCurrencies,
+                selected = currencyInfo(fx.secondary),
+                onSelect = { onFxChange(fx.withSecondary(it.code)) },
+                label = { it.label },
+                detail = { it.code },
+            )
+            Spacer(Modifier.height(8.dp))
+            HintText(stringResource(R.string.settings_secondary_currency_hint))
             CardDivider()
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -96,7 +132,7 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f),
                 )
                 SegmentedControl(
-                    options = listOf(PEN to "S/", USD to "US$"),
+                    options = listOf(fx.main to mainSymbol, fx.secondary to secondarySymbol),
                     selected = displayCurrency,
                     onSelect = onDisplayCurrencyChange,
                     fill = false,
@@ -118,14 +154,20 @@ fun SettingsScreen(
             Spacer(Modifier.height(14.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    stringResource(R.string.settings_fx_prefix),
+                    stringResource(R.string.settings_fx_prefix, secondarySymbol, mainSymbol),
                     style = MaterialTheme.typography.titleMedium,
                     color = Ink,
                 )
                 Spacer(Modifier.width(12.dp))
                 OrbitaTextField(
                     value = rate,
-                    onValueChange = { rate = it },
+                    onValueChange = { text ->
+                        rate = text
+                        // Only a valid rate (> 0) reaches the rest of the app.
+                        text.replace(',', '.').toBigDecimalOrNull()
+                            ?.takeIf { it.signum() > 0 }
+                            ?.let { onFxChange(fx.copy(rate = it)) }
+                    },
                     placeholder = "0.00",
                     keyboardType = KeyboardType.Decimal,
                     modifier = Modifier.width(120.dp),
@@ -133,12 +175,14 @@ fun SettingsScreen(
             }
             Spacer(Modifier.height(10.dp))
             Text(
-                stringResource(R.string.settings_fx_inverse, inverse),
+                stringResource(R.string.settings_fx_inverse, mainSymbol, secondarySymbol, inverse),
                 style = MaterialTheme.typography.labelMedium,
                 color = Ink,
             )
             Spacer(Modifier.height(6.dp))
             HintText(stringResource(R.string.settings_fx_hint))
+            Spacer(Modifier.height(4.dp))
+            HintText(stringResource(R.string.settings_fx_reset_hint))
         }
 
         SectionTitle(stringResource(R.string.categories_title))
@@ -220,8 +264,11 @@ fun SettingsScreen(
 @Composable
 private fun SettingsPreview() {
     var currency by remember { mutableStateOf(PEN) }
+    var fx by remember { mutableStateOf(MockFx()) }
     OrbitaTheme {
         SettingsScreen(
+            fx = fx,
+            onFxChange = { fx = it },
             displayCurrency = currency,
             onDisplayCurrencyChange = { currency = it },
             onBack = {},

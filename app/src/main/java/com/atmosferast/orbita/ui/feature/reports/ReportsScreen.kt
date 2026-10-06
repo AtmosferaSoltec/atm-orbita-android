@@ -13,8 +13,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DateRangePicker
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,16 +69,33 @@ import com.atmosferast.orbita.ui.theme.NeutralSoft
 import com.atmosferast.orbita.ui.theme.OrbitaTheme
 import com.atmosferast.orbita.ui.theme.Primary
 import com.atmosferast.orbita.ui.theme.PrimarySoft
+import com.atmosferast.orbita.ui.mock.MovementKind
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 
 private enum class ReportMode { MONTH, RANGE }
 
+/**
+ * [focus] is set when coming from a month card of Inicio: the ranking of that kind goes first.
+ */
 @Composable
-fun ReportsScreen(modifier: Modifier = Modifier) {
+fun ReportsScreen(
+    modifier: Modifier = Modifier,
+    initialMonth: LocalDate = SampleData.reportMonth,
+    focus: MovementKind? = null,
+) {
     var mode by remember { mutableStateOf(ReportMode.MONTH) }
-    var month by remember { mutableStateOf(SampleData.reportMonth) }
-    // The sample data only covers September 2026.
-    val hasData = mode == ReportMode.RANGE || month == SampleData.reportMonth
+    var month by remember { mutableStateOf(initialMonth) }
+    var rangeFrom by remember { mutableStateOf(SampleData.reportMonth) }
+    var rangeTo by remember { mutableStateOf(SampleData.reportMonth.withDayOfMonth(30)) }
+    var pickingRange by remember { mutableStateOf(false) }
+    // The sample data only covers September and October 2026: a range shows the first of those
+    // months it touches, whole (the mockup has no per-day data to add up).
+    val report = if (mode == ReportMode.MONTH) SampleData.reportFor(month)
+    else listOf(SampleData.reportMonth, SampleData.currentMonth)
+        .firstOrNull { !it.isAfter(rangeTo) && !it.plusMonths(1).minusDays(1).isBefore(rangeFrom) }
+        ?.let(SampleData::reportFor)
 
     ScreenScaffold(
         modifier = modifier,
@@ -109,17 +131,30 @@ fun ReportsScreen(modifier: Modifier = Modifier) {
                 onNext = { month = month.plusMonths(1) },
             )
         } else {
-            RangeSelector(SampleData.reportMonth, SampleData.reportMonth.withDayOfMonth(30))
+            RangeSelector(rangeFrom, rangeTo, onClick = { pickingRange = true })
+        }
+        if (pickingRange) {
+            DateRangeDialog(
+                from = rangeFrom,
+                to = rangeTo,
+                onConfirm = { from, to ->
+                    rangeFrom = from
+                    rangeTo = to
+                    pickingRange = false
+                },
+                onDismiss = { pickingRange = false },
+            )
         }
         Spacer(Modifier.height(12.dp))
 
-        if (!hasData) {
+        if (report == null) {
             StateMessage(OrbitaIcons.Chart, stringResource(R.string.reports_empty))
             return@ScreenScaffold
         }
 
-        val income = SampleData.reportIncomes.total()
-        val expense = SampleData.reportExpenses.total()
+        val (expenses, incomes) = report
+        val income = incomes.total()
+        val expense = expenses.total()
         val balance = income - expense
         OrbitaCard {
             Row {
@@ -145,11 +180,21 @@ fun ReportsScreen(modifier: Modifier = Modifier) {
             )
         }
 
-        SectionTitle(stringResource(R.string.reports_top_expenses))
-        CategoryRanking(SampleData.reportExpenses)
-
-        SectionTitle(stringResource(R.string.reports_income_sources))
-        CategoryRanking(SampleData.reportIncomes)
+        val expenseRanking = @Composable {
+            SectionTitle(stringResource(R.string.reports_top_expenses))
+            CategoryRanking(expenses)
+        }
+        val incomeRanking = @Composable {
+            SectionTitle(stringResource(R.string.reports_income_sources))
+            CategoryRanking(incomes)
+        }
+        if (focus == MovementKind.INCOME) {
+            incomeRanking()
+            expenseRanking()
+        } else {
+            expenseRanking()
+            incomeRanking()
+        }
 
         HintText(
             stringResource(R.string.reports_hint),
@@ -169,10 +214,12 @@ private fun MonthSelector(month: LocalDate, onPrevious: () -> Unit, onNext: () -
                 onPrevious,
                 container = Background,
             )
-            Spacer(Modifier.width(10.dp))
-            IconBadge(OrbitaIcons.Calendar, Primary, PrimarySoft, size = 40.dp)
-            Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 Text(
                     formatMonthYear(month),
                     style = MaterialTheme.typography.titleSmall,
@@ -196,16 +243,76 @@ private fun MonthSelector(month: LocalDate, onPrevious: () -> Unit, onNext: () -
 }
 
 @Composable
-private fun RangeSelector(from: LocalDate, to: LocalDate) {
+private fun RangeSelector(from: LocalDate, to: LocalDate, onClick: () -> Unit) {
+    // Both fields open the same calendar, where the start and the end are picked together.
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(Modifier.weight(1f)) {
             FieldLabel(stringResource(R.string.field_from))
-            PickerField(formatDate(from), onClick = {})
+            PickerField(formatDate(from), onClick = onClick)
         }
         Column(Modifier.weight(1f)) {
             FieldLabel(stringResource(R.string.field_until))
-            PickerField(formatDate(to), onClick = {})
+            PickerField(formatDate(to), onClick = onClick)
         }
+    }
+}
+
+private fun LocalDate.toUtcMillis(): Long = atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+
+private fun Long.toUtcDate(): LocalDate = Instant.ofEpochMilli(this).atZone(ZoneOffset.UTC).toLocalDate()
+
+/** Calendar to pick a start and an end date. "Aceptar" needs both. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DateRangeDialog(
+    from: LocalDate,
+    to: LocalDate,
+    onConfirm: (LocalDate, LocalDate) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    // The picker works in UTC milliseconds.
+    val state = rememberDateRangePickerState(
+        initialSelectedStartDateMillis = from.toUtcMillis(),
+        initialSelectedEndDateMillis = to.toUtcMillis(),
+    )
+    val start = state.selectedStartDateMillis
+    val end = state.selectedEndDateMillis
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = { if (start != null && end != null) onConfirm(start.toUtcDate(), end.toUtcDate()) },
+                enabled = start != null && end != null,
+            ) { Text(stringResource(R.string.action_accept)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    ) {
+        DateRangePicker(
+            state = state,
+            // The range picker scrolls through months, so it needs a bounded height.
+            modifier = Modifier.height(480.dp),
+            title = {
+                Text(
+                    stringResource(R.string.reports_range_title),
+                    modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp),
+                )
+            },
+            headline = {
+                Text(
+                    stringResource(
+                        R.string.reports_range_headline,
+                        start?.let { formatDayMonth(it.toUtcDate()) }
+                            ?: stringResource(R.string.field_from),
+                        end?.let { formatDayMonth(it.toUtcDate()) }
+                            ?: stringResource(R.string.field_until),
+                    ),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(start = 24.dp, end = 12.dp, bottom = 12.dp),
+                )
+            },
+        )
     }
 }
 

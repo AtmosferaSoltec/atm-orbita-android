@@ -15,10 +15,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atmosferast.orbita.R
 import com.atmosferast.orbita.core.PEN
-import com.atmosferast.orbita.core.USD
+import com.atmosferast.orbita.core.currencyInfo
 import com.atmosferast.orbita.core.currencySymbol
+import com.atmosferast.orbita.core.supportedCurrencies
 import com.atmosferast.orbita.ui.components.ChipGroup
 import com.atmosferast.orbita.ui.components.ConfirmDialog
+import com.atmosferast.orbita.ui.components.DropdownField
 import com.atmosferast.orbita.ui.components.FieldLabel
 import com.atmosferast.orbita.ui.components.HintText
 import com.atmosferast.orbita.ui.components.ModalTopBar
@@ -45,11 +47,12 @@ fun AccountFormScreen(
     onClose: () -> Unit,
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
+    defaultCurrency: String = PEN,
 ) {
     val editing = account != null
     var name by remember { mutableStateOf(account?.name.orEmpty()) }
     var type by remember { mutableStateOf(account?.type ?: AccountType.DEBIT) }
-    var currency by remember { mutableStateOf(account?.currency ?: PEN) }
+    var currency by remember { mutableStateOf(account?.currency ?: defaultCurrency) }
     var initialBalance by remember { mutableStateOf("") }
     var includeInSavings by remember { mutableStateOf(account?.includeInSavings ?: true) }
     var confirmArchive by remember { mutableStateOf(false) }
@@ -95,28 +98,21 @@ fun AccountFormScreen(
         if (editing) {
             // The currency cannot change once the account has movements.
             ChipGroup {
-                OrbitaChip(
-                    stringResource(
-                        if (currency == USD) R.string.currency_option_usd
-                        else R.string.currency_option_pen,
-                    ),
-                    selected = true,
-                    onClick = {},
-                )
+                OrbitaChip(currencyInfo(currency).label, selected = true, onClick = {})
             }
             HintText(
                 stringResource(R.string.account_currency_locked),
                 Modifier.padding(top = 8.dp),
             )
         } else {
-            ChipGroup {
-                OrbitaChip(
-                    stringResource(R.string.currency_option_pen), currency == PEN, { currency = PEN },
-                )
-                OrbitaChip(
-                    stringResource(R.string.currency_option_usd), currency == USD, { currency = USD },
-                )
-            }
+            // Starts on the user's default currency (Ajustes).
+            DropdownField(
+                options = supportedCurrencies,
+                selected = currencyInfo(currency),
+                onSelect = { currency = it.code },
+                label = { it.label },
+                detail = { it.code },
+            )
             FieldLabel(stringResource(R.string.account_initial_balance))
             OrbitaTextField(
                 value = initialBalance,

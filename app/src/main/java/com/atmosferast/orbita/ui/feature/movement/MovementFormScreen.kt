@@ -92,11 +92,13 @@ fun MovementFormScreen(
     }
     var description by remember { mutableStateOf(editing?.description.orEmpty()) }
     var credit by remember { mutableStateOf(initialCredit) }
+    var creditCard by remember { mutableStateOf(SampleData.creditCards.first()) }
     var confirmDelete by remember { mutableStateOf(false) }
 
     val isExpense = kind == MovementKind.EXPENSE
     val onCredit = credit && isExpense && editing == null
-    val symbol = currencySymbol(if (onCredit) PEN else account.currency)
+    // A credit purchase is registered in the currency of its card.
+    val symbol = currencySymbol(if (onCredit) creditCard.currency else account.currency)
     val focusManager = LocalFocusManager.current
 
     BackHandler(enabled = keypadOpen) { keypadOpen = false }
@@ -274,6 +276,22 @@ fun MovementFormScreen(
                 )
                 HintText(stringResource(R.string.movement_credit_hint))
                 if (credit) {
+                    FieldLabel(stringResource(R.string.credit_card_field))
+                    DropdownField(
+                        options = SampleData.creditCards,
+                        selected = creditCard,
+                        onSelect = { creditCard = it },
+                        label = { it.name },
+                        detail = { currencySymbol(it.currency) },
+                        leading = {
+                            Icon(
+                                OrbitaIcons.CreditCard,
+                                contentDescription = null,
+                                tint = Primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        },
+                    )
                     FieldLabel(stringResource(R.string.credit_due_date))
                     PickerField(formatDate(SampleData.today.plusDays(13)), onClick = {})
                 }

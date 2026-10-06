@@ -61,8 +61,16 @@ data class MockTransfer(
     val toAmount: BigDecimal,
 ) : MockEntry
 
+/** A credit card: a debt account that groups pending purchases. New purchases use [currency]. */
+data class MockCreditCard(
+    val id: String,
+    val name: String,
+    val currency: String = PEN,
+)
+
 data class MockCreditPurchase(
     val id: String,
+    val card: MockCreditCard,
     val description: String,
     val category: MockCategory,
     val purchaseDate: LocalDate,
@@ -167,17 +175,51 @@ object SampleData {
         MockCategoryTotal(otherIncome, BigDecimal("100.00")),
     )
 
+    // October 2026 report (current month), consistent with [entries]
+    val currentMonth: LocalDate = today.withDayOfMonth(1)
+    private val currentExpenses = listOf(
+        MockCategoryTotal(food, BigDecimal("18.50")),
+        MockCategoryTotal(transport, BigDecimal("12.00")),
+    )
+    private val currentIncomes = listOf(MockCategoryTotal(salary, BigDecimal("3500.00")))
+
+    /** Expenses and incomes by category for [month], or null when the sample has no data. */
+    fun reportFor(month: LocalDate): Pair<List<MockCategoryTotal>, List<MockCategoryTotal>>? =
+        when (month.withDayOfMonth(1)) {
+            reportMonth -> reportExpenses to reportIncomes
+            currentMonth -> currentExpenses to currentIncomes
+            else -> null
+        }
+
+    private val visa = MockCreditCard("visa", "Visa Clásica")
+    private val mastercard = MockCreditCard("mastercard", "Mastercard Oro")
+
+    val creditCards = listOf(visa, mastercard)
+
     val creditPurchases = listOf(
-        MockCreditPurchase("p1", "Pasajes", transport, sep(10), oct(5), BigDecimal("240.00"), PEN),
         MockCreditPurchase(
-            "p2", "Cena en restaurante", food, sep(18), oct(15), BigDecimal("96.00"), PEN,
+            "p1", visa, "Pasajes", transport, sep(10), oct(5), BigDecimal("240.00"), PEN,
         ),
-        MockCreditPurchase("p3", "Audífonos", leisure, sep(20), oct(15), BigDecimal("189.90"), PEN),
         MockCreditPurchase(
-            "p4", "Suscripción de software", other, sep(25), oct(15), BigDecimal("12.00"), USD,
+            "p2", visa, "Cena en restaurante", food, sep(18), oct(15), BigDecimal("96.00"), PEN,
+        ),
+        MockCreditPurchase(
+            "p3", mastercard, "Audífonos", leisure, sep(20), oct(15), BigDecimal("189.90"), PEN,
+        ),
+        MockCreditPurchase(
+            "p4", mastercard, "Suscripción de software", other, sep(25), oct(15),
+            BigDecimal("12.00"), USD,
         ),
     )
 }
+
+/** Currencies owed, [main] first. */
+fun List<MockCreditPurchase>.debtCurrencies(main: String): List<String> =
+    map { it.currency }.distinct().sortedBy { it != main }
+
+/** Debt in [currency]; currencies are never mixed. */
+fun List<MockCreditPurchase>.debtIn(currency: String): BigDecimal =
+    filter { it.currency == currency }.fold(BigDecimal.ZERO) { acc, purchase -> acc + purchase.amount }
 
 fun List<MockCategoryTotal>.total(): BigDecimal = fold(BigDecimal.ZERO) { acc, item -> acc + item.total }
 
@@ -186,18 +228,66 @@ fun percentOf(part: BigDecimal, whole: BigDecimal): BigDecimal =
     if (whole.signum() == 0) BigDecimal.ZERO
     else part.multiply(BigDecimal(100)).divide(whole, 1, RoundingMode.HALF_UP)
 
-/** Converts between PEN and USD with the manual sample rate. Rounds once, at the end. */
-fun convert(amount: BigDecimal, from: String, to: String): BigDecimal = when {
-    from == to -> amount
-    from == USD -> amount.multiply(SampleData.usdToPen)
-    else -> amount.divide(SampleData.usdToPen, 10, RoundingMode.HALF_UP)
-}.setScale(2, RoundingMode.HALF_UP)
+/**
+ * The user's two currencies (Ajustes) and the manual rate between them:
+ * [rate] = units of [main] per 1 unit of [secondary] (1 US$ = S/ 3.20).
+ */
+data class MockFx(
+    val main: String = PEN,
+    val secondary: String = USD,
+    val rate: BigDecimal = SampleData.usdToPen,
+) {
+    /** The other currency of the pair. */
+    fun other(currency: String): String = if (currency == main) secondary else main
 
-/** Savings total of the included accounts, shown in [currency]. */
-fun List<MockAccount>.savingsTotal(currency: String): BigDecimal {
-    val totalPen = filter { it.includeInSavings }.fold(BigDecimal.ZERO) { acc, account ->
-        acc + if (account.currency == USD) account.balance.multiply(SampleData.usdToPen)
-        else account.balance
+    /** Same pair the other way round, with the inverse rate. */
+    private fun swapped() = MockFx(
+        main = secondary,
+        secondary = main,
+        rate = BigDecimal.ONE.divide(rate, 6, RoundingMode.HALF_UP),
+    )
+
+    /**
+     * New main currency. The two currencies are never the same: picking the secondary one swaps
+     * them. Any other change leaves no known rate, so it restarts at 1 for the user to type.
+     */
+    fun withMain(code: String): MockFx = when (code) {
+        main -> this
+        secondary -> swapped()
+        else -> copy(main = code, rate = BigDecimal.ONE)
     }
-    return convert(totalPen, PEN, currency)
+
+    /** New secondary currency; same rules as [withMain]. */
+    fun withSecondary(code: String): MockFx = when (code) {
+        secondary -> this
+        main -> swapped()
+        else -> copy(secondary = code, rate = BigDecimal.ONE)
+    }
+
+    /** Unrounded; null when [from] or [to] is outside the pair (there is no rate for it). */
+    private fun raw(amount: BigDecimal, from: String, to: String): BigDecimal? = when {
+        from == to -> amount
+        from == secondary && to == main -> amount.multiply(rate)
+        from == main && to == secondary -> amount.divide(rate, 10, RoundingMode.HALF_UP)
+        else -> null
+    }
+
+    /** Rounds once, at the end. */
+    fun convert(amount: BigDecimal, from: String, to: String): BigDecimal? =
+        raw(amount, from, to)?.setScale(2, RoundingMode.HALF_UP)
+
+    /** Units of [to] per 1 unit of [from], or null outside the pair. */
+    fun rateBetween(from: String, to: String): BigDecimal? =
+        raw(BigDecimal.ONE, from, to)?.setScale(6, RoundingMode.HALF_UP)
+
+    /**
+     * Savings total of the included accounts, shown in [currency]. Accounts in a currency
+     * outside the pair are left out: there is no rate to convert them.
+     */
+    fun savingsTotal(accounts: List<MockAccount>, currency: String): BigDecimal =
+        accounts.filter { it.includeInSavings }
+            .fold(BigDecimal.ZERO) { acc, account ->
+                acc + (raw(account.balance, account.currency, currency) ?: BigDecimal.ZERO)
+            }
+            .setScale(2, RoundingMode.HALF_UP)
 }

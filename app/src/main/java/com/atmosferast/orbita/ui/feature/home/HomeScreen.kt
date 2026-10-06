@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
@@ -36,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atmosferast.orbita.R
 import com.atmosferast.orbita.core.PEN
-import com.atmosferast.orbita.core.USD
 import com.atmosferast.orbita.core.currencySymbol
 import com.atmosferast.orbita.core.formatAmount
 import com.atmosferast.orbita.core.formatDayMonth
@@ -60,15 +60,21 @@ import com.atmosferast.orbita.ui.components.SectionTitle
 import com.atmosferast.orbita.ui.components.SegmentedControl
 import com.atmosferast.orbita.ui.components.SkeletonBlock
 import com.atmosferast.orbita.ui.components.StateMessage
+import com.atmosferast.orbita.ui.feature.credit.pendingPaymentsLabel
 import com.atmosferast.orbita.ui.mock.MockAccount
 import com.atmosferast.orbita.ui.mock.MockEntry
+import com.atmosferast.orbita.ui.mock.MockFx
+import com.atmosferast.orbita.ui.mock.MovementKind
 import com.atmosferast.orbita.ui.mock.SampleData
-import com.atmosferast.orbita.ui.mock.savingsTotal
 import com.atmosferast.orbita.ui.theme.Expense
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
 import com.atmosferast.orbita.ui.theme.Income
+import com.atmosferast.orbita.ui.theme.IncomeSoft
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
+import com.atmosferast.orbita.ui.theme.MutedLight
+import com.atmosferast.orbita.ui.theme.Orange
+import com.atmosferast.orbita.ui.theme.OrangeSoft
 import com.atmosferast.orbita.ui.theme.OrbitaTheme
 import java.math.BigDecimal
 
@@ -77,11 +83,13 @@ enum class HomeState { CONTENT, LOADING, EMPTY, ERROR }
 @Composable
 fun HomeScreen(
     accounts: List<MockAccount>,
+    fx: MockFx,
     displayCurrency: String,
     onDisplayCurrencyChange: (String) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAccounts: () -> Unit,
     onOpenCredit: () -> Unit,
+    onOpenReport: (MovementKind) -> Unit,
     onOpenMovements: () -> Unit,
     onEntryClick: (MockEntry) -> Unit,
     modifier: Modifier = Modifier,
@@ -92,7 +100,7 @@ fun HomeScreen(
         header = {
             ScreenHeader(
                 title = stringResource(R.string.home_title),
-                overline = stringResource(R.string.home_overline),
+                subtitle = stringResource(R.string.home_subtitle),
                 action = {
                     CircleIconButton(
                         OrbitaIcons.Settings,
@@ -114,12 +122,13 @@ fun HomeScreen(
             )
 
             else -> {
-                SavingsHeroCard(accounts, displayCurrency, onDisplayCurrencyChange, onOpenAccounts)
+                SavingsHeroCard(accounts, fx, displayCurrency, onDisplayCurrencyChange, onOpenAccounts)
                 Spacer(Modifier.height(12.dp))
                 val empty = state == HomeState.EMPTY
                 MonthCards(
                     income = if (empty) BigDecimal.ZERO else SampleData.monthIncome,
                     expense = if (empty) BigDecimal.ZERO else SampleData.monthExpense,
+                    onOpenReport = onOpenReport,
                 )
                 HintText(
                     stringResource(R.string.home_month_note),
@@ -153,17 +162,18 @@ fun HomeScreen(
 @Composable
 private fun SavingsHeroCard(
     accounts: List<MockAccount>,
+    fx: MockFx,
     displayCurrency: String,
     onDisplayCurrencyChange: (String) -> Unit,
     onOpenAccounts: () -> Unit,
 ) {
-    val otherCurrency = if (displayCurrency == PEN) USD else PEN
-    val total = accounts.savingsTotal(displayCurrency)
-    HeroCard {
+    val otherCurrency = fx.other(displayCurrency)
+    val total = fx.savingsTotal(accounts, displayCurrency)
+    HeroCard(scrim = true) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             HeroLabel(stringResource(R.string.savings_total), Modifier.weight(1f))
             SegmentedControl(
-                options = listOf(PEN to "S/", USD to "US$"),
+                options = listOf(fx.main, fx.secondary).map { it to currencySymbol(it) },
                 selected = displayCurrency,
                 onSelect = onDisplayCurrencyChange,
                 fill = false,
@@ -171,30 +181,25 @@ private fun SavingsHeroCard(
             )
         }
         Spacer(Modifier.height(16.dp))
-        // Smaller, softer currency symbol so the figure leads.
         Text(
-            buildAnnotatedString {
-                withStyle(
-                    SpanStyle(
-                        color = Color.White.copy(alpha = 0.72f),
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
-                ) { append(currencySymbol(displayCurrency) + " ") }
-                append(formatAmount(total))
-            },
+            formatMoney(total, displayCurrency),
             style = MaterialTheme.typography.displaySmall.copy(fontSize = 42.sp, lineHeight = 48.sp),
             color = Color.White,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Spacer(Modifier.height(10.dp))
-        HeroPill(
+        Spacer(Modifier.height(4.dp))
+        // Plain supporting line: the same total in the other currency.
+        Text(
             stringResource(
                 R.string.savings_equivalent_manual,
-                formatMoney(accounts.savingsTotal(otherCurrency), otherCurrency),
-                formatRate(SampleData.usdToPen),
+                formatMoney(fx.savingsTotal(accounts, otherCurrency), otherCurrency),
+                formatRate(fx.rate),
             ),
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White.copy(alpha = 0.85f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.height(18.dp))
         Row(
@@ -239,36 +244,77 @@ private fun SavingsHeroCard(
 }
 
 @Composable
-private fun MonthCards(income: BigDecimal, expense: BigDecimal) {
-    val month = monthName(SampleData.today)
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+private fun MonthCards(
+    income: BigDecimal,
+    expense: BigDecimal,
+    onOpenReport: (MovementKind) -> Unit,
+) {
+    val month = monthName(SampleData.today).replaceFirstChar { it.uppercase() }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         MonthCard(
-            label = stringResource(R.string.home_month_income, month),
+            icon = OrbitaIcons.TrendUp,
+            label = stringResource(R.string.home_month_income),
+            month = month,
             amount = formatSignedMoney(income, PEN, positive = true),
             color = Income,
-            modifier = Modifier.weight(1f),
+            container = IncomeSoft,
+            onClick = { onOpenReport(MovementKind.INCOME) },
         )
         MonthCard(
-            label = stringResource(R.string.home_month_expense, month),
+            icon = OrbitaIcons.TrendDown,
+            label = stringResource(R.string.home_month_expense),
+            month = month,
             amount = formatSignedMoney(expense, PEN, positive = false),
             color = Expense,
-            modifier = Modifier.weight(1f),
+            container = ExpenseSoft,
+            onClick = { onOpenReport(MovementKind.EXPENSE) },
         )
     }
 }
 
+/** Opens the report of the current month; the month reads lighter than the label. */
 @Composable
-private fun MonthCard(label: String, amount: String, color: Color, modifier: Modifier = Modifier) {
-    OrbitaCard(modifier = modifier) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Muted, maxLines = 1)
-        Spacer(Modifier.height(6.dp))
-        Text(
-            amount,
-            style = MaterialTheme.typography.titleMedium,
-            color = color,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+private fun MonthCard(
+    icon: ImageVector,
+    label: String,
+    month: String,
+    amount: String,
+    color: Color,
+    container: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OrbitaCard(modifier = modifier, onClick = onClick) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconBadge(icon, color, container)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    buildAnnotatedString {
+                        append(label)
+                        withStyle(SpanStyle(color = MutedLight)) { append(" · $month") }
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Muted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    amount,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = color,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Icon(
+                OrbitaIcons.ChevronRight,
+                contentDescription = null,
+                tint = MutedLight,
+                modifier = Modifier.size(20.dp),
+            )
+        }
     }
 }
 
@@ -276,10 +322,9 @@ private fun MonthCard(label: String, amount: String, color: Color, modifier: Mod
 @Composable
 private fun CreditReminderCard(onClick: () -> Unit) {
     val purchases = SampleData.creditPurchases
-    val nextDue = purchases.minOf { it.dueDate }
     OrbitaCard(onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconBadge(OrbitaIcons.CreditCard, Expense, ExpenseSoft)
+            IconBadge(OrbitaIcons.CreditCard, Orange, OrangeSoft)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
@@ -288,11 +333,7 @@ private fun CreditReminderCard(onClick: () -> Unit) {
                     color = Ink,
                 )
                 Text(
-                    stringResource(
-                        R.string.home_credit_pending,
-                        purchases.size,
-                        formatDayMonth(nextDue),
-                    ),
+                    pendingPaymentsLabel(purchases),
                     style = MaterialTheme.typography.bodySmall,
                     color = Muted,
                 )
@@ -341,11 +382,13 @@ private fun HomePreviewContent(state: HomeState) {
     OrbitaTheme {
         HomeScreen(
             accounts = SampleData.accounts,
+            fx = MockFx(),
             displayCurrency = currency,
             onDisplayCurrencyChange = { currency = it },
             onOpenSettings = {},
             onOpenAccounts = {},
             onOpenCredit = {},
+            onOpenReport = {},
             onOpenMovements = {},
             onEntryClick = {},
             state = state,

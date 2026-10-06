@@ -16,8 +16,8 @@ Los wireframes son orientativos. Las medidas de la maqueta están en px de un li
 | `primary` | `#1D4ED8` | Acciones, selección, botón principal |
 | `primarySoft` | `#E8EEFD` | Fondos suaves de iconos/botones secundarios |
 | `heroGradientStart` / `Mid` / `End` / `heroGlow` | `#3B1D8F` / `#1D4ED8` / `#0E7490` / `#67E8F9` | Degradado diagonal (violeta → azul → verde azulado) y brillo de las tarjetas de **ahorro** (Inicio y Cuentas); texto `#FFFFFF`, superficies translúcidas blanco 14 % |
-| `creditGradientStart` / `Mid` / `End` | `#FDE047` / `#FBBF24` / `#F59E0B` | Degradado diagonal (amarillo → ámbar → naranja ámbar) de la tarjeta "Por pagar" de **Crédito**; brillo blanco y texto oscuro `#0E1A2B` |
-| `income` / `incomeSoft` | `#0B7A5A` / `#E3F4EE` | Ingresos |
+| `creditGradientStart` / `Mid` / `End` | `#FDE047` / `#FBBF24` / `#F59E0B` | Degradado diagonal (amarillo → ámbar → naranja ámbar) de **Crédito**; brillo blanco. En "Deuda total" lleva encima un velo vertical negro (0 % → 80 %, el mismo de las tarjetas de ahorro de Inicio y Cuentas) y texto blanco; en el inicio de sesión va sin velo y con texto oscuro `#0E1A2B` |
+| `income` / `incomeSoft` | `#2EAD5B` / `#E6F6EC` | Ingresos |
 | `expense` / `expenseSoft` | `#E53935` / `#FDECEA` | Egresos y vencimientos urgentes |
 | `neutral` / `neutralSoft` | `#3B4A60` / `#EEF1F5` | Transferencias, chips inactivos |
 | `chipBorder` | `#CBD3DE` | Borde de chips sin seleccionar |

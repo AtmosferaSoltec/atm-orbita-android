@@ -90,6 +90,7 @@ fun ScreenHeader(
     title: String,
     modifier: Modifier = Modifier,
     overline: String? = null,
+    subtitle: String? = null,
     action: @Composable (() -> Unit)? = null,
 ) {
     Row(
@@ -108,6 +109,14 @@ fun ScreenHeader(
                 color = Ink,
                 modifier = Modifier.semantics { heading() },
             )
+            if (subtitle != null) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Muted,
+                    modifier = Modifier.padding(top = 2.dp, end = 12.dp),
+                )
+            }
         }
         action?.invoke()
     }
@@ -244,11 +253,16 @@ enum class HeroTone(val gradient: List<Color>, val glow: Color, val content: Col
     CREDIT(listOf(CreditGradientStart, CreditGradientMid, CreditGradientEnd), Color.White, Ink),
 }
 
-/** Highlighted card (savings total, credit to pay) over a three-color gradient. */
+/**
+ * Highlighted card (savings total, credit to pay) over a three-color gradient.
+ * [scrim] darkens it from top (0 %) to bottom (80 % black); the screens use it on every tone so
+ * the cards look alike, and it is what lets white text sit on the yellow CREDIT tone.
+ */
 @Composable
 fun HeroCard(
     modifier: Modifier = Modifier,
     tone: HeroTone = HeroTone.SAVINGS,
+    scrim: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
@@ -278,6 +292,13 @@ fun HeroCard(
                         radius = size.width * 0.7f,
                     ),
                 )
+                if (scrim) {
+                    drawRect(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.80f)),
+                        ),
+                    )
+                }
             }
             .padding(20.dp),
         content = content,
@@ -509,6 +530,8 @@ fun PillButton(
             .background(container)
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(horizontal = 16.dp),
+        // Only matters when the caller stretches the pill (e.g. fillMaxWidth).
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {

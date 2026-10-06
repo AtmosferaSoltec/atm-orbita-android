@@ -42,8 +42,11 @@ object OrbitaIcons {
     )
     val ArrowUpRight = lineIcon("ArrowUpRight", "M7 17 L17 7 M8 7 h9 v9")
     val ArrowDownLeft = lineIcon("ArrowDownLeft", "M17 7 L7 17 M16 17 H7 V8")
+    val TrendUp = lineIcon("TrendUp", "M3 17 l6 -6 4 4 8 -8 M15 7 h6 v6")
+    val TrendDown = lineIcon("TrendDown", "M3 7 l6 6 4 -4 8 8 M15 17 h6 v-6")
     val ArrowDown = lineIcon("ArrowDown", "M12 5 v14 M6 13 l6 6 6 -6")
     val ArrowLeft = lineIcon("ArrowLeft", "M19 12 H5 M11 6 l-6 6 6 6")
+    val SwapVertical = lineIcon("SwapVertical", "M8 4 v15 M4 15 l4 4 4 -4 M16 20 V5 M12 9 l4 -4 4 4")
     val Swap = lineIcon("Swap", "M4 8 h15 M15 4 l4 4 -4 4 M20 16 H5 M9 12 l-4 4 4 4")
     val ChevronRight = lineIcon("ChevronRight", "M9 6 l6 6 -6 6")
     val Backspace = lineIcon(

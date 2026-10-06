@@ -32,10 +32,10 @@ Estados: **Maqueta** = pantalla navegable con datos de ejemplo, sin backend · *
 | Reportes | Reportes | MVP | Maqueta |
 | Categorías | Categorías, Nueva/Editar categoría | MVP | Maqueta |
 | Ajustes | Ajustes | MVP | Maqueta |
-| Tarjeta de crédito | Crédito, Marcar como pagada | v1.1 | Maqueta |
+| Tarjeta de crédito | Crédito, Nueva/Editar tarjeta, Marcar como pagada | v1.1 | Maqueta |
 | Base de datos (Supabase) | — | MVP | Pendiente (Fase 0) |
 
-**Qué significa "Maqueta" hoy.** Todo vive en memoria con los [datos de ejemplo](#11-datos-de-ejemplo). Funcionan de verdad: la navegación, el selector S/ ↔ US$, los interruptores de ahorro (recalculan el total), los tres campos enlazados de la transferencia, el teclado de monto de Nuevo movimiento, el filtro por cuenta y la búsqueda en la lista, y quitar de pendientes una compra al pagarla. **No** funcionan todavía: guardar/eliminar (solo cierran la pantalla), los selectores de fecha, los filtros de categoría y fechas, el selector de cuenta de la transferencia, las validaciones y el inicio de sesión real.
+**Qué significa "Maqueta" hoy.** Todo vive en memoria con los [datos de ejemplo](#11-datos-de-ejemplo). Funcionan de verdad: la navegación, el selector S/ ↔ US$, los interruptores de ahorro (recalculan el total), los tres campos enlazados de la transferencia, sus selectores de cuenta (con el botón de invertir) y su selector de fecha, el calendario de rango de Reportes, el teclado de monto de Nuevo movimiento, el filtro por cuenta y la búsqueda en la lista, y quitar de pendientes una compra al pagarla. **No** funcionan todavía: guardar/eliminar (solo cierran la pantalla), los demás selectores de fecha (movimiento, pago de crédito), los filtros de categoría y fechas, las validaciones y el inicio de sesión real.
 
 Las pantallas de Autenticación, Lista de movimientos, Editar movimiento/transferencia, Nueva/Editar cuenta y Categorías **no estaban en la maqueta original** (`docs/05`, sección 9): su diseño es una propuesta pendiente de confirmación.
 
@@ -47,7 +47,9 @@ Las pantallas de Autenticación, Lista de movimientos, Editar movimiento/transfe
 | **Movimiento** | Un **ingreso** o un **egreso** en una cuenta, con categoría, monto, fecha y descripción opcional. Hereda la moneda de su cuenta. |
 | **Categoría** | Clasifica movimientos. Es de ingreso **o** de egreso, tiene nombre y color. Al registrarse el usuario recibe: egreso → Alimentación, Transporte, Vivienda, Salud, Ocio, Otros; ingreso → Sueldo, Freelance, Otros ingresos. |
 | **Transferencia** | Mueve dinero entre dos cuentas propias distintas. **No es ingreso ni gasto.** Puede cambiar de moneda. |
-| **Compra con tarjeta de crédito** | Gasto pendiente de pago. Es un **recordatorio**: no afecta saldos, ahorros ni reportes hasta que se marca como pagada; recién entonces se crea un egreso. |
+| **Moneda principal y secundaria** | Las dos monedas del usuario, elegidas en Ajustes (por defecto soles y dólares). La principal es la de las cuentas y tarjetas nuevas; la secundaria sirve para ver equivalentes. El tipo de cambio manual es entre ambas. |
+| **Tarjeta de crédito** | Cuenta de deuda. Tiene nombre editable, **una moneda** (por defecto la principal) y se puede archivar. Las compras nuevas se registran en la moneda de su tarjeta. Agrupa compras pendientes; su deuda es la suma de esas compras, por moneda. El usuario puede tener varias. |
+| **Compra con tarjeta de crédito** | Pertenece a **una** tarjeta de crédito. Gasto pendiente de pago. Es un **recordatorio**: no afecta saldos, ahorros ni reportes hasta que se marca como pagada; recién entonces se crea un egreso. |
 | **Tipo de cambio** | Unidades de la moneda destino por 1 unidad de la moneda origen (1 US$ = S/ 3.20). En el MVP lo fija el usuario a mano. |
 | **Ahorro total** | Suma de los saldos de las cuentas no archivadas con el interruptor activado, convertida a la moneda de visualización. |
 
@@ -84,8 +86,11 @@ Los valores exactos (colores, tipografía Manrope, radios) están en `docs/05`, 
 
 - Fondo gris muy claro `#F3F5F7` y tarjetas blancas con esquinas de 20.
 - **Tarjeta destacada** (Ahorro total en Inicio, Total en ahorros en Cuentas): esquinas de 28 y fondo en **degradado diagonal de tres colores**, de arriba-izquierda a abajo-derecha: violeta `#3B1D8F` → azul `#1D4ED8` → verde azulado `#0E7490`. Encima lleva un brillo celeste (`#67E8F9` al 30 %) que nace en la esquina superior derecha y una sombra violeta en la inferior izquierda. Texto blanco; etiquetas al 85–90 % de opacidad. Las superficies interiores (píldoras, franjas) son blanco al 14 %.
-- **El color distingue ahorro de crédito.** Ese degradado violeta-azul es el de las tarjetas de **ahorro** (Inicio y Cuentas). La tarjeta "Por pagar" de **Crédito** usa la misma forma y brillo pero en **amarillos**: amarillo `#FDE047` → ámbar `#FBBF24` → naranja ámbar `#F59E0B`, con brillo blanco y **texto oscuro** `#0E1A2B` (secundario al 80 %), porque el blanco no se lee sobre amarillo.
-- Azul `#1D4ED8` para acciones y selección; verde `#0B7A5A` ingresos; rojo intenso `#E53935` (fondo suave `#FDECEA`) egresos, errores, acciones destructivas y urgencias; gris azulado `#3B4A60` transferencias.
+- **El color distingue ahorro de crédito.** Ese degradado violeta-azul es el de las tarjetas de **ahorro** (Inicio y Cuentas). La tarjeta "Deuda total" de **Crédito** usa la misma forma y brillo pero en **amarillos**: amarillo `#FDE047` → ámbar `#FBBF24` → naranja ámbar `#F59E0B`, con brillo blanco. Como el blanco no se lee sobre amarillo, hay dos variantes:
+  - **Con velo y texto blanco** (tarjeta "Deuda total" de Crédito): texto en blanco (etiqueta al 85 %, nota al 90 %) sobre el velo descrito abajo.
+  - **Sin velo y con texto oscuro** `#0E1A2B` (tarjeta flotante del inicio de sesión).
+- **Velo oscuro de las tarjetas destacadas.** Las tres tarjetas destacadas de las pantallas — "Ahorro total" (Inicio), "Total en ahorros" (Cuentas) y "Deuda total" (Crédito) — llevan sobre su degradado un **velo vertical negro del 0 % arriba al 80 % abajo**, para que se vean uniformes: el color pleno arriba y la tarjeta oscureciéndose hacia el pie. Las tarjetas flotantes del inicio de sesión no lo llevan.
+- Azul `#1D4ED8` para acciones y selección; verde intenso `#2EAD5B` (fondo suave `#E6F6EC`) ingresos; rojo intenso `#E53935` (fondo suave `#FDECEA`) egresos, errores, acciones destructivas y urgencias; gris azulado `#3B4A60` para el monto de las transferencias; celeste `#0EA5E9` (fondo suave `#E0F2FE`) para el icono de transferencias y cambios de moneda; naranja `#F97316` (fondo suave `#FFEDD5`) para el icono del aviso de tarjeta de crédito en Inicio.
 - Botón principal: ancho completo, 56 de alto, radio 18, fijo al pie de los formularios.
 - Campos: 52 de alto, radio 14, borde fino. Controles tipo píldora con radio 22.
 - Iconos de línea (trazo ~1.9), sin emojis. Áreas táctiles de al menos 48.
@@ -101,7 +106,7 @@ Componentes reutilizados en toda la app:
 | **Chip** | Píldora seleccionable; seleccionada = fondo azul y texto blanco. |
 | **Fila con interruptor** | Texto + interruptor; toda la fila es táctil. |
 | **Campo selector** | Campo de solo lectura con icono (calendario) que abre un selector nativo. |
-| **Fila de movimiento** | Icono en recuadro de color suave (↙ ingreso verde, ↗ egreso rojo, ⇄ transferencia gris), título, subtítulo y monto a la derecha. |
+| **Fila de movimiento** | Icono en recuadro de color suave (**↗ ingreso verde, flecha hacia arriba; ↙ egreso rojo, flecha hacia abajo**; ⇄ transferencia o cambio de moneda **celeste** `#0EA5E9` sobre `#E0F2FE`), título, subtítulo y monto a la derecha. El monto de la transferencia sigue en gris azulado. |
 | **Diálogo de confirmación** | Título, texto, "Cancelar" y la acción destructiva en rojo. |
 | **Mensaje de estado** | Icono + título + texto + acción opcional, para vacío y error. |
 
@@ -118,7 +123,8 @@ Con sesión:   barra inferior  Inicio · Cuentas · [ + ] · Reportes · Crédit
 | Barra inferior | Botón central **+** | Nuevo movimiento |
 | Inicio | Engranaje | Ajustes |
 | Inicio | "Elegir ›" en la tarjeta de ahorro | pestaña Cuentas |
-| Inicio | Tarjeta "Tarjeta de crédito" | pestaña Crédito |
+| Inicio | Tarjeta "Tarjetas de Crédito" | pestaña Crédito |
+| Inicio | Tarjeta "Ingresos · mes" o "Gastos · mes" | pestaña Reportes (mes actual, con ese detalle primero) |
 | Inicio | "Ver todos" | Lista de movimientos |
 | Inicio / Lista | Tocar un movimiento | Editar movimiento |
 | Inicio / Lista | Tocar una transferencia | Editar transferencia |
@@ -129,6 +135,9 @@ Con sesión:   barra inferior  Inicio · Cuentas · [ + ] · Reportes · Crédit
 | Transferir | Pestaña "Egreso" o "Ingreso" | Nuevo movimiento (reemplaza la pantalla) |
 | Crédito | "Registrar compra con tarjeta" | Nuevo movimiento con el interruptor de crédito activado |
 | Crédito | "Marcar como pagada" | Marcar como pagada |
+| Crédito | Tocar la fila superior de una tarjeta | repliega o despliega ese bloque (no navega) |
+| Crédito | "Editar tarjeta" (dentro del bloque desplegado) | Editar tarjeta |
+| Crédito | "Nueva tarjeta de crédito" | Nueva tarjeta |
 | Ajustes | "Gestionar categorías" | Categorías → Nueva/Editar categoría |
 | Ajustes | "Cerrar sesión" | Iniciar sesión (se borra el historial) |
 
@@ -158,22 +167,23 @@ Cada pantalla indica: qué muestra, cómo se comporta, validaciones, estados y q
 
 **Muestra, de arriba abajo:**
 
-1. Encabezado: "Resumen" (pequeño) y "Inicio" (título); a la derecha el botón de Ajustes.
+1. Encabezado, arriba a la izquierda: **"👋 Bienvenido"** (título, con el emoji de saludo al inicio; es la única excepción a la regla de no usar emojis) y debajo, en gris y tamaño de cuerpo (14), "Revisa cómo van tus finanzas"; a la derecha el botón de Ajustes.
 2. **Tarjeta "Ahorro total"**, la pieza principal de la pantalla:
    - Fondo: la **tarjeta destacada con degradado** de tres colores (violeta → azul → verde azulado) descrita en la sección 5. Todo el texto es blanco.
-   - Arriba: "Ahorro total" y, a la derecha, el selector `S/ | US$` sobre una pista translúcida (opción elegida en blanco).
-   - El total en grande (42, peso 800): el símbolo de moneda va más pequeño (24) y con 72 % de opacidad para que destaque la cifra.
-   - Debajo, en una **píldora translúcida** (blanco al 14 %): el equivalente en la otra moneda y el cambio usado (`≈ US$ 2,239.47 · cambio 3.20 (manual)`).
+   - Arriba: "Ahorro total" y, a la derecha, el selector `[principal] | [secundaria]` (por defecto `S/ | US$`; las dos monedas de Ajustes) sobre una pista translúcida (opción elegida en blanco).
+   - El total en grande (42, peso 800): el **símbolo de moneda va al mismo tamaño y color que la cifra** (`S/ 7,166.30`).
+   - Justo debajo, como **texto de apoyo sin píldora ni fondo** (14, blanco al 85 %): el mismo total en la otra moneda y el cambio usado, introducido por "o" en lugar de `≈`: `o US$ 2,239.47 · cambio 3.20 (manual)`.
    - Al pie, una **franja translúcida** táctil con icono de billetera: "4 de 5 cuentas incluidas" y "Elegir ›".
-3. Dos tarjetas: **"Ingresos · octubre"** (`+S/ 3,500.00`, verde) y **"Gastos · octubre"** (`−S/ 30.50`, rojo).
+3. Dos tarjetas de ancho completo, **una sobre otra** (separación de 10): **"Ingresos · Octubre"** (`+S/ 3,500.00`, verde) y debajo **"Gastos · Octubre"** (`−S/ 30.50`, rojo). Cada una lleva a la izquierda un icono en recuadro de color suave — **línea de tendencia hacia arriba** en ingresos (verde), **hacia abajo** en gastos (rojo) — y a su derecha la etiqueta (14, peso 700; antes 12) con el monto debajo (20, peso 800, en su color; antes 16). En la etiqueta, "Ingresos"/"Gastos" va en gris `#5B6778` y el **mes, con mayúscula inicial, en un gris más claro** `#94A0B2` (igual que el "·" que lo precede). A la derecha, una flecha **›** en ese gris claro indica que la tarjeta es táctil.
 4. Nota: "Las transferencias y las compras de tarjeta pendientes no entran aquí."
-5. **Tarjeta "Tarjeta de crédito"** (v1.1, solo si hay pendientes): "4 compras pendientes · vence 5 oct" (la fecha límite más próxima).
+5. **Tarjeta "Tarjetas de Crédito"** (v1.1, solo si hay pendientes), con el icono de tarjeta en **naranja** `#F97316` sobre fondo naranja suave `#FFEDD5`: "4 pagos pendientes · vence 5 oct" (pagos pendientes de todas las tarjetas y la fecha límite más próxima).
 6. **"Últimos movimientos"** con "Ver todos": los 4–5 más recientes, movimientos y transferencias mezclados, por fecha descendente.
 
 **Comportamiento:**
 
 - El selector cambia la moneda del total; la línea secundaria muestra siempre la otra. La elección es la misma que en Ajustes y en Cuentas.
 - "N de M cuentas": N = cuentas con el interruptor activado, M = cuentas no archivadas.
+- Tocar una tarjeta del mes abre la pestaña **Reportes** en modo "Por mes", con el **mes actual** seleccionado y el detalle de lo tocado primero: desde "Ingresos" va arriba "Tus fuentes de ingreso"; desde "Gastos", "Dónde gastas más" (ver 7.8).
 - Tarjetas del mes: totales del **mes calendario actual**. Con una sola moneda se muestra esa; con varias, el total de la moneda predeterminada sin convertir (o un renglón por moneda).
 - Fila de movimiento: título = descripción, o el nombre de la categoría si está vacía. Subtítulo = `categoría · cuenta · fecha corta`; si el título ya es la categoría, en su lugar va "Ingreso" o "Egreso". Monto con signo y color.
 - Fila de transferencia: título = nota (o "Transferencia"); subtítulo = `origen → destino · fecha`; monto `US$ 20.00 → S/ 64.00` entre monedas distintas, o un solo monto si es la misma.
@@ -184,7 +194,7 @@ Cada pantalla indica: qué muestra, cómo se comporta, validaciones, estados y q
 
 ### 7.3 Cuentas
 
-**Muestra:** título "Cuentas" y botón "Transferir"; tarjeta destacada con degradado "Total en ahorros · 4 de 5 cuentas" con el total y, en una píldora translúcida, el equivalente (`≈ US$ 2,239.47 · cambio 3.20`); una tarjeta por cuenta; botón de borde punteado "+ Nueva cuenta"; texto de ayuda.
+**Muestra:** título "Cuentas" y botón "Transferir"; tarjeta destacada con degradado "Total en ahorros · 4 de 5 cuentas" con el total y, justo debajo, como texto de apoyo sin píldora ni fondo (14, blanco al 85 %), el equivalente introducido por "o" (`o US$ 2,239.47 · cambio 3.20`), igual que en Inicio; una tarjeta por cuenta; botón de borde punteado "+ Nueva cuenta"; texto de ayuda.
 
 **Tarjeta de cuenta:** icono según tipo (billete = efectivo, banco = débito/ahorro, signo de dólar = cualquier cuenta en USD, billetera = otra), nombre, subtítulo `tipo · moneda` ("Ahorro · dólares"), saldo a la derecha y, si la cuenta no está en soles, `≈ S/ 800.00` debajo. Bajo un divisor, la fila "Contar en el total de ahorros" con su interruptor.
 
@@ -198,7 +208,7 @@ Cada pantalla indica: qué muestra, cómo se comporta, validaciones, estados y q
 |---|---|---|
 | Nombre | obligatorio, 1–60 caracteres | editable |
 | Tipo | chips Efectivo / Débito / Ahorro / Otra (por defecto Débito) | editable |
-| Moneda | chips Soles (S/) / Dólares (US$) (por defecto Soles) | **bloqueada**, con el aviso "La moneda no se puede cambiar porque la cuenta ya tiene movimientos." |
+| Moneda | **desplegable** con las monedas admitidas (ver 7.12); por defecto, la **moneda predeterminada** del usuario | **bloqueada**, con el aviso "La moneda no se puede cambiar porque la cuenta ya tiene movimientos." |
 | Saldo inicial | opcional, ≥ 0, con el símbolo de la moneda elegida | no se muestra |
 | Contar en el total de ahorros | interruptor, activado | editable |
 
@@ -239,7 +249,7 @@ Botón al pie: "Guardar cuenta" / "Guardar cambios". En Editar hay además **"Ar
 - Cambiar entre Egreso e Ingreso cambia la lista de categorías, **selecciona la primera** y cambia el color del monto (verde en ingreso).
 - Tocar "Transferencia" abre la pantalla Transferir en lugar de esta.
 - El símbolo del monto sigue la moneda de la cuenta elegida.
-- Con el interruptor de crédito **activado**: se oculta el desplegable de cuenta, aparece el campo "Fecha límite de pago" dentro de la tarjeta y el botón dice "Guardar compra pendiente". Se guarda una compra pendiente, **no** un movimiento.
+- Con el interruptor de crédito **activado**: se oculta el desplegable de cuenta, aparecen dentro de la tarjeta el desplegable **"Tarjeta"** (las tarjetas de crédito no archivadas; por defecto la primera) y el campo "Fecha límite de pago", y el botón dice "Guardar compra pendiente". Se guarda una compra pendiente, **no** un movimiento.
 - Texto del botón: "Guardar egreso" / "Guardar ingreso" / "Guardar compra pendiente" / "Guardar cambios" (Editar).
 - La papelera pide confirmación: "¿Eliminar este movimiento?" — "Dejará de contar en tus saldos y reportes."
 - Al guardar o eliminar se vuelve a la pantalla anterior y se actualizan saldos y listas.
@@ -254,16 +264,19 @@ Botón al pie: "Guardar cuenta" / "Guardar cambios". En Editar hay además **"Ar
 
 1. Barra superior con **X** y "Transferir" (papelera en Editar).
 2. Control segmentado con "Transferencia" seleccionada (no aparece en Editar).
-3. Tarjeta **Desde** y tarjeta **Hacia**, cada una con icono, nombre de la cuenta y "Saldo S/ …"; entre ambas, un círculo con flecha hacia abajo.
+3. **Desde** y **Hacia**: dos **desplegables** de cuenta (el mismo componente que en Nuevo movimiento), cada uno con su etiqueta encima y mostrando icono, nombre y saldo de la cuenta elegida. Entre ambos, centrado, un **botón circular "Invertir cuentas"** (48, borde fino, icono azul de dos flechas verticales opuestas).
 4. Tarjeta de montos: **"Monto que sale"** (grande, moneda de origen) · **"Tipo de cambio · editable"** con `1 US$ = S/ [3.20]` y a la derecha "Referencia · manual 3.20" · **"Monto que entra · editable"** (moneda de destino).
 5. Ayuda: "Si el banco aplicó otro cambio, edita el tipo de cambio o el monto que entra y el otro valor se recalcula."
 6. **"Saldos después de transferir"**: los dos saldos resultantes.
-7. **Fecha** (hoy, editable) y **Nota (opcional)**.
+7. **Fecha**: por defecto **la del día**; tocar el campo abre el selector de fecha nativo ("Aceptar" / "Cancelar") para cambiarla. En Editar muestra la fecha de la transferencia. Debajo, **Nota (opcional)**.
 8. Botón "Guardar transferencia" / "Guardar cambios".
 
 **Comportamiento:**
 
-- Tocar Desde o Hacia abre un selector de cuenta; no se puede elegir la misma en ambas.
+- Tocar Desde o Hacia abre la lista de **todas las cuentas no archivadas**; se puede elegir cualquiera como origen y cualquiera como destino.
+- **Nunca queda la misma cuenta en ambos lados:** si en un lado se elige la cuenta que está en el otro, las dos se **intercambian**.
+- El botón "Invertir cuentas" intercambia origen y destino.
+- Cada vez que cambia una cuenta (o se invierten), el tipo de cambio vuelve al **manual vigente** para el nuevo par de monedas y "Monto que entra" se recalcula a partir de "Monto que sale"; un cambio escrito a mano antes se pierde.
 - **Misma moneda:** se ocultan el tipo de cambio y "Monto que entra"; entra lo mismo que sale.
 - **Monedas distintas:** el cambio sugerido es el vigente y los tres campos están enlazados:
   - cambia "sale" o el cambio → `entra = redondear(sale × cambio, 2)`;
@@ -291,13 +304,13 @@ Botón al pie: "Guardar cuenta" / "Guardar cambios". En Editar hay además **"Ar
 
 1. Título "Reportes" y la etiqueta inactiva "PDF · próximamente".
 2. Control segmentado **Por mes | Rango de fechas**.
-3. Por mes: tarjeta con flecha ‹, icono de calendario, "Septiembre 2026" y "1 – 30 sep", flecha ›. Por rango: campos **Desde** y **Hasta**.
+3. Por mes: tarjeta con flecha ‹ a la izquierda, flecha › a la derecha y, **centrados** entre ambas, "Septiembre 2026" con "1 – 30 sep" debajo (sin icono de calendario). Por rango: campos **Desde** y **Hasta** (por defecto, del primer al último día del mes del reporte). Tocar **cualquiera de los dos** abre **un único calendario de rango**: se toca el día de inicio y luego el de fin, y los días intermedios quedan resaltados. El calendario lleva el título "Elige el rango de fechas", un encabezado con el rango elegido (`1 sep – 30 sep`; muestra "Desde" o "Hasta" mientras falte ese extremo), y los botones "Cancelar" y "Aceptar". **"Aceptar" solo se activa con las dos fechas elegidas.** Al aceptar, se actualizan Desde y Hasta y el reporte.
 4. Tarjeta resumen: **Ingresos** (verde) y **Gastos** (rojo) lado a lado; debajo "Balance del periodo" con signo (verde si ≥ 0, rojo si es negativo).
 5. **"Dónde gastas más"**: por categoría, punto de color, nombre, `S/ 800.00 · 37.2%` y una barra horizontal.
 6. **"Tus fuentes de ingreso"**: igual, con categorías de ingreso.
 7. Nota: "Las compras con tarjeta aparecen aquí solo cuando las marcas como pagadas. Las transferencias entre tus cuentas no cuentan como ingreso ni gasto."
 
-**Comportamiento:** las flechas cambian de mes (por defecto, el actual). Barras ordenadas de mayor a menor, con ancho = porcentaje sobre el total **de esa moneda** y el color de la categoría. Con varias monedas en el periodo se repiten los bloques por moneda, soles primero.
+**Comportamiento:** las flechas cambian de mes (por defecto, el actual). Si se llega desde una tarjeta del mes de Inicio, se abre en "Por mes" con el mes actual y, si la tarjeta era la de **Ingresos**, el bloque "Tus fuentes de ingreso" se muestra **antes** que "Dónde gastas más" (desde Gastos se mantiene el orden normal). Al entrar por la barra inferior el orden es siempre el normal. Barras ordenadas de mayor a menor, con ancho = porcentaje sobre el total **de esa moneda** y el color de la categoría. Con varias monedas en el periodo se repiten los bloques por moneda, soles primero.
 
 **Estados:** sin datos → "No hay movimientos en este periodo" · cargando · error.
 
@@ -305,9 +318,23 @@ Botón al pie: "Guardar cuenta" / "Guardar cambios". En Editar hay además **"Ar
 
 ### 7.9 Tarjeta de crédito (v1.1)
 
-**Muestra:** "Compras pendientes de pago" (pequeño) y "Tarjeta de crédito"; tarjeta destacada en **degradado amarillo con texto oscuro** (sección 5) **"Por pagar"** con el total en soles en grande, `+ US$ 12.00` debajo si hay compras en dólares, y la nota "No cuenta en tus saldos ni en tus reportes hasta que la marques como pagada."; botón "+ Registrar compra con tarjeta"; "Ordenadas por fecha límite"; una tarjeta por compra.
+Funciona **igual que Cuentas, pero para deudas**: un total arriba y, debajo, la deuda subdividida por **tarjeta de crédito** (una persona puede tener varias, de distintas marcas o bancos).
 
-**Tarjeta de compra:** descripción y monto; `categoría · compra 10 sep`; chip de vencimiento; botón "✓ Marcar como pagada".
+**Muestra:** "Deudas pendientes de pago" (pequeño) y **"Tarjetas de Crédito"** (título, en plural porque pueden ser varias); tarjeta destacada en **degradado amarillo con velo oscuro y texto blanco** (sección 5) **"Deuda total · 2 tarjetas"** con el total en la **moneda principal** en grande y, debajo, una línea `+ US$ 12.00` por cada otra moneda en la que haya deuda, y la nota "No cuenta en tus saldos ni en tus reportes hasta que la marques como pagada."; botón "+ Registrar compra con tarjeta"; **un bloque por tarjeta de crédito**; botón de borde punteado "+ Nueva tarjeta de crédito"; texto de ayuda "Cada compra pertenece a una tarjeta. La deuda total suma todas tus tarjetas, sin mezclar monedas."
+
+**Bloque de tarjeta de crédito:** arriba, una fila táctil con icono de tarjeta — **rojo** sobre fondo rojo suave si la tarjeta tiene algún pago **urgente** (vence en 3 días o menos, o ya venció), **azul** sobre azul suave si no —, el **nombre** de la tarjeta y, debajo, en **dos líneas**: la cantidad de pagos pendientes (`2 pagos pendientes`) y la fecha límite más próxima (`Vence 5 oct`, en rojo si es urgente). Una tarjeta sin deuda muestra solo "Sin pagos pendientes", con el icono azul y, a la derecha, **su deuda** en la moneda de la tarjeta, con una línea `+ US$ 12.00` debajo por cada otra moneda que deba (si solo debe en otra moneda, esa es el monto principal). Debajo, separadas por divisores, **sus compras pendientes**, ordenadas por fecha límite.
+
+**Compra pendiente (dentro del bloque):** descripción y monto; `categoría · compra 10 sep`; chip de vencimiento; botón "✓ Marcar como pagada".
+
+**Orden de los bloques:** primero la tarjeta con la fecha límite más próxima; las tarjetas sin deuda van al final.
+
+**Nueva tarjeta / Editar tarjeta:** formulario con **Nombre** (obligatorio, 1–60 caracteres, placeholder "Ej. Visa Clásica"), **Moneda** (desplegable con las monedas admitidas de 7.12; en una tarjeta nueva arranca en la **moneda principal** del usuario; ayuda "Las compras que registres con esta tarjeta usarán esta moneda.") y botón "Guardar tarjeta" / "Guardar cambios". En Editar hay además "Archivar tarjeta" (rojo suave) con el texto "La tarjeta deja de aparecer en las listas, pero conserva sus compras." y diálogo de confirmación "¿Archivar esta tarjeta?". Se abre con "+ Nueva tarjeta de crédito" o con "Editar tarjeta" dentro de un bloque desplegado.
+
+**Replegar y desplegar:** cada bloque es plegable. Tocar su fila superior alterna entre **replegado** (solo icono, nombre, subtítulo y deuda) y **desplegado** (además, sus compras pendientes y, al final, tras un divisor, el enlace centrado "✎ Editar tarjeta"). A la derecha de la deuda hay una flecha **⌄** que gira 180° al desplegar; el contenido aparece y desaparece con animación. Por defecto, las tarjetas **con** pagos pendientes empiezan desplegadas y las que no deben nada, replegadas. El estado de cada bloque se conserva al rotar la pantalla.
+
+**Botón "Marcar como pagada":** ocupa **todo el ancho** del bloque (respetando su padding de 16), con el icono y el texto centrados.
+
+**"Pagos pendientes":** es la cantidad de compras aún sin pagar (cada compra se paga por separado con "Marcar como pagada"). El texto usa singular y plural: "1 pago pendiente", "2 pagos pendientes"; "1 tarjeta", "2 tarjetas".
 
 **Chip de vencimiento:**
 
@@ -320,11 +347,11 @@ Botón al pie: "Guardar cuenta" / "Guardar cambios". En Editar hay además **"Ar
 | −1 | "Vencida hace 1 día" | rojo |
 | menos de −1 | "Vencida hace 2 días" | rojo |
 
-**Comportamiento:** totales por moneda, sin mezclar. Orden por fecha límite ascendente.
+**Comportamiento:** totales por moneda, sin mezclar, tanto en la deuda total como en cada tarjeta. Al pagar una compra, baja la deuda de su tarjeta y la deuda total.
 
-**Estados:** vacío → "No tienes compras pendientes".
+**Estados:** sin tarjetas → "Aún no tienes tarjetas de crédito" · tarjeta sin deuda → "Sin pagos pendientes" y sin lista de compras.
 
-**Backend:** `credit_purchases` con `status = 'pending'`.
+**Backend:** `credit_purchases` con `status = 'pending'`, agrupadas por tarjeta. **Pendiente en `docs/03`:** hoy el esquema no tiene tarjetas de crédito; hace falta una tabla nueva (p. ej. `credit_cards`: nombre, archivada) y una columna en `credit_purchases` que apunte a ella, con su RLS, en una migración versionada.
 
 ### 7.10 Marcar como pagada (v1.1)
 
@@ -348,8 +375,15 @@ Botón al pie: "Guardar cuenta" / "Guardar cambios". En Editar hay además **"Ar
 
 **Muestra, por secciones:**
 
-- **Monedas:** "Moneda predeterminada · Soles (S/)" y "Ver ahorro total en" con el selector `S/ | US$` (el mismo valor que en Inicio).
-- **Tipo de cambio:** control **Manual | Automático · pronto** (Automático aún no se puede elegir); `1 US$ = S/ [3.20]` editable; "Equivale a 1 S/ = US$ 0.3125"; ayuda: "Se usa para el total de ahorros y como valor sugerido en las transferencias. Puedes cambiarlo cuando quieras."
+- **Monedas:** el usuario trabaja con **dos monedas**, ambas elegibles con un desplegable (la app se usa en distintos países):
+  - **"Moneda predeterminada"** (la *principal*; por defecto soles), con la ayuda "Es la moneda con la que se crean tus cuentas nuevas. Puedes cambiarla cuando quieras; tus cuentas actuales conservan la suya."
+  - **"Moneda secundaria"** (por defecto **dólares**), con la ayuda "Sirve para ver el equivalente de tus ahorros en otra moneda. El tipo de cambio de abajo es entre estas dos monedas."
+  - **"Ver ahorro total en"** con un selector de dos opciones: `[principal] | [secundaria]` (p. ej. `S/ | US$`; el mismo valor que en Inicio).
+  - **Las dos monedas nunca coinciden:** si en un desplegable se elige la moneda que está en el otro, se **intercambian** (y el tipo de cambio pasa a su inverso). Si se elige cualquier otra moneda, **el tipo de cambio vuelve a 1.00** porque no hay valor conocido para el nuevo par, y el usuario debe escribirlo. Si la moneda en la que se veía el ahorro deja de estar en el par, la vista pasa a la principal.
+  - **Monedas admitidas** (código ISO · símbolo · nombre): `PEN` S/ Soles · `USD` US$ Dólares · `EUR` € Euros · `MXN` MX$ Pesos mexicanos · `COP` COL$ Pesos colombianos · `CLP` CLP$ Pesos chilenos · `ARS` AR$ Pesos argentinos · `BOB` Bs Bolivianos · `BRL` R$ Reales. Cada opción se muestra como `Soles (S/)` con el código a la derecha.
+  - **Dónde se usan las dos monedas:** la principal es la moneda inicial de las **cuentas nuevas** y de las **tarjetas de crédito nuevas**, la que encabeza la "Deuda total" de Crédito y aquella en la que se muestra el `≈` de las cuentas en otra moneda. El par principal/secundaria alimenta el selector y el equivalente ("o US$ …") del ahorro total en Inicio y Cuentas, y el tipo de cambio sugerido en Transferir.
+  - **Límite actual: solo hay tipo de cambio entre la principal y la secundaria.** Una cuenta en una tercera moneda **no entra en el ahorro total** ni muestra `≈`, y una transferencia que la involucre arranca con tipo de cambio 1.00 para escribirlo a mano. Los datos de ejemplo siguen en soles y dólares, y las tarjetas del mes de Inicio y los Reportes siguen mostrando soles. Para admitir más de dos monedas a la vez hará falta un tipo de cambio por cada par (la tabla `exchange_rates` ya lo permite).
+- **Tipo de cambio:** control **Manual | Automático · pronto** (Automático aún no se puede elegir); `1 [secundaria] = [principal] [valor]` editable, p. ej. `1 US$ = S/ [3.20]`; "Equivale a 1 S/ = US$ 0.3125"; ayuda "Al cambiar de monedas el tipo de cambio vuelve a 1.00: escribe el valor correcto."; ayuda: "Se usa para el total de ahorros y como valor sugerido en las transferencias. Puedes cambiarlo cuando quieras."
 - **Categorías:** fila "Gestionar categorías".
 - **Seguridad:** "Inicias sesión con tu correo y contraseña. Cada persona solo ve sus propios datos.", el correo de la sesión y el botón rojo suave "Cerrar sesión".
 - **Próximamente:** Exportar a PDF · Modo sin internet · Cambio automático diario · Acceso con Google.
@@ -358,7 +392,7 @@ Botón al pie: "Guardar cuenta" / "Guardar cambios". En Editar hay además **"Ar
 
 **Validaciones:** tipo de cambio > 0.
 
-**Backend:** editar el cambio **inserta una fila nueva** en `exchange_rates` (`source = 'manual'`, fecha de hoy); no modifica la anterior. La moneda de visualización se guarda en `profiles.display_currency`.
+**Backend:** la moneda predeterminada se guarda en `profiles.default_currency` (el esquema ya acepta cualquier código de 3 letras). **Pendiente en `docs/03`:** no hay dónde guardar la moneda secundaria (hace falta una columna nueva en `profiles`) ni la moneda de cada tarjeta de crédito (va en la tabla de tarjetas, también pendiente). Editar el cambio **inserta una fila nueva** en `exchange_rates` (`source = 'manual'`, fecha de hoy); no modifica la anterior. La moneda de visualización se guarda en `profiles.display_currency`.
 
 ## 8. Flujos completos
 
@@ -424,9 +458,11 @@ Los usan las maquetas y las pruebas. "Hoy" = **2 oct 2026**; cambio manual **1 U
 | Billetera digital | Otra | PEN | 85.00 | no |
 
 - Ahorro total: **S/ 7,166.30** = **US$ 2,239.47**.
-- Octubre: ingresos S/ 3,500.00, gastos S/ 30.50.
+- Octubre: ingresos S/ 3,500.00 (Sueldo), gastos S/ 30.50 (Alimentación 18.50 · Transporte 12.00). La maqueta de Reportes tiene datos de septiembre y octubre; el resto de meses se muestra vacío.
 - Septiembre: ingresos S/ 4,200.00, gastos S/ 2,148.60, balance +S/ 2,051.40; porcentajes de gasto 37.2 / 28.5 / 10.0 / 8.8 / 8.5 / 6.9.
-- Crédito pendiente: S/ 525.90 + US$ 12.00 en 4 compras; la más próxima vence el 5 oct.
+- Crédito pendiente: S/ 525.90 + US$ 12.00 en 4 compras de 2 tarjetas; la más próxima vence el 5 oct.
+  - **Visa Clásica**: Pasajes S/ 240.00 (vence 5 oct) y Cena en restaurante S/ 96.00 (vence 15 oct) → S/ 336.00.
+  - **Mastercard Oro**: Audífonos S/ 189.90 y Suscripción de software US$ 12.00 (ambas vencen 15 oct) → S/ 189.90 + US$ 12.00.
 - Detalle completo: `docs/03`, sección 7. Los movimientos de septiembre de la lista (Alquiler, Supermercado, Diseño de logo, Cine, Farmacia, Ahorro del mes) son relleno de la maqueta.
 
 ## 12. Notas para la versión iOS
@@ -462,3 +498,18 @@ Los usan las maquetas y las pruebas. "Hoy" = **2 oct 2026**; cambio manual **1 U
 | 6 oct 2026 | Iniciar sesión / Registro: el icono y el nombre de la app se reemplazan por dos **tarjetas flotantes** (ahorro y crédito) sin datos, solo con "Orbita" arriba a la izquierda, que se alternan al frente cada 3.2 s. |
 | 6 oct 2026 | Iniciar sesión / Registro: las tarjetas flotantes llevan un **chip metálico** arriba a la derecha y el contenido de la pantalla pasa a estar **centrado verticalmente**. |
 | 6 oct 2026 | Color: el rojo de la app pasa de ladrillo `#B93815` a **rojo intenso `#E53935`**, y su fondo suave de `#FBEAE4` a `#FDECEA`. Afecta a egresos, errores, acciones destructivas y vencimientos. |
+| 6 oct 2026 | Color: el verde de ingresos pasa de `#0B7A5A` a **verde intenso `#2EAD5B`**, y su fondo suave de `#E3F4EE` a `#E6F6EC`. El color de la categoría Sueldo (`#0B7A5A`) no cambia. |
+| 6 oct 2026 | Inicio: las tarjetas de ingresos y gastos del mes pasan de estar lado a lado a **una sobre otra**, con texto y monto más grandes y un icono de tendencia (arriba en ingresos, abajo en gastos). |
+| 6 oct 2026 | Inicio: en las tarjetas del mes, el mes va con **mayúscula inicial** y en gris más claro (`#94A0B2`) que "Ingresos"/"Gastos"; las tarjetas son **táctiles** y abren Reportes en el mes actual con ese detalle primero. La maqueta de Reportes suma datos de octubre. |
+| 6 oct 2026 | Crédito: la pantalla pasa de una lista única de compras a **"Deuda total" subdividida por tarjeta de crédito** (como Cuentas con los ahorros): bloque por tarjeta con su deuda y sus compras, pantallas Nueva/Editar tarjeta y desplegable "Tarjeta" al registrar una compra. En Inicio, el aviso dice "pagos pendientes" en vez de "compras pendientes". **Falta reflejar las tarjetas en el esquema de `docs/03`.** |
+| 6 oct 2026 | Inicio: el encabezado pasa a "Bienvenido" con el subtítulo "Revisa cómo van tus ahorros, ingresos, gastos y movimientos."; en "Ahorro total" el símbolo de moneda va al tamaño de la cifra y el equivalente deja la píldora y el `≈` por un texto de apoyo "o US$ …"; el icono de "Tarjeta de crédito" pasa a naranja. Filas de movimiento: el icono de transferencia o cambio pasa de gris a celeste (en Inicio y en la Lista de movimientos). |
+| 6 oct 2026 | Inicio: el título pasa a "👋 Bienvenido" (con emoji de saludo) y el subtítulo a "Revisa cómo van tus finanzas". |
+| 6 oct 2026 | Cuentas: en "Total en ahorros" el equivalente deja la píldora y el `≈` por el texto de apoyo "o US$ … · cambio 3.20", como en Inicio. |
+| 6 oct 2026 | Reportes: el selector de mes pierde el icono de calendario; el mes-año y el rango de días van centrados entre las flechas. |
+| 6 oct 2026 | Crédito: el título pasa a "Tarjetas de Crédito" (también en el aviso de Inicio); el degradado de crédito pasa de amarillos con texto oscuro a **naranjas con brillo amarillo y texto blanco** (`#C2410C` → `#EA580C` → `#D97706`), también en la tarjeta flotante del inicio de sesión; los bloques de tarjeta son **replegables**; "Editar tarjeta" pasa a un enlace dentro del bloque; "Marcar como pagada" ocupa todo el ancho. |
+| 6 oct 2026 | Crédito: se **revierte** el degradado naranja; vuelve el amarillo (`#FDE047` → `#FBBF24` → `#F59E0B`). En "Deuda total" el texto blanco se resuelve con un **velo oscuro vertical** (`#1C1206`, 30 % arriba → 78 % abajo) sobre el amarillo. La tarjeta flotante del inicio de sesión vuelve a amarillo con texto oscuro, sin velo. |
+| 6 oct 2026 | Tarjetas destacadas: el velo pasa a **negro del 0 % arriba al 80 % abajo** y se aplica también a las tarjetas azules de ahorro de Inicio y Cuentas, para que las tres se vean uniformes. |
+| 6 oct 2026 | Transferir: **Desde** y **Hacia** pasan de tarjetas fijas a **desplegables** con todas las cuentas, con botón "Invertir cuentas" entre ambos; elegir la cuenta del otro lado las intercambia; al cambiar de cuentas el tipo de cambio vuelve al manual. La **fecha** (hoy por defecto) ya se puede editar con el selector nativo. |
+| 6 oct 2026 | Filas de movimiento: se invierten las flechas; **ingreso ↗ (arriba)** y **egreso ↙ (abajo)**. Ajustes: la **moneda predeterminada** pasa de fija (soles) a elegible entre 9 monedas; Nueva cuenta usa un desplegable de monedas que arranca en la predeterminada. El resto de la app sigue en soles y dólares (pendiente de definir). |
+| 6 oct 2026 | Monedas: el dólar deja de ser fijo y pasa a ser la **moneda secundaria**, elegible en Ajustes (por defecto dólares). El selector del ahorro total, el equivalente "o …", el tipo de cambio de Ajustes y el sugerido en Transferir usan el par principal/secundaria. Las **tarjetas de crédito tienen moneda** (por defecto la principal) y sus compras nuevas la heredan; la "Deuda total" muestra primero la principal y una línea por cada otra moneda. Límite: solo hay tipo de cambio entre esas dos monedas. |
+| 6 oct 2026 | Reportes: en "Rango de fechas", Desde y Hasta abren un **calendario de rango** para elegir inicio y fin a la vez. Crédito: el icono de cada tarjeta es **rojo si tiene un pago urgente** y azul si no; bajo el nombre van en dos líneas los pagos pendientes y "Vence …". |

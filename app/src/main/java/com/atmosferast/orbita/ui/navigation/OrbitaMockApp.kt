@@ -23,6 +23,7 @@ import com.atmosferast.orbita.ui.feature.accounts.AccountsScreen
 import com.atmosferast.orbita.ui.feature.auth.AuthScreen
 import com.atmosferast.orbita.ui.feature.categories.CategoriesScreen
 import com.atmosferast.orbita.ui.feature.categories.CategoryFormScreen
+import com.atmosferast.orbita.ui.feature.credit.CreditCardFormScreen
 import com.atmosferast.orbita.ui.feature.credit.CreditScreen
 import com.atmosferast.orbita.ui.feature.credit.PayCreditScreen
 import com.atmosferast.orbita.ui.feature.home.HomeScreen
@@ -33,8 +34,10 @@ import com.atmosferast.orbita.ui.feature.settings.SettingsScreen
 import com.atmosferast.orbita.ui.feature.transfer.TransferScreen
 import com.atmosferast.orbita.ui.mock.MockAccount
 import com.atmosferast.orbita.ui.mock.MockCategory
+import com.atmosferast.orbita.ui.mock.MockCreditCard
 import com.atmosferast.orbita.ui.mock.MockCreditPurchase
 import com.atmosferast.orbita.ui.mock.MockEntry
+import com.atmosferast.orbita.ui.mock.MockFx
 import com.atmosferast.orbita.ui.mock.MockMovement
 import com.atmosferast.orbita.ui.mock.MockTransfer
 import com.atmosferast.orbita.ui.mock.MovementKind
@@ -48,6 +51,7 @@ private sealed interface Screen {
     data class MovementForm(val editing: MockMovement? = null, val credit: Boolean = false) : Screen
     data class Transfer(val editing: MockTransfer? = null) : Screen
     data class PayCredit(val purchase: MockCreditPurchase) : Screen
+    data class CreditCardForm(val card: MockCreditCard?) : Screen
     data object Settings : Screen
     data object Movements : Screen
     data class AccountForm(val account: MockAccount?) : Screen
@@ -66,6 +70,9 @@ fun OrbitaMockApp() {
     var accounts by remember { mutableStateOf(SampleData.accounts) }
     var purchases by remember { mutableStateOf(SampleData.creditPurchases) }
     var displayCurrency by remember { mutableStateOf(PEN) }
+    var fx by remember { mutableStateOf(MockFx()) }
+    // Set when Reportes is opened from a month card of Inicio; the bottom bar clears it.
+    var reportFocus by remember { mutableStateOf<MovementKind?>(null) }
 
     fun push(screen: Screen) {
         backStack.add(screen)
@@ -119,17 +126,23 @@ fun OrbitaMockApp() {
                     when (tab) {
                         BottomTab.HOME -> HomeScreen(
                             accounts = accounts,
+                            fx = fx,
                             displayCurrency = displayCurrency,
                             onDisplayCurrencyChange = { displayCurrency = it },
                             onOpenSettings = { push(Screen.Settings) },
                             onOpenAccounts = { tab = BottomTab.ACCOUNTS },
                             onOpenCredit = { tab = BottomTab.CREDIT },
+                            onOpenReport = { kind ->
+                                reportFocus = kind
+                                tab = BottomTab.REPORTS
+                            },
                             onOpenMovements = { push(Screen.Movements) },
                             onEntryClick = ::openEntry,
                         )
 
                         BottomTab.ACCOUNTS -> AccountsScreen(
                             accounts = accounts,
+                            fx = fx,
                             displayCurrency = displayCurrency,
                             onToggleSavings = { account, include ->
                                 accounts = accounts.map {
@@ -142,18 +155,29 @@ fun OrbitaMockApp() {
                             onNewAccount = { push(Screen.AccountForm(null)) },
                         )
 
-                        BottomTab.REPORTS -> ReportsScreen()
+                        BottomTab.REPORTS -> ReportsScreen(
+                            initialMonth = if (reportFocus != null) SampleData.currentMonth
+                            else SampleData.reportMonth,
+                            focus = reportFocus,
+                        )
 
                         BottomTab.CREDIT -> CreditScreen(
+                            cards = SampleData.creditCards,
+                            mainCurrency = fx.main,
                             purchases = purchases,
                             onRegisterPurchase = { push(Screen.MovementForm(credit = true)) },
                             onPay = { push(Screen.PayCredit(it)) },
+                            onCardClick = { push(Screen.CreditCardForm(it)) },
+                            onNewCard = { push(Screen.CreditCardForm(null)) },
                         )
                     }
                 }
                 OrbitaBottomBar(
                     current = tab,
-                    onSelect = { tab = it },
+                    onSelect = {
+                        reportFocus = null
+                        tab = it
+                    },
                     onAdd = { push(Screen.MovementForm()) },
                 )
             }
@@ -169,11 +193,13 @@ fun OrbitaMockApp() {
             )
 
             is Screen.Transfer -> TransferScreen(
+                accounts = accounts,
                 onClose = ::pop,
                 onSave = ::pop,
                 onOpenMovement = { replaceTop(Screen.MovementForm()) },
-                from = screen.editing?.from ?: SampleData.dollarAccount,
-                to = screen.editing?.to ?: SampleData.debitAccount,
+                initialFrom = screen.editing?.from ?: SampleData.dollarAccount,
+                initialTo = screen.editing?.to ?: SampleData.debitAccount,
+                fx = fx,
                 editing = screen.editing,
                 onDelete = ::pop,
             )
@@ -189,7 +215,22 @@ fun OrbitaMockApp() {
                 },
             )
 
+            is Screen.CreditCardForm -> CreditCardFormScreen(
+                card = screen.card,
+                defaultCurrency = fx.main,
+                onClose = ::pop,
+                onSave = ::pop,
+            )
+
             Screen.Settings -> SettingsScreen(
+                fx = fx,
+                onFxChange = { newFx ->
+                    // The total is shown in one of the two currencies of the pair.
+                    if (displayCurrency != newFx.main && displayCurrency != newFx.secondary) {
+                        displayCurrency = newFx.main
+                    }
+                    fx = newFx
+                },
                 displayCurrency = displayCurrency,
                 onDisplayCurrencyChange = { displayCurrency = it },
                 onBack = ::pop,
@@ -205,6 +246,7 @@ fun OrbitaMockApp() {
 
             is Screen.AccountForm -> AccountFormScreen(
                 account = screen.account,
+                defaultCurrency = fx.main,
                 onClose = ::pop,
                 onSave = ::pop,
             )

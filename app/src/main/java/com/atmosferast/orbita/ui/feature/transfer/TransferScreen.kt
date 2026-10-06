@@ -3,6 +3,7 @@ package com.atmosferast.orbita.ui.feature.transfer
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,9 +16,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,12 +34,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atmosferast.orbita.R
-import com.atmosferast.orbita.core.USD
 import com.atmosferast.orbita.core.currencySymbol
 import com.atmosferast.orbita.core.formatDate
 import com.atmosferast.orbita.core.formatMoney
@@ -42,9 +47,9 @@ import com.atmosferast.orbita.ui.components.AmountInput
 import com.atmosferast.orbita.ui.components.CardDivider
 import com.atmosferast.orbita.ui.components.CircleIconButton
 import com.atmosferast.orbita.ui.components.ConfirmDialog
+import com.atmosferast.orbita.ui.components.DropdownField
 import com.atmosferast.orbita.ui.components.FieldLabel
 import com.atmosferast.orbita.ui.components.HintText
-import com.atmosferast.orbita.ui.components.IconBadge
 import com.atmosferast.orbita.ui.components.LabelValueRow
 import com.atmosferast.orbita.ui.components.ModalTopBar
 import com.atmosferast.orbita.ui.components.OrbitaCard
@@ -57,22 +62,23 @@ import com.atmosferast.orbita.ui.components.SectionTitle
 import com.atmosferast.orbita.ui.components.SegmentedControl
 import com.atmosferast.orbita.ui.components.accountIcon
 import com.atmosferast.orbita.ui.mock.MockAccount
+import com.atmosferast.orbita.ui.mock.MockFx
 import com.atmosferast.orbita.ui.mock.MockTransfer
 import com.atmosferast.orbita.ui.mock.SampleData
 import com.atmosferast.orbita.ui.theme.Expense
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
-import com.atmosferast.orbita.ui.theme.Neutral
 import com.atmosferast.orbita.ui.theme.NeutralSoft
 import com.atmosferast.orbita.ui.theme.OrbitaShapes
 import com.atmosferast.orbita.ui.theme.OrbitaTheme
 import com.atmosferast.orbita.ui.theme.Outline
 import com.atmosferast.orbita.ui.theme.Primary
-import com.atmosferast.orbita.ui.theme.PrimarySoft
 import com.atmosferast.orbita.ui.theme.Surface
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.time.Instant
+import java.time.ZoneOffset
 
 private enum class TransferTab { EXPENSE, INCOME, TRANSFER }
 
@@ -82,24 +88,36 @@ private fun parseAmount(text: String): BigDecimal? =
 private fun plain(amount: BigDecimal): String =
     amount.setScale(2, RoundingMode.HALF_UP).toPlainString()
 
-/** Transfer between two own accounts; with different currencies out, rate and in are linked. */
+/**
+ * Manual rate: units of [to]'s currency per 1 unit of [from]'s. Outside the user's pair of
+ * currencies there is no rate, so it starts at 1 for the user to type.
+ */
+private fun referenceRate(from: MockAccount, to: MockAccount, fx: MockFx): BigDecimal =
+    fx.rateBetween(from.currency, to.currency) ?: BigDecimal.ONE
+
+/**
+ * Transfer between two own accounts, both chosen by the user. With different currencies the
+ * amount out, the (manual) rate and the amount in are linked; with the same currency there is
+ * no exchange.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransferScreen(
+    accounts: List<MockAccount>,
     onClose: () -> Unit,
     onSave: () -> Unit,
     onOpenMovement: () -> Unit,
     modifier: Modifier = Modifier,
-    from: MockAccount = SampleData.dollarAccount,
-    to: MockAccount = SampleData.debitAccount,
+    initialFrom: MockAccount = SampleData.dollarAccount,
+    initialTo: MockAccount = SampleData.debitAccount,
+    fx: MockFx = MockFx(),
     editing: MockTransfer? = null,
     onDelete: () -> Unit = {},
 ) {
+    var from by remember { mutableStateOf(initialFrom) }
+    var to by remember { mutableStateOf(initialTo) }
     val sameCurrency = from.currency == to.currency
-    val referenceRate = remember(from, to) {
-        if (from.currency == to.currency) BigDecimal.ONE
-        else if (from.currency == USD) SampleData.usdToPen
-        else BigDecimal.ONE.divide(SampleData.usdToPen, 6, RoundingMode.HALF_UP)
-    }
+    val referenceRate = referenceRate(from, to, fx)
     var out by remember { mutableStateOf(plain(editing?.fromAmount ?: BigDecimal("20.00"))) }
     var rate by remember { mutableStateOf(formatRate(referenceRate)) }
     var incoming by remember {
@@ -107,6 +125,8 @@ fun TransferScreen(
             plain(editing?.toAmount ?: BigDecimal("20.00").multiply(referenceRate)),
         )
     }
+    var date by remember { mutableStateOf(editing?.date ?: SampleData.today) }
+    var pickingDate by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf(editing?.note.orEmpty()) }
     var confirmDelete by remember { mutableStateOf(false) }
 
@@ -117,6 +137,14 @@ fun TransferScreen(
         if (o != null && r != null) {
             incoming = plain(o.multiply(r))
         }
+    }
+
+    // Changing an account resets the rate to the manual one of the new pair of currencies.
+    fun setAccounts(newFrom: MockAccount, newTo: MockAccount) {
+        from = newFrom
+        to = newTo
+        rate = formatRate(referenceRate(newFrom, newTo, fx))
+        recalculateIncoming(out, rate)
     }
 
     val outAmount = parseAmount(out) ?: BigDecimal.ZERO
@@ -169,28 +197,45 @@ fun TransferScreen(
             Spacer(Modifier.height(14.dp))
         }
 
-        Box(contentAlignment = Alignment.Center) {
-            Column {
-                AccountSlot(stringResource(R.string.transfer_from), from)
-                Spacer(Modifier.height(10.dp))
-                AccountSlot(stringResource(R.string.transfer_to), to)
-            }
+        // The same account cannot be on both sides: picking the other side's account swaps them.
+        FieldLabel(stringResource(R.string.transfer_from))
+        AccountDropdown(
+            accounts = accounts,
+            selected = from,
+            onSelect = { if (it.id == to.id) setAccounts(to, from) else setAccounts(it, to) },
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 10.dp),
+            contentAlignment = Alignment.Center,
+        ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
                     .background(Surface)
-                    .border(BorderStroke(1.dp, Outline), CircleShape),
+                    .border(BorderStroke(1.dp, Outline), CircleShape)
+                    .clickable(
+                        role = Role.Button,
+                        onClickLabel = stringResource(R.string.transfer_swap),
+                    ) { setAccounts(to, from) },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    OrbitaIcons.ArrowDown,
-                    contentDescription = null,
-                    tint = Neutral,
-                    modifier = Modifier.size(18.dp),
+                    OrbitaIcons.SwapVertical,
+                    contentDescription = stringResource(R.string.transfer_swap),
+                    tint = Primary,
+                    modifier = Modifier.size(20.dp),
                 )
             }
         }
+        FieldLabel(stringResource(R.string.transfer_to))
+        AccountDropdown(
+            accounts = accounts,
+            selected = to,
+            onSelect = { if (it.id == from.id) setAccounts(to, from) else setAccounts(from, it) },
+        )
 
         Spacer(Modifier.height(12.dp))
         OrbitaCard {
@@ -284,7 +329,7 @@ fun TransferScreen(
         }
 
         FieldLabel(stringResource(R.string.field_date))
-        PickerField(formatDate(editing?.date ?: SampleData.today), onClick = {})
+        PickerField(formatDate(date), onClick = { pickingDate = true })
 
         FieldLabel(stringResource(R.string.field_note))
         OrbitaTextField(
@@ -292,6 +337,31 @@ fun TransferScreen(
             onValueChange = { note = it },
             placeholder = stringResource(R.string.transfer_note_placeholder),
         )
+    }
+
+    if (pickingDate) {
+        // The picker works in UTC milliseconds.
+        val pickerState = rememberDatePickerState(
+            initialSelectedDateMillis = date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+        )
+        DatePickerDialog(
+            onDismissRequest = { pickingDate = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pickerState.selectedDateMillis?.let {
+                            date = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()
+                        }
+                        pickingDate = false
+                    },
+                ) { Text(stringResource(R.string.action_accept)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pickingDate = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        ) { DatePicker(state = pickerState) }
     }
 
     if (confirmDelete) {
@@ -313,33 +383,29 @@ private fun CardLabel(text: String, modifier: Modifier = Modifier) {
     Text(text, style = MaterialTheme.typography.labelMedium, color = Muted, modifier = modifier)
 }
 
-/** "Desde" / "Hacia" card; tapping it opens the account selector. */
+/** "Desde" / "Hacia" selector: every account with its icon and balance. */
 @Composable
-private fun AccountSlot(label: String, account: MockAccount) {
-    OrbitaCard(onClick = {}) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconBadge(accountIcon(account), Primary, PrimarySoft, size = 40.dp)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                CardLabel(label)
-                Text(
-                    account.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = Ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Text(
-                stringResource(
-                    R.string.transfer_balance,
-                    formatMoney(account.balance, account.currency),
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = Muted,
+private fun AccountDropdown(
+    accounts: List<MockAccount>,
+    selected: MockAccount,
+    onSelect: (MockAccount) -> Unit,
+) {
+    DropdownField(
+        options = accounts,
+        // The list may hold a newer copy of the account (e.g. savings switch changed).
+        selected = accounts.firstOrNull { it.id == selected.id } ?: selected,
+        onSelect = onSelect,
+        label = { it.name },
+        detail = { formatMoney(it.balance, it.currency) },
+        leading = { option ->
+            Icon(
+                accountIcon(option),
+                contentDescription = null,
+                tint = Primary,
+                modifier = Modifier.size(20.dp),
             )
-        }
-    }
+        },
+    )
 }
 
 @Composable
@@ -362,7 +428,9 @@ private fun RateInput(value: String, onValueChange: (String) -> Unit) {
 @Preview(name = "Transferencia · entre monedas", widthDp = 390, heightDp = 1100)
 @Composable
 private fun TransferPreview() {
-    OrbitaTheme { TransferScreen(onClose = {}, onSave = {}, onOpenMovement = {}) }
+    OrbitaTheme {
+        TransferScreen(SampleData.accounts, onClose = {}, onSave = {}, onOpenMovement = {})
+    }
 }
 
 @Preview(name = "Transferencia · misma moneda", widthDp = 390, heightDp = 1000)
@@ -370,11 +438,12 @@ private fun TransferPreview() {
 private fun TransferSameCurrencyPreview() {
     OrbitaTheme {
         TransferScreen(
+            SampleData.accounts,
             onClose = {},
             onSave = {},
             onOpenMovement = {},
-            from = SampleData.debitAccount,
-            to = SampleData.accounts.first { it.id == "savings" },
+            initialFrom = SampleData.debitAccount,
+            initialTo = SampleData.accounts.first { it.id == "savings" },
         )
     }
 }
@@ -384,6 +453,7 @@ private fun TransferSameCurrencyPreview() {
 private fun TransferEditPreview() {
     OrbitaTheme {
         TransferScreen(
+            SampleData.accounts,
             onClose = {},
             onSave = {},
             onOpenMovement = {},

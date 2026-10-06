@@ -5,6 +5,7 @@
     <string name="action_back">Volver</string>
     <string name="action_close">Cerrar</string>
     <string name="action_cancel">Cancelar</string>
+    <string name="action_accept">Aceptar</string>
     <string name="action_retry">Reintentar</string>
     <string name="action_see_all">Ver todos</string>
     <string name="action_choose">Elegir</string>
@@ -71,16 +72,15 @@
     <string name="auth_error_credentials">Correo o contraseña incorrectos.</string>
 
     <!-- Home -->
-    <string name="home_overline">Resumen</string>
-    <string name="home_title">Inicio</string>
+    <string name="home_title">👋 Bienvenido</string>
+    <string name="home_subtitle">Revisa cómo van tus finanzas</string>
     <string name="savings_total">Ahorro total</string>
-    <string name="savings_equivalent_manual">≈ %1$s · cambio %2$s (manual)</string>
-    <string name="savings_equivalent">≈ %1$s · cambio %2$s</string>
+    <string name="savings_equivalent_manual">o %1$s · cambio %2$s (manual)</string>
+    <string name="savings_equivalent">o %1$s · cambio %2$s</string>
     <string name="savings_accounts_included">%1$d de %2$d cuentas incluidas</string>
-    <string name="home_month_income">Ingresos · %1$s</string>
-    <string name="home_month_expense">Gastos · %1$s</string>
+    <string name="home_month_income">Ingresos</string>
+    <string name="home_month_expense">Gastos</string>
     <string name="home_month_note">Las transferencias y las compras de tarjeta pendientes no entran aquí.</string>
-    <string name="home_credit_pending">%1$d compras pendientes · vence %2$s</string>
     <string name="home_recent">Últimos movimientos</string>
     <string name="home_empty_title">Registra tu primer movimiento</string>
     <string name="home_empty_message">Toca el botón + para anotar un ingreso o un egreso.</string>
@@ -131,6 +131,7 @@
     <string name="transfer_edit_title">Editar transferencia</string>
     <string name="transfer_from">Desde</string>
     <string name="transfer_to">Hacia</string>
+    <string name="transfer_swap">Invertir cuentas</string>
     <string name="transfer_balance">Saldo %1$s</string>
     <string name="transfer_amount_out">Monto que sale</string>
     <string name="transfer_rate_label">Tipo de cambio · editable</string>
@@ -158,15 +159,43 @@
     <string name="reports_top_expenses">Dónde gastas más</string>
     <string name="reports_income_sources">Tus fuentes de ingreso</string>
     <string name="reports_hint">Las compras con tarjeta aparecen aquí solo cuando las marcas como pagadas. Las transferencias entre tus cuentas no cuentan como ingreso ni gasto.</string>
+    <string name="reports_range_title">Elige el rango de fechas</string>
+    <string name="reports_range_headline">%1$s – %2$s</string>
     <string name="reports_empty">No hay movimientos en este periodo</string>
 
     <!-- Credit card (v1.1) -->
-    <string name="credit_card">Tarjeta de crédito</string>
-    <string name="credit_overline">Compras pendientes de pago</string>
-    <string name="credit_to_pay">Por pagar</string>
+    <string name="credit_card">Tarjetas de Crédito</string>
+    <string name="credit_card_edit">Editar tarjeta</string>
+    <string name="credit_expand">Mostrar pagos pendientes</string>
+    <string name="credit_collapse">Ocultar pagos pendientes</string>
+    <string name="credit_overline">Deudas pendientes de pago</string>
+    <string name="credit_total_label">Deuda total · %1$s</string>
+    <plurals name="credit_cards_count">
+        <item quantity="one">%1$d tarjeta</item>
+        <item quantity="other">%1$d tarjetas</item>
+    </plurals>
+    <plurals name="credit_pending_payments">
+        <item quantity="one">%1$d pago pendiente</item>
+        <item quantity="other">%1$d pagos pendientes</item>
+    </plurals>
+    <string name="credit_pending_due">%1$s · vence %2$s</string>
+    <string name="credit_next_due">Vence %1$s</string>
+    <string name="credit_card_no_pending">Sin pagos pendientes</string>
+    <string name="credit_extra_amount">+ %1$s</string>
+    <string name="credit_new_card">Nueva tarjeta de crédito</string>
+    <string name="credit_no_cards">Aún no tienes tarjetas de crédito</string>
+    <string name="credit_hint">Cada compra pertenece a una tarjeta. La deuda total suma todas tus tarjetas, sin mezclar monedas.</string>
+    <string name="credit_card_field">Tarjeta</string>
+    <string name="credit_card_new_title">Nueva tarjeta</string>
+    <string name="credit_card_edit_title">Editar tarjeta</string>
+    <string name="credit_card_name_placeholder">Ej. Visa Clásica</string>
+    <string name="credit_card_currency_hint">Las compras que registres con esta tarjeta usarán esta moneda.</string>
+    <string name="credit_card_save">Guardar tarjeta</string>
+    <string name="credit_card_archive">Archivar tarjeta</string>
+    <string name="credit_card_archive_hint">La tarjeta deja de aparecer en las listas, pero conserva sus compras.</string>
+    <string name="dialog_archive_card_title">¿Archivar esta tarjeta?</string>
     <string name="credit_note">No cuenta en tus saldos ni en tus reportes hasta que la marques como pagada.</string>
     <string name="credit_register">Registrar compra con tarjeta</string>
-    <string name="credit_sorted">Ordenadas por fecha límite</string>
     <string name="credit_purchase_subtitle">%1$s · compra %2$s</string>
     <string name="credit_due_date">Fecha límite de pago</string>
     <string name="credit_due_in_days">Vence %1$s · en %2$d días</string>
@@ -175,7 +204,6 @@
     <string name="credit_overdue_one_day">Vencida hace 1 día</string>
     <string name="credit_overdue_days">Vencida hace %1$d días</string>
     <string name="credit_mark_paid">Marcar como pagada</string>
-    <string name="credit_empty">No tienes compras pendientes</string>
     <string name="pay_purchase_subtitle">%1$s · compra %2$s · vence %3$s</string>
     <string name="pay_from">Pagar desde</string>
     <string name="pay_real_amount">Monto realmente descontado</string>
@@ -189,12 +217,16 @@
     <string name="settings_title">Ajustes</string>
     <string name="settings_currencies">Monedas</string>
     <string name="settings_default_currency">Moneda predeterminada</string>
+    <string name="settings_default_currency_hint">Es la moneda con la que se crean tus cuentas nuevas. Puedes cambiarla cuando quieras; tus cuentas actuales conservan la suya.</string>
+    <string name="settings_secondary_currency">Moneda secundaria</string>
+    <string name="settings_secondary_currency_hint">Sirve para ver el equivalente de tus ahorros en otra moneda. El tipo de cambio de abajo es entre estas dos monedas.</string>
+    <string name="settings_fx_reset_hint">Al cambiar de monedas el tipo de cambio vuelve a 1.00: escribe el valor correcto.</string>
     <string name="settings_display_currency">Ver ahorro total en</string>
     <string name="settings_fx">Tipo de cambio</string>
     <string name="settings_fx_manual">Manual</string>
     <string name="settings_fx_auto_soon">Automático · pronto</string>
-    <string name="settings_fx_prefix">1 US$ = S/</string>
-    <string name="settings_fx_inverse">Equivale a 1 S/ = US$ %1$s</string>
+    <string name="settings_fx_prefix">1 %1$s = %2$s</string>
+    <string name="settings_fx_inverse">Equivale a 1 %1$s = %2$s %3$s</string>
     <string name="settings_fx_hint">Se usa para el total de ahorros y como valor sugerido en las transferencias. Puedes cambiarlo cuando quieras.</string>
     <string name="settings_manage_categories">Gestionar categorías</string>
     <string name="settings_manage_categories_hint">Crear, renombrar, cambiar color o archivar.</string>
