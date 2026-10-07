@@ -28,9 +28,10 @@ npx supabase@latest link --project-ref <REF_DEL_PROYECTO>   # el ref está en la
 
 ## Paso 3 · Crear y aplicar la migración del MVP
 ```bash
-npx supabase@latest migration new init     # crea supabase/migrations/<fecha>_init.sql
+# La migración del MVP ya está en el repositorio: supabase/migrations/0001_init.sql
+# (es el SQL de la sección 3 de docs/03). No hace falta crearla.
 ```
-1. Abre ese archivo y pega **todo** el SQL de la sección 3 de `docs/03-modelo-de-datos.md`.
+1. Revisa que `supabase/migrations/0001_init.sql` exista. Si cambias el esquema, **no lo edites**: crea una migración nueva (`npx supabase@latest migration new <nombre>`) y actualiza `docs/03`.
 2. Aplícalo:
 ```bash
 npx supabase@latest db push
@@ -64,7 +65,7 @@ Al registrarse un usuario, el trigger `handle_new_user` le crea perfil, categor�
 SUPABASE_URL=https://xxxxxxxx.supabase.co
 SUPABASE_ANON_KEY=<clave pública>
 ```
-3. Exponerlas por `BuildConfig` en `build.gradle.kts` y crear el cliente (verifica la API vigente de `supabase-kt`):
+3. **Ya está hecho en el código:** `app/build.gradle.kts` las expone por `BuildConfig` y `di/AppModule.kt` crea el cliente así:
 ```kotlin
 val supabase = createSupabaseClient(
     supabaseUrl = BuildConfig.SUPABASE_URL,
@@ -74,7 +75,8 @@ val supabase = createSupabaseClient(
     install(Postgrest)
 }
 ```
-4. Prueba mínima: registrar un usuario, iniciar sesión y leer `account_balances` (debe verse solo "Efectivo" con saldo 0).
+4. Vuelve a compilar. Con las dos claves puestas, la app deja el **modo demo** para la sesión: registro, inicio y cierre de sesión son reales, y la sesión se conserva al reabrir la app. **Los datos siguen siendo los de ejemplo** hasta que cada módulo se conecte (Fase 2 en adelante, `docs/06`). Sin las claves, la app sigue funcionando entera en modo demo.
+5. Prueba mínima: registrar un usuario, iniciar sesión, cerrar la app, reabrirla (debe seguir con sesión) y cerrar sesión. En el panel → Authentication → Users debe aparecer el usuario, y en Table Editor su perfil, sus categorías y su cuenta "Efectivo".
 
 ## Paso 7 · Desarrollo local (opcional)
 Con Docker instalado: `npx supabase@latest start` levanta una copia local (base de datos, Auth y panel) y `npx supabase@latest db reset` la recrea desde las migraciones. Útil para probar migraciones sin tocar `gastos-dev`.

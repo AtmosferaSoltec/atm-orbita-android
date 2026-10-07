@@ -23,12 +23,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,7 +63,7 @@ import com.atmosferast.orbita.ui.theme.ExpenseSoft
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
 import com.atmosferast.orbita.ui.theme.OrbitaShapes
-import com.atmosferast.orbita.ui.theme.OrbitaTheme
+import com.atmosferast.orbita.ui.components.OrbitaPreview
 import com.atmosferast.orbita.ui.theme.Primary
 import kotlin.math.PI
 import kotlin.math.sin
@@ -73,7 +73,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun AuthScreen(
     register: Boolean,
-    onSubmit: () -> Unit,
+    onSubmit: (email: String, password: String) -> Unit,
     onSwitch: () -> Unit,
     modifier: Modifier = Modifier,
     error: String? = null,
@@ -160,7 +160,7 @@ fun AuthScreen(
             stringResource(
                 if (register) R.string.auth_register_action else R.string.auth_login_action,
             ),
-            onSubmit,
+            onClick = { onSubmit(email, password) },
         )
 
         Spacer(Modifier.height(8.dp))
@@ -304,16 +304,16 @@ private val ChipLine = Color(0xFF0E1A2B).copy(alpha = 0.35f)
 @Preview(name = "Iniciar sesión", widthDp = 390, heightDp = 844)
 @Composable
 private fun LoginPreview() {
-    OrbitaTheme { AuthScreen(register = false, onSubmit = {}, onSwitch = {}) }
+    OrbitaPreview { AuthScreen(register = false, onSubmit = { _, _ -> }, onSwitch = {}) }
 }
 
 @Preview(name = "Iniciar sesión · error", widthDp = 390, heightDp = 844)
 @Composable
 private fun LoginErrorPreview() {
-    OrbitaTheme {
+    OrbitaPreview {
         AuthScreen(
             register = false,
-            onSubmit = {},
+            onSubmit = { _, _ -> },
             onSwitch = {},
             error = stringResource(R.string.auth_error_credentials),
         )
@@ -323,5 +323,5 @@ private fun LoginErrorPreview() {
 @Preview(name = "Registro", widthDp = 390, heightDp = 844)
 @Composable
 private fun RegisterPreview() {
-    OrbitaTheme { AuthScreen(register = true, onSubmit = {}, onSwitch = {}) }
+    OrbitaPreview { AuthScreen(register = true, onSubmit = { _, _ -> }, onSwitch = {}) }
 }

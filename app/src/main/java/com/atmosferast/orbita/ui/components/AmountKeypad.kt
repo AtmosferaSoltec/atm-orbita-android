@@ -35,6 +35,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -47,7 +48,6 @@ import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
 import com.atmosferast.orbita.ui.theme.NeutralSoft
 import com.atmosferast.orbita.ui.theme.OrbitaShapes
-import com.atmosferast.orbita.ui.theme.OrbitaTheme
 import com.atmosferast.orbita.ui.theme.Primary
 import com.atmosferast.orbita.ui.theme.Surface
 
@@ -61,8 +61,8 @@ fun AmountDisplay(
     modifier: Modifier = Modifier,
     color: Color = Ink,
     active: Boolean = false,
+    style: TextStyle = MaterialTheme.typography.displaySmall,
 ) {
-    val style = MaterialTheme.typography.displaySmall
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(symbol, style = style, color = Muted)
         Spacer(Modifier.width(10.dp))
@@ -93,7 +93,8 @@ fun AmountDisplay(
             Spacer(Modifier.width(4.dp))
             Box(
                 Modifier
-                    .size(width = 2.dp, height = 36.dp)
+                    // As tall as the digits it follows.
+                    .size(width = 2.dp, height = (style.fontSize.value * 0.95f).dp)
                     .alpha(blink)
                     .background(Primary),
             )
@@ -203,7 +204,7 @@ private fun KeypadKey(
 @Preview(name = "Teclado de monto", widthDp = 390)
 @Composable
 private fun AmountKeypadPreview() {
-    OrbitaTheme {
+    OrbitaPreview {
         Column(Modifier.padding(20.dp)) {
             AmountDisplay("S/", 4552, active = true)
             Spacer(Modifier.height(16.dp))

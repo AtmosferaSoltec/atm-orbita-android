@@ -1,13 +1,16 @@
 package com.atmosferast.orbita.ui.feature.accounts
 
+import java.math.BigDecimal
+import com.atmosferast.orbita.ui.components.parseDecimal
+import com.atmosferast.orbita.domain.model.AccountDraft
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -33,21 +36,22 @@ import com.atmosferast.orbita.ui.components.PrimaryButton
 import com.atmosferast.orbita.ui.components.ScreenScaffold
 import com.atmosferast.orbita.ui.components.SwitchRow
 import com.atmosferast.orbita.ui.components.accountTypeLabel
-import com.atmosferast.orbita.ui.mock.AccountType
-import com.atmosferast.orbita.ui.mock.MockAccount
-import com.atmosferast.orbita.ui.mock.SampleData
+import com.atmosferast.orbita.domain.model.AccountType
+import com.atmosferast.orbita.domain.model.Account
+import com.atmosferast.orbita.data.demo.SampleData
 import com.atmosferast.orbita.ui.theme.Expense
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
-import com.atmosferast.orbita.ui.theme.OrbitaTheme
+import com.atmosferast.orbita.ui.components.OrbitaPreview
 
 /** New account ([account] = null) or edit account. Not in the original mockups (docs/05, section 9). */
 @Composable
 fun AccountFormScreen(
-    account: MockAccount?,
+    account: Account?,
     onClose: () -> Unit,
-    onSave: () -> Unit,
+    onSave: (AccountDraft) -> Unit,
     modifier: Modifier = Modifier,
     defaultCurrency: String = PEN,
+    onArchive: () -> Unit = {},
 ) {
     val editing = account != null
     var name by remember { mutableStateOf(account?.name.orEmpty()) }
@@ -76,7 +80,18 @@ fun AccountFormScreen(
                 stringResource(
                     if (editing) R.string.action_save_changes else R.string.account_save,
                 ),
-                onSave,
+                onClick = {
+                    onSave(
+                        AccountDraft(
+                            name = name,
+                            type = type,
+                            currency = currency,
+                            // An empty field is a balance of zero.
+                            initialBalance = parseDecimal(initialBalance) ?: BigDecimal.ZERO,
+                            includeInSavings = includeInSavings,
+                        ),
+                    )
+                },
             )
         },
     ) {
@@ -152,7 +167,7 @@ fun AccountFormScreen(
             confirmLabel = stringResource(R.string.action_archive),
             onConfirm = {
                 confirmArchive = false
-                onSave()
+                onArchive()
             },
             onDismiss = { confirmArchive = false },
         )
@@ -162,11 +177,11 @@ fun AccountFormScreen(
 @Preview(name = "Nueva cuenta", widthDp = 390, heightDp = 844)
 @Composable
 private fun AccountNewPreview() {
-    OrbitaTheme { AccountFormScreen(account = null, onClose = {}, onSave = {}) }
+    OrbitaPreview { AccountFormScreen(account = null, onClose = {}, onSave = {}) }
 }
 
 @Preview(name = "Editar cuenta", widthDp = 390, heightDp = 844)
 @Composable
 private fun AccountEditPreview() {
-    OrbitaTheme { AccountFormScreen(SampleData.debitAccount, onClose = {}, onSave = {}) }
+    OrbitaPreview { AccountFormScreen(SampleData.debitAccount, onClose = {}, onSave = {}) }
 }

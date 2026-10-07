@@ -39,13 +39,14 @@ import com.atmosferast.orbita.R
 import com.atmosferast.orbita.core.USD
 import com.atmosferast.orbita.core.formatDayMonth
 import com.atmosferast.orbita.core.formatMoney
+import com.atmosferast.orbita.core.formatMonthYear
 import com.atmosferast.orbita.core.formatSignedMoney
-import com.atmosferast.orbita.ui.mock.AccountType
-import com.atmosferast.orbita.ui.mock.MockAccount
-import com.atmosferast.orbita.ui.mock.MockEntry
-import com.atmosferast.orbita.ui.mock.MockMovement
-import com.atmosferast.orbita.ui.mock.MockTransfer
-import com.atmosferast.orbita.ui.mock.MovementKind
+import com.atmosferast.orbita.domain.model.AccountType
+import com.atmosferast.orbita.domain.model.Account
+import com.atmosferast.orbita.domain.model.Entry
+import com.atmosferast.orbita.domain.model.Movement
+import com.atmosferast.orbita.domain.model.Transfer
+import com.atmosferast.orbita.domain.model.MovementKind
 import com.atmosferast.orbita.ui.theme.Background
 import com.atmosferast.orbita.ui.theme.DividerSoft
 import com.atmosferast.orbita.ui.theme.Expense
@@ -62,6 +63,56 @@ import com.atmosferast.orbita.ui.theme.Primary
 import com.atmosferast.orbita.ui.theme.Surface
 import com.atmosferast.orbita.ui.theme.Transfer
 import com.atmosferast.orbita.ui.theme.TransferSoft
+import java.time.LocalDate
+
+/** Month stepper: ‹ goes to the previous month, › to the next. An arrow at its limit is dimmed. */
+@Composable
+fun MonthSelector(
+    month: LocalDate,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    modifier: Modifier = Modifier,
+    canGoPrevious: Boolean = true,
+    canGoNext: Boolean = true,
+) {
+    val lastDay = month.withDayOfMonth(month.lengthOfMonth())
+    OrbitaCard(modifier = modifier, contentPadding = PaddingValues(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            CircleIconButton(
+                OrbitaIcons.ChevronLeft,
+                stringResource(R.string.reports_prev_month),
+                onPrevious,
+                container = Background,
+                enabled = canGoPrevious,
+            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    formatMonthYear(month),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Ink,
+                    maxLines = 1,
+                )
+                Text(
+                    "1 – ${formatDayMonth(lastDay)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Muted,
+                )
+            }
+            CircleIconButton(
+                OrbitaIcons.ChevronRight,
+                stringResource(R.string.reports_next_month),
+                onNext,
+                container = Background,
+                enabled = canGoNext,
+            )
+        }
+    }
+}
 
 /** Scrollable screen body with the standard horizontal padding and an optional pinned footer. */
 @Composable
@@ -98,7 +149,7 @@ fun ScreenScaffold(
     }
 }
 
-fun accountIcon(account: MockAccount): ImageVector = when {
+fun accountIcon(account: Account): ImageVector = when {
     account.currency == USD -> OrbitaIcons.Dollar
     account.type == AccountType.CASH -> OrbitaIcons.Banknote
     account.type == AccountType.OTHER -> OrbitaIcons.Wallet
@@ -117,10 +168,10 @@ fun accountTypeLabel(type: AccountType): String = stringResource(
 
 /** Row of the movement lists: income (↗, up), expense (↙, down) or transfer (⇄). */
 @Composable
-fun EntryRow(entry: MockEntry, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun EntryRow(entry: Entry, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val date = formatDayMonth(entry.date)
     when (entry) {
-        is MockMovement -> {
+        is Movement -> {
             val income = entry.kind == MovementKind.INCOME
             val kindLabel = stringResource(if (income) R.string.kind_income else R.string.kind_expense)
             val redundant = entry.description.isBlank() || entry.description == entry.category.name
@@ -141,7 +192,7 @@ fun EntryRow(entry: MockEntry, onClick: () -> Unit, modifier: Modifier = Modifie
             )
         }
 
-        is MockTransfer -> {
+        is Transfer -> {
             val out = formatMoney(entry.fromAmount, entry.from.currency)
             val amount = if (entry.from.currency == entry.to.currency) out
             else "$out → ${formatMoney(entry.toAmount, entry.to.currency)}"
@@ -210,11 +261,36 @@ private fun EntryRowLayout(
     }
 }
 
+/** Heading under the tabs of the new movement / transfer forms: says what is being registered. */
+@Composable
+fun FormIntro(
+    icon: ImageVector,
+    tint: Color,
+    container: Color,
+    title: String,
+    subtitle: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconBadge(icon, tint, container)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, color = Ink)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Muted)
+        }
+    }
+}
+
 /** White card that stacks [EntryRow]s separated by soft dividers. */
 @Composable
 fun EntryList(
-    entries: List<MockEntry>,
-    onEntryClick: (MockEntry) -> Unit,
+    entries: List<Entry>,
+    onEntryClick: (Entry) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     OrbitaCard(modifier = modifier, contentPadding = PaddingValues(vertical = 4.dp)) {

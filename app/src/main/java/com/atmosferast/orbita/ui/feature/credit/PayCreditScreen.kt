@@ -1,5 +1,9 @@
 package com.atmosferast.orbita.ui.feature.credit
 
+import com.atmosferast.orbita.ui.components.DateDialog
+import com.atmosferast.orbita.ui.components.parseDecimal
+import com.atmosferast.orbita.ui.components.LocalToday
+import com.atmosferast.orbita.domain.model.CreditPayment
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -9,9 +13,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -38,36 +42,45 @@ import com.atmosferast.orbita.ui.components.OrbitaTextField
 import com.atmosferast.orbita.ui.components.PickerField
 import com.atmosferast.orbita.ui.components.PrimaryButton
 import com.atmosferast.orbita.ui.components.ScreenScaffold
-import com.atmosferast.orbita.ui.mock.MockAccount
-import com.atmosferast.orbita.ui.mock.MockCreditPurchase
-import com.atmosferast.orbita.ui.mock.SampleData
+import com.atmosferast.orbita.domain.model.Account
+import com.atmosferast.orbita.domain.model.CreditPurchase
+import com.atmosferast.orbita.data.demo.SampleData
 import com.atmosferast.orbita.ui.theme.Expense
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
-import com.atmosferast.orbita.ui.theme.OrbitaTheme
+import com.atmosferast.orbita.ui.components.OrbitaPreview
 import java.math.BigDecimal
 import java.math.RoundingMode
 
 /** "Marcar como pagada": only now the expense is created in the chosen account. */
 @Composable
 fun PayCreditScreen(
-    purchase: MockCreditPurchase,
-    accounts: List<MockAccount>,
+    purchase: CreditPurchase,
+    accounts: List<Account>,
     onBack: () -> Unit,
-    onConfirm: () -> Unit,
+    onConfirm: (CreditPayment) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // If the currencies match, the purchase amount is suggested; otherwise the user must type
     // what the bank really charged.
-    fun suggestedAmount(account: MockAccount) =
+    fun suggestedAmount(account: Account) =
         if (account.currency == purchase.currency) {
             purchase.amount.setScale(2, RoundingMode.HALF_UP).toPlainString()
         } else ""
 
-    var account by remember { mutableStateOf(SampleData.debitAccount) }
-    var amount by remember { mutableStateOf(suggestedAmount(SampleData.debitAccount)) }
+    val today = LocalToday.current
+    // Starts on an account in the currency of the purchase, where no conversion is needed.
+    val initialAccount = remember {
+        accounts.firstOrNull { it.currency == purchase.currency } ?: accounts.firstOrNull()
+    }
+    var selectedId by remember { mutableStateOf(initialAccount?.id) }
+    var amount by remember { mutableStateOf(initialAccount?.let(::suggestedAmount).orEmpty()) }
+    var paidOn by remember { mutableStateOf(today) }
+    var pickingDate by remember { mutableStateOf(false) }
+    // The list may hold a newer copy of the account (its balance changes with every movement).
+    val account = accounts.firstOrNull { it.id == selectedId }
 
-    val paid = amount.replace(',', '.').toBigDecimalOrNull() ?: BigDecimal.ZERO
+    val paid = parseDecimal(amount) ?: BigDecimal.ZERO
 
     ScreenScaffold(
         modifier = modifier,
@@ -79,7 +92,14 @@ fun PayCreditScreen(
                 onNavigate = onBack,
             )
         },
-        footer = { PrimaryButton(stringResource(R.string.pay_confirm), onConfirm) },
+        footer = {
+            PrimaryButton(
+                stringResource(R.string.pay_confirm),
+                onClick = {
+                    onConfirm(CreditPayment(purchase.id, account?.id, parseDecimal(amount), paidOn))
+                },
+            )
+        },
     ) {
         OrbitaCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -115,9 +135,9 @@ fun PayCreditScreen(
             accounts.forEach { option ->
                 OrbitaChip(
                     option.name,
-                    option.id == account.id,
+                    option.id == selectedId,
                     {
-                        account = option
+                        selectedId = option.id
                         amount = suggestedAmount(option)
                     },
                 )
@@ -129,14 +149,15 @@ fun PayCreditScreen(
             value = amount,
             onValueChange = { amount = it },
             placeholder = "0.00",
-            prefix = currencySymbol(account.currency),
+            prefix = currencySymbol(account?.currency ?: purchase.currency),
             keyboardType = KeyboardType.Decimal,
         )
         HintText(stringResource(R.string.pay_real_amount_hint), Modifier.padding(top = 8.dp))
 
         FieldLabel(stringResource(R.string.pay_date))
-        PickerField(formatDate(SampleData.today), onClick = {})
+        PickerField(formatDate(paidOn), onClick = { pickingDate = true })
 
+        if (account == null) return@ScreenScaffold
         Spacer(Modifier.height(20.dp))
         OrbitaCard {
             Text(
@@ -160,12 +181,26 @@ fun PayCreditScreen(
             )
         }
     }
+
+    if (pickingDate) {
+        // The payment becomes an expense, and an expense cannot be dated in the future.
+        DateDialog(
+            title = stringResource(R.string.calendar_date_title),
+            date = paidOn,
+            today = today,
+            onConfirm = {
+                paidOn = it
+                pickingDate = false
+            },
+            onDismiss = { pickingDate = false },
+        )
+    }
 }
 
 @Preview(name = "Pagar compra", widthDp = 390, heightDp = 900)
 @Composable
 private fun PayCreditPreview() {
-    OrbitaTheme {
+    OrbitaPreview {
         PayCreditScreen(
             SampleData.creditPurchases.first(),
             SampleData.accounts,

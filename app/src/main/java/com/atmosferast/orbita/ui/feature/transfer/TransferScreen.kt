@@ -1,11 +1,12 @@
 package com.atmosferast.orbita.ui.feature.transfer
 
+import com.atmosferast.orbita.ui.components.LocalToday
+import com.atmosferast.orbita.domain.model.TransferDraft
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,19 +17,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,16 +35,31 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atmosferast.orbita.R
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
+import com.atmosferast.orbita.core.MAX_AMOUNT_CENTS
+import com.atmosferast.orbita.core.amountToCents
+import com.atmosferast.orbita.core.appendAmountDigits
+import com.atmosferast.orbita.core.centsToAmount
+import com.atmosferast.orbita.core.removeAmountDigit
+import com.atmosferast.orbita.ui.components.AmountDisplay
+import com.atmosferast.orbita.ui.components.AmountKeypad
+import kotlinx.coroutines.delay
 import com.atmosferast.orbita.core.currencySymbol
 import com.atmosferast.orbita.core.formatDate
 import com.atmosferast.orbita.core.formatMoney
 import com.atmosferast.orbita.core.formatRate
-import com.atmosferast.orbita.ui.components.AmountInput
 import com.atmosferast.orbita.ui.components.CardDivider
 import com.atmosferast.orbita.ui.components.CircleIconButton
 import com.atmosferast.orbita.ui.components.ConfirmDialog
+import com.atmosferast.orbita.ui.components.DateDialog
 import com.atmosferast.orbita.ui.components.DropdownField
 import com.atmosferast.orbita.ui.components.FieldLabel
+import com.atmosferast.orbita.ui.components.FormIntro
 import com.atmosferast.orbita.ui.components.HintText
 import com.atmosferast.orbita.ui.components.LabelValueRow
 import com.atmosferast.orbita.ui.components.ModalTopBar
@@ -61,38 +72,38 @@ import com.atmosferast.orbita.ui.components.ScreenScaffold
 import com.atmosferast.orbita.ui.components.SectionTitle
 import com.atmosferast.orbita.ui.components.SegmentedControl
 import com.atmosferast.orbita.ui.components.accountIcon
-import com.atmosferast.orbita.ui.mock.MockAccount
-import com.atmosferast.orbita.ui.mock.MockFx
-import com.atmosferast.orbita.ui.mock.MockTransfer
-import com.atmosferast.orbita.ui.mock.SampleData
+import com.atmosferast.orbita.domain.model.Account
+import com.atmosferast.orbita.domain.model.FxPair
+import com.atmosferast.orbita.domain.model.Transfer
+import com.atmosferast.orbita.data.demo.SampleData
 import com.atmosferast.orbita.ui.theme.Expense
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
 import com.atmosferast.orbita.ui.theme.NeutralSoft
 import com.atmosferast.orbita.ui.theme.OrbitaShapes
-import com.atmosferast.orbita.ui.theme.OrbitaTheme
+import com.atmosferast.orbita.ui.components.OrbitaPreview
 import com.atmosferast.orbita.ui.theme.Outline
 import com.atmosferast.orbita.ui.theme.Primary
 import com.atmosferast.orbita.ui.theme.Surface
+import com.atmosferast.orbita.ui.theme.Transfer
+import com.atmosferast.orbita.ui.theme.TransferSoft
 import java.math.BigDecimal
 import java.math.RoundingMode
-import java.time.Instant
-import java.time.ZoneOffset
 
 private enum class TransferTab { EXPENSE, INCOME, TRANSFER }
 
 private fun parseAmount(text: String): BigDecimal? =
     text.replace(',', '.').toBigDecimalOrNull()?.takeIf { it.signum() > 0 }
 
-private fun plain(amount: BigDecimal): String =
-    amount.setScale(2, RoundingMode.HALF_UP).toPlainString()
+/** The two amounts of a transfer; the in-app keypad types into one of them at a time. */
+private enum class AmountField { OUT, IN }
 
 /**
  * Manual rate: units of [to]'s currency per 1 unit of [from]'s. Outside the user's pair of
  * currencies there is no rate, so it starts at 1 for the user to type.
  */
-private fun referenceRate(from: MockAccount, to: MockAccount, fx: MockFx): BigDecimal =
+private fun referenceRate(from: Account, to: Account, fx: FxPair): BigDecimal =
     fx.rateBetween(from.currency, to.currency) ?: BigDecimal.ONE
 
 /**
@@ -100,57 +111,99 @@ private fun referenceRate(from: MockAccount, to: MockAccount, fx: MockFx): BigDe
  * amount out, the (manual) rate and the amount in are linked; with the same currency there is
  * no exchange.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransferScreen(
-    accounts: List<MockAccount>,
+    accounts: List<Account>,
+    initialFrom: Account,
+    initialTo: Account,
+    fx: FxPair,
     onClose: () -> Unit,
-    onSave: () -> Unit,
+    onSave: (draft: TransferDraft, sameCurrency: Boolean) -> Unit,
     onOpenMovement: () -> Unit,
     modifier: Modifier = Modifier,
-    initialFrom: MockAccount = SampleData.dollarAccount,
-    initialTo: MockAccount = SampleData.debitAccount,
-    fx: MockFx = MockFx(),
-    editing: MockTransfer? = null,
+    editing: Transfer? = null,
     onDelete: () -> Unit = {},
 ) {
+    val today = LocalToday.current
     var from by remember { mutableStateOf(initialFrom) }
     var to by remember { mutableStateOf(initialTo) }
     val sameCurrency = from.currency == to.currency
     val referenceRate = referenceRate(from, to, fx)
-    var out by remember { mutableStateOf(plain(editing?.fromAmount ?: BigDecimal("20.00"))) }
-    var rate by remember { mutableStateOf(formatRate(referenceRate)) }
-    var incoming by remember {
-        mutableStateOf(
-            plain(editing?.toAmount ?: BigDecimal("20.00").multiply(referenceRate)),
-        )
-    }
-    var date by remember { mutableStateOf(editing?.date ?: SampleData.today) }
+    // A new transfer starts empty; an edited one, with what was saved. Both amounts are typed
+    // with the in-app keypad, so they are kept in cents like the amount of a movement.
+    var outCents by remember { mutableStateOf(editing?.let { amountToCents(it.fromAmount) } ?: 0L) }
+    var rate by remember { mutableStateOf(formatRate(editing?.exchangeRate ?: referenceRate)) }
+    var inCents by remember { mutableStateOf(editing?.let { amountToCents(it.toAmount) } ?: 0L) }
+    // The amount the keypad is typing into; null while it is closed.
+    var keypadField by remember { mutableStateOf<AmountField?>(null) }
+    var date by remember { mutableStateOf(editing?.date ?: today) }
     var pickingDate by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf(editing?.note.orEmpty()) }
     var confirmDelete by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val amountsCard = remember { BringIntoViewRequester() }
 
     // in = round(out × rate, 2)
-    fun recalculateIncoming(newOut: String, newRate: String) {
-        val o = parseAmount(newOut)
-        val r = parseAmount(newRate)
-        if (o != null && r != null) {
-            incoming = plain(o.multiply(r))
-        }
+    fun recalculateIncoming(newOutCents: Long, newRate: String) {
+        val r = parseAmount(newRate) ?: return
+        val converted = centsToAmount(newOutCents).multiply(r).setScale(2, RoundingMode.HALF_UP)
+        inCents = amountToCents(converted).coerceAtMost(MAX_AMOUNT_CENTS)
     }
 
     // Changing an account resets the rate to the manual one of the new pair of currencies.
-    fun setAccounts(newFrom: MockAccount, newTo: MockAccount) {
+    fun setAccounts(newFrom: Account, newTo: Account) {
         from = newFrom
         to = newTo
         rate = formatRate(referenceRate(newFrom, newTo, fx))
-        recalculateIncoming(out, rate)
+        recalculateIncoming(outCents, rate)
     }
 
-    val outAmount = parseAmount(out) ?: BigDecimal.ZERO
-    val inAmount = if (sameCurrency) outAmount else parseAmount(incoming) ?: BigDecimal.ZERO
-    val fromAfter = from.balance - outAmount
-    val toAfter = to.balance + inAmount
+    // What the keypad types goes to the active amount; the other values follow.
+    fun typeAmount(change: (Long) -> Long) {
+        when (keypadField) {
+            AmountField.OUT -> {
+                outCents = change(outCents)
+                recalculateIncoming(outCents, rate)
+            }
+
+            AmountField.IN -> {
+                inCents = change(inCents)
+                // rate = in ÷ out
+                if (inCents > 0 && outCents > 0) {
+                    rate = formatRate(
+                        centsToAmount(inCents).divide(centsToAmount(outCents), 6, RoundingMode.HALF_UP),
+                    )
+                }
+            }
+
+            null -> Unit
+        }
+    }
+
+    // The amounts never use the system keyboard.
+    fun openKeypad(field: AmountField) {
+        focusManager.clearFocus()
+        keypadField = field
+    }
+
+    BackHandler(enabled = keypadField != null) { keypadField = null }
+    // The keypad takes the foot of the screen: keep the amounts in sight above it.
+    LaunchedEffect(keypadField) {
+        if (keypadField != null) {
+            delay(150)
+            amountsCard.bringIntoView()
+        }
+    }
+
+    val outAmount = centsToAmount(outCents)
+    val inAmount = if (sameCurrency) outAmount else centsToAmount(inCents)
+    // When editing, the balances already count this transfer: it is taken back first.
+    fun withoutEdited(account: Account): BigDecimal =
+        account.balance +
+            (editing?.takeIf { it.from.id == account.id }?.fromAmount ?: BigDecimal.ZERO) -
+            (editing?.takeIf { it.to.id == account.id }?.toAmount ?: BigDecimal.ZERO)
+    val fromAfter = withoutEdited(from) - outAmount
+    val toAfter = withoutEdited(to) + inAmount
 
     ScreenScaffold(
         modifier = modifier,
@@ -176,12 +229,35 @@ fun TransferScreen(
             )
         },
         footer = {
-            PrimaryButton(
-                stringResource(
-                    if (editing != null) R.string.action_save_changes else R.string.transfer_save,
-                ),
-                onSave,
-            )
+            if (keypadField != null) {
+                AmountKeypad(
+                    onDigits = { digits -> typeAmount { appendAmountDigits(it, digits) } },
+                    onBackspace = { typeAmount(::removeAmountDigit) },
+                    onClear = { typeAmount { 0L } },
+                    onDone = { keypadField = null },
+                )
+            } else {
+                PrimaryButton(
+                    stringResource(
+                        if (editing != null) R.string.action_save_changes else R.string.transfer_save,
+                    ),
+                    onClick = {
+                        onSave(
+                            TransferDraft(
+                                fromAccountId = from.id,
+                                toAccountId = to.id,
+                                fromAmount = outAmount,
+                                // Same currency: no exchange, what goes out is what comes in.
+                                toAmount = inAmount,
+                                exchangeRate = if (sameCurrency) null else parseAmount(rate),
+                                date = date,
+                                note = note,
+                            ),
+                            sameCurrency,
+                        )
+                    },
+                )
+            }
         },
     ) {
         if (editing == null) {
@@ -194,7 +270,15 @@ fun TransferScreen(
                 selected = TransferTab.TRANSFER,
                 onSelect = { if (it != TransferTab.TRANSFER) onOpenMovement() },
             )
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
+            FormIntro(
+                icon = OrbitaIcons.Swap,
+                tint = Transfer,
+                container = TransferSoft,
+                title = stringResource(R.string.transfer_intro_title),
+                subtitle = stringResource(R.string.transfer_intro_subtitle),
+            )
+            Spacer(Modifier.height(4.dp))
         }
 
         // The same account cannot be on both sides: picking the other side's account swaps them.
@@ -238,15 +322,22 @@ fun TransferScreen(
         )
 
         Spacer(Modifier.height(12.dp))
-        OrbitaCard {
+        OrbitaCard(
+            modifier = Modifier
+                .bringIntoViewRequester(amountsCard)
+                .then(
+                    if (keypadField != null) Modifier.border(1.5.dp, Primary, OrbitaShapes.Card)
+                    else Modifier,
+                ),
+        ) {
             CardLabel(stringResource(R.string.transfer_amount_out))
-            AmountInput(
+            AmountDisplay(
                 symbol = currencySymbol(from.currency),
-                value = out,
-                onValueChange = {
-                    out = it
-                    recalculateIncoming(it, rate)
-                },
+                cents = outCents,
+                active = keypadField == AmountField.OUT,
+                modifier = Modifier
+                    .clip(OrbitaShapes.Field)
+                    .clickable(role = Role.Button) { openKeypad(AmountField.OUT) },
             )
             // Same currency: no exchange rate, in = out.
             if (!sameCurrency) {
@@ -267,12 +358,14 @@ fun TransferScreen(
                         color = Ink,
                     )
                     Spacer(Modifier.width(8.dp))
+                    // The rate has up to 4 decimals: it keeps the decimal keyboard of the system.
                     RateInput(
                         value = rate,
                         onValueChange = {
                             rate = it
-                            recalculateIncoming(out, it)
+                            recalculateIncoming(outCents, it)
                         },
+                        modifier = Modifier.onFocusChanged { if (it.hasFocus) keypadField = null },
                     )
                     Spacer(Modifier.weight(1f))
                     Text(
@@ -286,19 +379,14 @@ fun TransferScreen(
                 }
                 CardDivider()
                 CardLabel(stringResource(R.string.transfer_amount_in))
-                AmountInput(
+                AmountDisplay(
                     symbol = currencySymbol(to.currency),
-                    value = incoming,
-                    onValueChange = { text ->
-                        incoming = text
-                        // rate = in ÷ out
-                        val i = parseAmount(text)
-                        val o = parseAmount(out)
-                        if (i != null && o != null) {
-                            rate = formatRate(i.divide(o, 6, RoundingMode.HALF_UP))
-                        }
-                    },
+                    cents = inCents,
+                    active = keypadField == AmountField.IN,
                     style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier
+                        .clip(OrbitaShapes.Field)
+                        .clickable(role = Role.Button) { openKeypad(AmountField.IN) },
                 )
             }
         }
@@ -336,32 +424,22 @@ fun TransferScreen(
             value = note,
             onValueChange = { note = it },
             placeholder = stringResource(R.string.transfer_note_placeholder),
+            modifier = Modifier.onFocusChanged { if (it.hasFocus) keypadField = null },
         )
     }
 
     if (pickingDate) {
-        // The picker works in UTC milliseconds.
-        val pickerState = rememberDatePickerState(
-            initialSelectedDateMillis = date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+        // A transfer cannot be dated in the future.
+        DateDialog(
+            title = stringResource(R.string.calendar_date_title),
+            date = date,
+            today = today,
+            onConfirm = {
+                date = it
+                pickingDate = false
+            },
+            onDismiss = { pickingDate = false },
         )
-        DatePickerDialog(
-            onDismissRequest = { pickingDate = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        pickerState.selectedDateMillis?.let {
-                            date = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()
-                        }
-                        pickingDate = false
-                    },
-                ) { Text(stringResource(R.string.action_accept)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { pickingDate = false }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            },
-        ) { DatePicker(state = pickerState) }
     }
 
     if (confirmDelete) {
@@ -386,9 +464,9 @@ private fun CardLabel(text: String, modifier: Modifier = Modifier) {
 /** "Desde" / "Hacia" selector: every account with its icon and balance. */
 @Composable
 private fun AccountDropdown(
-    accounts: List<MockAccount>,
-    selected: MockAccount,
-    onSelect: (MockAccount) -> Unit,
+    accounts: List<Account>,
+    selected: Account,
+    onSelect: (Account) -> Unit,
 ) {
     DropdownField(
         options = accounts,
@@ -409,7 +487,7 @@ private fun AccountDropdown(
 }
 
 @Composable
-private fun RateInput(value: String, onValueChange: (String) -> Unit) {
+private fun RateInput(value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
@@ -417,7 +495,7 @@ private fun RateInput(value: String, onValueChange: (String) -> Unit) {
         textStyle = MaterialTheme.typography.titleMedium.copy(color = Ink),
         cursorBrush = SolidColor(Primary),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        modifier = Modifier
+        modifier = modifier
             .width(88.dp)
             .clip(OrbitaShapes.Field)
             .background(NeutralSoft)
@@ -428,22 +506,31 @@ private fun RateInput(value: String, onValueChange: (String) -> Unit) {
 @Preview(name = "Transferencia · entre monedas", widthDp = 390, heightDp = 1100)
 @Composable
 private fun TransferPreview() {
-    OrbitaTheme {
-        TransferScreen(SampleData.accounts, onClose = {}, onSave = {}, onOpenMovement = {})
+    OrbitaPreview {
+        TransferScreen(
+            SampleData.accounts,
+            initialFrom = SampleData.dollarAccount,
+            initialTo = SampleData.debitAccount,
+            fx = SampleData.fx,
+            onClose = {},
+            onSave = { _, _ -> },
+            onOpenMovement = {},
+        )
     }
 }
 
 @Preview(name = "Transferencia · misma moneda", widthDp = 390, heightDp = 1000)
 @Composable
 private fun TransferSameCurrencyPreview() {
-    OrbitaTheme {
+    OrbitaPreview {
         TransferScreen(
             SampleData.accounts,
-            onClose = {},
-            onSave = {},
-            onOpenMovement = {},
             initialFrom = SampleData.debitAccount,
             initialTo = SampleData.accounts.first { it.id == "savings" },
+            fx = SampleData.fx,
+            onClose = {},
+            onSave = { _, _ -> },
+            onOpenMovement = {},
         )
     }
 }
@@ -451,11 +538,14 @@ private fun TransferSameCurrencyPreview() {
 @Preview(name = "Editar transferencia", widthDp = 390, heightDp = 1100)
 @Composable
 private fun TransferEditPreview() {
-    OrbitaTheme {
+    OrbitaPreview {
         TransferScreen(
             SampleData.accounts,
+            initialFrom = SampleData.dollarExchange.from,
+            initialTo = SampleData.dollarExchange.to,
+            fx = SampleData.fx,
             onClose = {},
-            onSave = {},
+            onSave = { _, _ -> },
             onOpenMovement = {},
             editing = SampleData.dollarExchange,
         )

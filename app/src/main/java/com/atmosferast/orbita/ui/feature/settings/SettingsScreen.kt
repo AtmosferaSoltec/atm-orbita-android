@@ -14,9 +14,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -42,15 +42,15 @@ import com.atmosferast.orbita.ui.components.PillButton
 import com.atmosferast.orbita.ui.components.ScreenScaffold
 import com.atmosferast.orbita.ui.components.SectionTitle
 import com.atmosferast.orbita.ui.components.SegmentedControl
-import com.atmosferast.orbita.ui.mock.MockFx
-import com.atmosferast.orbita.ui.mock.SampleData
+import com.atmosferast.orbita.domain.model.FxPair
+import com.atmosferast.orbita.data.demo.SampleData
 import com.atmosferast.orbita.ui.theme.Expense
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
 import com.atmosferast.orbita.ui.theme.Neutral
 import com.atmosferast.orbita.ui.theme.NeutralSoft
-import com.atmosferast.orbita.ui.theme.OrbitaTheme
+import com.atmosferast.orbita.ui.components.OrbitaPreview
 import com.atmosferast.orbita.ui.theme.Primary
 import com.atmosferast.orbita.ui.theme.PrimarySoft
 import java.math.BigDecimal
@@ -60,14 +60,15 @@ private enum class FxMode { MANUAL, AUTO }
 
 @Composable
 fun SettingsScreen(
-    fx: MockFx,
-    onFxChange: (MockFx) -> Unit,
+    fx: FxPair,
+    onFxChange: (FxPair) -> Unit,
     displayCurrency: String,
     onDisplayCurrencyChange: (String) -> Unit,
     onBack: () -> Unit,
     onManageCategories: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
+    email: String = SampleData.userEmail,
 ) {
     // The text restarts whenever the pair of currencies changes.
     var rate by remember(fx.main, fx.secondary) { mutableStateOf(formatRate(fx.rate)) }
@@ -215,7 +216,7 @@ fun SettingsScreen(
                 HintText(stringResource(R.string.settings_security_text), Modifier.weight(1f))
             }
             CardDivider()
-            LabelValueRow(stringResource(R.string.settings_session), SampleData.userEmail)
+            LabelValueRow(stringResource(R.string.settings_session), email)
             Spacer(Modifier.height(12.dp))
             PillButton(
                 stringResource(R.string.action_logout),
@@ -264,8 +265,8 @@ fun SettingsScreen(
 @Composable
 private fun SettingsPreview() {
     var currency by remember { mutableStateOf(PEN) }
-    var fx by remember { mutableStateOf(MockFx()) }
-    OrbitaTheme {
+    var fx by remember { mutableStateOf(SampleData.fx) }
+    OrbitaPreview {
         SettingsScreen(
             fx = fx,
             onFxChange = { fx = it },

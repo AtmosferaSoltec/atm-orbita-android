@@ -15,9 +15,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,26 +51,26 @@ import com.atmosferast.orbita.ui.components.ScreenScaffold
 import com.atmosferast.orbita.ui.components.SwitchRow
 import com.atmosferast.orbita.ui.components.accountIcon
 import com.atmosferast.orbita.ui.components.accountTypeLabel
-import com.atmosferast.orbita.ui.mock.MockAccount
-import com.atmosferast.orbita.ui.mock.MockFx
-import com.atmosferast.orbita.ui.mock.SampleData
+import com.atmosferast.orbita.domain.model.Account
+import com.atmosferast.orbita.domain.model.FxPair
+import com.atmosferast.orbita.data.demo.SampleData
 import com.atmosferast.orbita.ui.theme.ChipBorder
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
 import com.atmosferast.orbita.ui.theme.OnHero
 import com.atmosferast.orbita.ui.theme.OrbitaShapes
-import com.atmosferast.orbita.ui.theme.OrbitaTheme
+import com.atmosferast.orbita.ui.components.OrbitaPreview
 import com.atmosferast.orbita.ui.theme.Primary
 import com.atmosferast.orbita.ui.theme.PrimarySoft
 
 @Composable
 fun AccountsScreen(
-    accounts: List<MockAccount>,
-    fx: MockFx,
+    accounts: List<Account>,
+    fx: FxPair,
     displayCurrency: String,
-    onToggleSavings: (MockAccount, Boolean) -> Unit,
+    onToggleSavings: (Account, Boolean) -> Unit,
     onTransfer: () -> Unit,
-    onAccountClick: (MockAccount) -> Unit,
+    onAccountClick: (Account) -> Unit,
     onNewAccount: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -110,7 +110,7 @@ fun AccountsScreen(
 }
 
 @Composable
-private fun SavingsSummaryCard(accounts: List<MockAccount>, fx: MockFx, displayCurrency: String) {
+private fun SavingsSummaryCard(accounts: List<Account>, fx: FxPair, displayCurrency: String) {
     val otherCurrency = fx.other(displayCurrency)
     HeroCard(scrim = true) {
         HeroLabel(
@@ -140,8 +140,8 @@ private fun SavingsSummaryCard(accounts: List<MockAccount>, fx: MockFx, displayC
 
 @Composable
 private fun AccountCard(
-    account: MockAccount,
-    fx: MockFx,
+    account: Account,
+    fx: FxPair,
     onClick: () -> Unit,
     onToggleSavings: (Boolean) -> Unit,
 ) {
@@ -247,10 +247,10 @@ fun DashedAddButton(label: String, onClick: () -> Unit) {
 @Composable
 private fun AccountsPreview() {
     var accounts by remember { mutableStateOf(SampleData.accounts) }
-    OrbitaTheme {
+    OrbitaPreview {
         AccountsScreen(
             accounts = accounts,
-            fx = MockFx(),
+            fx = SampleData.fx,
             displayCurrency = PEN,
             onToggleSavings = { account, include ->
                 accounts = accounts.map {

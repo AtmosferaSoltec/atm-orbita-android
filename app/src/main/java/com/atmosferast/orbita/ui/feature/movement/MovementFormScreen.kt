@@ -1,5 +1,13 @@
 package com.atmosferast.orbita.ui.feature.movement
 
+import com.atmosferast.orbita.core.centsToAmount
+import com.atmosferast.orbita.ui.components.DateDialog
+import com.atmosferast.orbita.ui.components.color
+import com.atmosferast.orbita.ui.components.LocalToday
+import com.atmosferast.orbita.domain.model.CreditPurchaseDraft
+import com.atmosferast.orbita.domain.model.MovementDraft
+import com.atmosferast.orbita.domain.model.CreditCard
+import com.atmosferast.orbita.domain.model.Category
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,9 +24,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -41,6 +49,7 @@ import com.atmosferast.orbita.ui.components.CircleIconButton
 import com.atmosferast.orbita.ui.components.ConfirmDialog
 import com.atmosferast.orbita.ui.components.DropdownField
 import com.atmosferast.orbita.ui.components.FieldLabel
+import com.atmosferast.orbita.ui.components.FormIntro
 import com.atmosferast.orbita.ui.components.HintText
 import com.atmosferast.orbita.ui.components.ModalTopBar
 import com.atmosferast.orbita.ui.components.OrbitaCard
@@ -52,20 +61,24 @@ import com.atmosferast.orbita.ui.components.ScreenScaffold
 import com.atmosferast.orbita.ui.components.SegmentedControl
 import com.atmosferast.orbita.ui.components.SwitchRow
 import com.atmosferast.orbita.ui.components.accountIcon
-import com.atmosferast.orbita.ui.mock.MockAccount
-import com.atmosferast.orbita.ui.mock.MockMovement
-import com.atmosferast.orbita.ui.mock.MovementKind
-import com.atmosferast.orbita.ui.mock.SampleData
+import com.atmosferast.orbita.domain.model.Account
+import com.atmosferast.orbita.domain.model.Movement
+import com.atmosferast.orbita.domain.model.MovementKind
+import com.atmosferast.orbita.data.demo.SampleData
 import com.atmosferast.orbita.ui.theme.Expense
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
 import com.atmosferast.orbita.ui.theme.Income
+import com.atmosferast.orbita.ui.theme.IncomeSoft
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
 import com.atmosferast.orbita.ui.theme.OrbitaShapes
-import com.atmosferast.orbita.ui.theme.OrbitaTheme
+import com.atmosferast.orbita.ui.components.OrbitaPreview
 import com.atmosferast.orbita.ui.theme.Primary
 
 private enum class FormTab { EXPENSE, INCOME, TRANSFER }
+
+/** Due date suggested for a new purchase with a credit card. */
+private const val DEFAULT_DAYS_TO_PAY = 13L
 
 /**
  * New movement, or edit/delete when [editing] is set. With "Compra con tarjeta de crédito" on,
@@ -73,32 +86,48 @@ private enum class FormTab { EXPENSE, INCOME, TRANSFER }
  */
 @Composable
 fun MovementFormScreen(
-    accounts: List<MockAccount>,
+    accounts: List<Account>,
+    categories: List<Category>,
+    creditCards: List<CreditCard>,
     onClose: () -> Unit,
-    onSave: () -> Unit,
+    onSave: (MovementDraft) -> Unit,
     onOpenTransfer: () -> Unit,
     modifier: Modifier = Modifier,
-    editing: MockMovement? = null,
+    editing: Movement? = null,
     initialCredit: Boolean = false,
+    defaultAccount: Account? = null,
+    onSavePurchase: (CreditPurchaseDraft) -> Unit = {},
     onDelete: () -> Unit = {},
 ) {
+    val today = LocalToday.current
+    fun categoriesOf(kind: MovementKind) = categories.filter { it.kind == kind }
+
     var kind by remember { mutableStateOf(editing?.kind ?: MovementKind.EXPENSE) }
     var amountCents by remember { mutableStateOf(editing?.let { amountToCents(it.amount) } ?: 0L) }
     // A new movement starts on the amount, with the in-app keypad open.
     var keypadOpen by remember { mutableStateOf(editing == null) }
-    var account by remember { mutableStateOf(editing?.account ?: SampleData.debitAccount) }
+    var accountId by remember {
+        mutableStateOf((editing?.account ?: defaultAccount ?: accounts.firstOrNull())?.id)
+    }
     var category by remember {
-        mutableStateOf(editing?.category ?: SampleData.categoriesOf(kind).first())
+        mutableStateOf(editing?.category ?: categoriesOf(kind).firstOrNull())
     }
     var description by remember { mutableStateOf(editing?.description.orEmpty()) }
+    var date by remember { mutableStateOf(editing?.date) }
+    var pickingDate by remember { mutableStateOf(false) }
     var credit by remember { mutableStateOf(initialCredit) }
-    var creditCard by remember { mutableStateOf(SampleData.creditCards.first()) }
+    var creditCard by remember { mutableStateOf(creditCards.firstOrNull()) }
+    var dueDate by remember { mutableStateOf(today.plusDays(DEFAULT_DAYS_TO_PAY)) }
+    var pickingDueDate by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
 
+    // The list holds the newest copy of the account (its balance changes with every movement);
+    // an edited movement may sit on an account that was archived since.
+    val account = accounts.firstOrNull { it.id == accountId } ?: editing?.account
     val isExpense = kind == MovementKind.EXPENSE
     val onCredit = credit && isExpense && editing == null
     // A credit purchase is registered in the currency of its card.
-    val symbol = currencySymbol(if (onCredit) creditCard.currency else account.currency)
+    val symbol = currencySymbol((if (onCredit) creditCard?.currency else account?.currency) ?: PEN)
     val focusManager = LocalFocusManager.current
 
     BackHandler(enabled = keypadOpen) { keypadOpen = false }
@@ -145,7 +174,20 @@ fun MovementFormScreen(
                             else -> R.string.movement_save_income
                         },
                     ),
-                    onSave,
+                    onClick = {
+                        val amount = centsToAmount(amountCents)
+                        if (onCredit) {
+                            onSavePurchase(
+                                CreditPurchaseDraft(
+                                    creditCard?.id, amount, category?.id, description, dueDate,
+                                ),
+                            )
+                        } else {
+                            onSave(
+                                MovementDraft(kind, amount, account?.id, category?.id, description, date),
+                            )
+                        }
+                    },
                 )
             }
         },
@@ -165,11 +207,29 @@ fun MovementFormScreen(
                     else -> {
                         kind = if (tab == FormTab.EXPENSE) MovementKind.EXPENSE else MovementKind.INCOME
                         // Changing the type selects its first category.
-                        category = SampleData.categoriesOf(kind).first()
+                        category = categoriesOf(kind).firstOrNull()
                     }
                 }
             },
         )
+
+        // Only when creating: the tabs alone do not tell the three forms apart.
+        if (editing == null) {
+            Spacer(Modifier.height(16.dp))
+            FormIntro(
+                icon = if (isExpense) OrbitaIcons.ArrowDownLeft else OrbitaIcons.ArrowUpRight,
+                tint = if (isExpense) Expense else Income,
+                container = if (isExpense) ExpenseSoft else IncomeSoft,
+                title = stringResource(
+                    if (isExpense) R.string.movement_intro_expense_title
+                    else R.string.movement_intro_income_title,
+                ),
+                subtitle = stringResource(
+                    if (isExpense) R.string.movement_intro_expense_subtitle
+                    else R.string.movement_intro_income_subtitle,
+                ),
+            )
+        }
 
         Spacer(Modifier.height(14.dp))
         OrbitaCard(
@@ -200,39 +260,47 @@ fun MovementFormScreen(
                     if (isExpense) R.string.movement_from_account else R.string.movement_to_account,
                 ),
             )
+            if (account == null) {
+                HintText(stringResource(R.string.error_no_accounts_message))
+            } else {
+                DropdownField(
+                    options = accounts,
+                    selected = account,
+                    onSelect = { accountId = it.id },
+                    label = { it.name },
+                    detail = { formatMoney(it.balance, it.currency) },
+                    leading = { option ->
+                        Icon(
+                            accountIcon(option),
+                            contentDescription = null,
+                            tint = Primary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    },
+                )
+            }
+        }
+
+        FieldLabel(stringResource(R.string.field_category))
+        val selectedCategory = category
+        if (selectedCategory == null) {
+            HintText(stringResource(R.string.error_no_categories))
+        } else {
             DropdownField(
-                options = accounts,
-                // The list may hold a newer copy of the account (e.g. savings switch changed).
-                selected = accounts.firstOrNull { it.id == account.id } ?: account,
-                onSelect = { account = it },
+                options = categoriesOf(kind),
+                selected = selectedCategory,
+                onSelect = { category = it },
                 label = { it.name },
-                detail = { formatMoney(it.balance, it.currency) },
                 leading = { option ->
-                    Icon(
-                        accountIcon(option),
-                        contentDescription = null,
-                        tint = Primary,
-                        modifier = Modifier.size(20.dp),
+                    Box(
+                        Modifier
+                            .size(12.dp)
+                            .clip(CircleShape)
+                            .background(option.color),
                     )
                 },
             )
         }
-
-        FieldLabel(stringResource(R.string.field_category))
-        DropdownField(
-            options = SampleData.categoriesOf(kind),
-            selected = category,
-            onSelect = { category = it },
-            label = { it.name },
-            leading = { option ->
-                Box(
-                    Modifier
-                        .size(12.dp)
-                        .clip(CircleShape)
-                        .background(option.color),
-                )
-            },
-        )
 
         FieldLabel(stringResource(R.string.field_description))
         OrbitaTextArea(
@@ -247,7 +315,7 @@ fun MovementFormScreen(
         // be changed later, when editing.
         if (editing != null) {
             FieldLabel(stringResource(R.string.field_date))
-            PickerField(formatDate(editing.date), onClick = {})
+            PickerField(formatDate(date ?: editing.date), onClick = { pickingDate = true })
         } else {
             Row(
                 modifier = Modifier.padding(top = 14.dp, start = 4.dp, end = 4.dp),
@@ -277,26 +345,60 @@ fun MovementFormScreen(
                 HintText(stringResource(R.string.movement_credit_hint))
                 if (credit) {
                     FieldLabel(stringResource(R.string.credit_card_field))
-                    DropdownField(
-                        options = SampleData.creditCards,
-                        selected = creditCard,
-                        onSelect = { creditCard = it },
-                        label = { it.name },
-                        detail = { currencySymbol(it.currency) },
-                        leading = {
-                            Icon(
-                                OrbitaIcons.CreditCard,
-                                contentDescription = null,
-                                tint = Primary,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        },
-                    )
+                    val selectedCard = creditCard
+                    if (selectedCard == null) {
+                        HintText(stringResource(R.string.credit_no_cards))
+                    } else {
+                        DropdownField(
+                            options = creditCards,
+                            selected = selectedCard,
+                            onSelect = { creditCard = it },
+                            label = { it.name },
+                            detail = { currencySymbol(it.currency) },
+                            leading = {
+                                Icon(
+                                    OrbitaIcons.CreditCard,
+                                    contentDescription = null,
+                                    tint = Primary,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            },
+                        )
+                    }
                     FieldLabel(stringResource(R.string.credit_due_date))
-                    PickerField(formatDate(SampleData.today.plusDays(13)), onClick = {})
+                    PickerField(formatDate(dueDate), onClick = { pickingDueDate = true })
                 }
             }
         }
+    }
+
+    if (pickingDate && editing != null) {
+        // A movement cannot be dated in the future.
+        DateDialog(
+            title = stringResource(R.string.calendar_date_title),
+            date = date ?: editing.date,
+            today = today,
+            onConfirm = {
+                date = it
+                pickingDate = false
+            },
+            onDismiss = { pickingDate = false },
+        )
+    }
+
+    if (pickingDueDate) {
+        // The one date that is in the future by nature.
+        DateDialog(
+            title = stringResource(R.string.credit_due_date),
+            date = dueDate,
+            today = today,
+            allowFuture = true,
+            onConfirm = {
+                dueDate = it
+                pickingDueDate = false
+            },
+            onDismiss = { pickingDueDate = false },
+        )
     }
 
     if (confirmDelete) {
@@ -316,17 +418,26 @@ fun MovementFormScreen(
 @Preview(name = "Nuevo movimiento · egreso", widthDp = 390, heightDp = 1000)
 @Composable
 private fun MovementNewPreview() {
-    OrbitaTheme {
-        MovementFormScreen(SampleData.accounts, onClose = {}, onSave = {}, onOpenTransfer = {})
+    OrbitaPreview {
+        MovementFormScreen(
+            SampleData.accounts,
+            SampleData.categories,
+            SampleData.creditCards,
+            onClose = {},
+            onSave = {},
+            onOpenTransfer = {},
+        )
     }
 }
 
 @Preview(name = "Nuevo movimiento · compra con tarjeta", widthDp = 390, heightDp = 1000)
 @Composable
 private fun MovementCreditPreview() {
-    OrbitaTheme {
+    OrbitaPreview {
         MovementFormScreen(
             SampleData.accounts,
+            SampleData.categories,
+            SampleData.creditCards,
             onClose = {},
             onSave = {},
             onOpenTransfer = {},
@@ -338,9 +449,11 @@ private fun MovementCreditPreview() {
 @Preview(name = "Editar movimiento", widthDp = 390, heightDp = 1000)
 @Composable
 private fun MovementEditPreview() {
-    OrbitaTheme {
+    OrbitaPreview {
         MovementFormScreen(
             SampleData.accounts,
+            SampleData.categories,
+            SampleData.creditCards,
             onClose = {},
             onSave = {},
             onOpenTransfer = {},

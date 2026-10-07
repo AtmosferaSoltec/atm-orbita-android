@@ -1,5 +1,8 @@
 package com.atmosferast.orbita.ui.feature.home
 
+import com.atmosferast.orbita.ui.components.LocalToday
+import com.atmosferast.orbita.domain.model.DatePeriod
+import com.atmosferast.orbita.domain.model.CreditPurchase
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,9 +20,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,7 +32,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -38,8 +40,6 @@ import androidx.compose.ui.unit.sp
 import com.atmosferast.orbita.R
 import com.atmosferast.orbita.core.PEN
 import com.atmosferast.orbita.core.currencySymbol
-import com.atmosferast.orbita.core.formatAmount
-import com.atmosferast.orbita.core.formatDayMonth
 import com.atmosferast.orbita.core.formatMoney
 import com.atmosferast.orbita.core.formatRate
 import com.atmosferast.orbita.core.formatSignedMoney
@@ -49,7 +49,6 @@ import com.atmosferast.orbita.ui.components.EntryList
 import com.atmosferast.orbita.ui.components.HeroCard
 import com.atmosferast.orbita.ui.components.HeroGlass
 import com.atmosferast.orbita.ui.components.HeroLabel
-import com.atmosferast.orbita.ui.components.HeroPill
 import com.atmosferast.orbita.ui.components.HintText
 import com.atmosferast.orbita.ui.components.IconBadge
 import com.atmosferast.orbita.ui.components.OrbitaCard
@@ -61,11 +60,11 @@ import com.atmosferast.orbita.ui.components.SegmentedControl
 import com.atmosferast.orbita.ui.components.SkeletonBlock
 import com.atmosferast.orbita.ui.components.StateMessage
 import com.atmosferast.orbita.ui.feature.credit.pendingPaymentsLabel
-import com.atmosferast.orbita.ui.mock.MockAccount
-import com.atmosferast.orbita.ui.mock.MockEntry
-import com.atmosferast.orbita.ui.mock.MockFx
-import com.atmosferast.orbita.ui.mock.MovementKind
-import com.atmosferast.orbita.ui.mock.SampleData
+import com.atmosferast.orbita.domain.model.Account
+import com.atmosferast.orbita.domain.model.Entry
+import com.atmosferast.orbita.domain.model.FxPair
+import com.atmosferast.orbita.domain.model.MovementKind
+import com.atmosferast.orbita.data.demo.SampleData
 import com.atmosferast.orbita.ui.theme.Expense
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
 import com.atmosferast.orbita.ui.theme.Income
@@ -75,25 +74,30 @@ import com.atmosferast.orbita.ui.theme.Muted
 import com.atmosferast.orbita.ui.theme.MutedLight
 import com.atmosferast.orbita.ui.theme.Orange
 import com.atmosferast.orbita.ui.theme.OrangeSoft
-import com.atmosferast.orbita.ui.theme.OrbitaTheme
+import com.atmosferast.orbita.ui.components.OrbitaPreview
 import java.math.BigDecimal
 
 enum class HomeState { CONTENT, LOADING, EMPTY, ERROR }
 
 @Composable
 fun HomeScreen(
-    accounts: List<MockAccount>,
-    fx: MockFx,
+    accounts: List<Account>,
+    fx: FxPair,
     displayCurrency: String,
+    monthIncome: BigDecimal,
+    monthExpense: BigDecimal,
+    recentEntries: List<Entry>,
+    pendingPurchases: List<CreditPurchase>,
     onDisplayCurrencyChange: (String) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAccounts: () -> Unit,
     onOpenCredit: () -> Unit,
     onOpenReport: (MovementKind) -> Unit,
     onOpenMovements: () -> Unit,
-    onEntryClick: (MockEntry) -> Unit,
+    onEntryClick: (Entry) -> Unit,
     modifier: Modifier = Modifier,
     state: HomeState = HomeState.CONTENT,
+    onRetry: () -> Unit = {},
 ) {
     ScreenScaffold(
         modifier = modifier,
@@ -119,6 +123,7 @@ fun HomeScreen(
                 title = stringResource(R.string.error_load_title),
                 message = stringResource(R.string.error_load_message),
                 actionLabel = stringResource(R.string.action_retry),
+                onAction = onRetry,
             )
 
             else -> {
@@ -126,17 +131,19 @@ fun HomeScreen(
                 Spacer(Modifier.height(12.dp))
                 val empty = state == HomeState.EMPTY
                 MonthCards(
-                    income = if (empty) BigDecimal.ZERO else SampleData.monthIncome,
-                    expense = if (empty) BigDecimal.ZERO else SampleData.monthExpense,
+                    income = monthIncome,
+                    expense = monthExpense,
+                    currency = fx.main,
                     onOpenReport = onOpenReport,
                 )
                 HintText(
                     stringResource(R.string.home_month_note),
                     Modifier.padding(top = 10.dp, start = 4.dp, end = 4.dp),
                 )
-                if (!empty) {
+                // Only in v1.1 and when there are pending purchases.
+                if (pendingPurchases.isNotEmpty()) {
                     Spacer(Modifier.height(14.dp))
-                    CreditReminderCard(onOpenCredit)
+                    CreditReminderCard(pendingPurchases, onOpenCredit)
                 }
                 SectionTitle(
                     stringResource(R.string.home_recent),
@@ -152,7 +159,7 @@ fun HomeScreen(
                         )
                     }
                 } else {
-                    EntryList(SampleData.recentEntries, onEntryClick)
+                    EntryList(recentEntries, onEntryClick)
                 }
             }
         }
@@ -161,8 +168,8 @@ fun HomeScreen(
 
 @Composable
 private fun SavingsHeroCard(
-    accounts: List<MockAccount>,
-    fx: MockFx,
+    accounts: List<Account>,
+    fx: FxPair,
     displayCurrency: String,
     onDisplayCurrencyChange: (String) -> Unit,
     onOpenAccounts: () -> Unit,
@@ -247,15 +254,16 @@ private fun SavingsHeroCard(
 private fun MonthCards(
     income: BigDecimal,
     expense: BigDecimal,
+    currency: String,
     onOpenReport: (MovementKind) -> Unit,
 ) {
-    val month = monthName(SampleData.today).replaceFirstChar { it.uppercase() }
+    val month = monthName(LocalToday.current).replaceFirstChar { it.uppercase() }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         MonthCard(
             icon = OrbitaIcons.TrendUp,
             label = stringResource(R.string.home_month_income),
             month = month,
-            amount = formatSignedMoney(income, PEN, positive = true),
+            amount = formatSignedMoney(income, currency, positive = true),
             color = Income,
             container = IncomeSoft,
             onClick = { onOpenReport(MovementKind.INCOME) },
@@ -264,7 +272,7 @@ private fun MonthCards(
             icon = OrbitaIcons.TrendDown,
             label = stringResource(R.string.home_month_expense),
             month = month,
-            amount = formatSignedMoney(expense, PEN, positive = false),
+            amount = formatSignedMoney(expense, currency, positive = false),
             color = Expense,
             container = ExpenseSoft,
             onClick = { onOpenReport(MovementKind.EXPENSE) },
@@ -318,10 +326,8 @@ private fun MonthCard(
     }
 }
 
-/** Only in v1.1 and when there are pending purchases. */
 @Composable
-private fun CreditReminderCard(onClick: () -> Unit) {
-    val purchases = SampleData.creditPurchases
+private fun CreditReminderCard(purchases: List<CreditPurchase>, onClick: () -> Unit) {
     OrbitaCard(onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconBadge(OrbitaIcons.CreditCard, Orange, OrangeSoft)
@@ -379,11 +385,17 @@ private fun HomeSkeleton() {
 @Composable
 private fun HomePreviewContent(state: HomeState) {
     var currency by remember { mutableStateOf(PEN) }
-    OrbitaTheme {
+    val empty = state == HomeState.EMPTY
+    val october = SampleData.reportFor(DatePeriod.ofMonth(SampleData.today)).first()
+    OrbitaPreview {
         HomeScreen(
             accounts = SampleData.accounts,
-            fx = MockFx(),
+            fx = SampleData.fx,
             displayCurrency = currency,
+            monthIncome = if (empty) BigDecimal.ZERO else october.incomeTotal,
+            monthExpense = if (empty) BigDecimal.ZERO else october.expenseTotal,
+            recentEntries = if (empty) emptyList() else SampleData.recentEntries,
+            pendingPurchases = if (empty) emptyList() else SampleData.creditPurchases,
             onDisplayCurrencyChange = { currency = it },
             onOpenSettings = {},
             onOpenAccounts = {},

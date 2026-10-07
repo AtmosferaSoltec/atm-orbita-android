@@ -7,6 +7,7 @@ App **Android nativa** (Kotlin + Jetpack Compose) para registrar ingresos y egre
 
 ## Estado
 - Fase actual: **0** (ver `docs/06-plan-y-pruebas.md`). Actualiza esta línea al cerrar cada fase.
+- **Adelantado el 7 oct 2026, a pedido del usuario:** la app ya tiene la arquitectura de la Fase 1 (Hilt, capas `domain` / `data` / `ui`, ViewModels, cliente Supabase por `BuildConfig`) y **toda la lógica de las Fases 2–6 funcionando sobre datos en memoria** (`data/demo`). Lo que falta de cada fase es su implementación en `data/remote` contra Supabase y la línea correspondiente en `di/AppModule.kt`. La Fase 0 (crear el proyecto de Supabase y aplicar `supabase/migrations/0001_init.sql`) sigue pendiente: requiere la cuenta del usuario. Navegación: sigue siendo una pila propia en `ui/navigation/OrbitaApp.kt`; migrarla a Navigation Compose está pendiente.
 
 ## Lee en este orden
 1. `docs/01-vision-y-alcance.md` — qué se construye, qué entra en el MVP y qué no.

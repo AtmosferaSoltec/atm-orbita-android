@@ -1,5 +1,6 @@
 package com.atmosferast.orbita.ui.feature.credit
 
+import com.atmosferast.orbita.ui.components.LocalToday
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
@@ -18,9 +19,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,11 +52,11 @@ import com.atmosferast.orbita.ui.components.ScreenScaffold
 import com.atmosferast.orbita.ui.components.StateMessage
 import com.atmosferast.orbita.ui.components.StatusChip
 import com.atmosferast.orbita.ui.feature.accounts.DashedAddButton
-import com.atmosferast.orbita.ui.mock.MockCreditCard
-import com.atmosferast.orbita.ui.mock.MockCreditPurchase
-import com.atmosferast.orbita.ui.mock.SampleData
-import com.atmosferast.orbita.ui.mock.debtCurrencies
-import com.atmosferast.orbita.ui.mock.debtIn
+import com.atmosferast.orbita.domain.model.CreditCard
+import com.atmosferast.orbita.domain.model.CreditPurchase
+import com.atmosferast.orbita.data.demo.SampleData
+import com.atmosferast.orbita.domain.model.debtCurrencies
+import com.atmosferast.orbita.domain.model.debtIn
 import com.atmosferast.orbita.ui.theme.Expense
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
 import com.atmosferast.orbita.ui.theme.Ink
@@ -64,7 +65,7 @@ import com.atmosferast.orbita.ui.theme.Neutral
 import com.atmosferast.orbita.ui.theme.NeutralSoft
 import com.atmosferast.orbita.ui.theme.OnHero
 import com.atmosferast.orbita.ui.theme.OrbitaShapes
-import com.atmosferast.orbita.ui.theme.OrbitaTheme
+import com.atmosferast.orbita.ui.components.OrbitaPreview
 import com.atmosferast.orbita.ui.theme.Primary
 import com.atmosferast.orbita.ui.theme.PrimarySoft
 import java.time.LocalDate
@@ -75,11 +76,11 @@ import java.time.LocalDate
  */
 @Composable
 fun CreditScreen(
-    cards: List<MockCreditCard>,
-    purchases: List<MockCreditPurchase>,
+    cards: List<CreditCard>,
+    purchases: List<CreditPurchase>,
     onRegisterPurchase: () -> Unit,
-    onPay: (MockCreditPurchase) -> Unit,
-    onCardClick: (MockCreditCard) -> Unit,
+    onPay: (CreditPurchase) -> Unit,
+    onCardClick: (CreditCard) -> Unit,
     onNewCard: () -> Unit,
     mainCurrency: String = PEN,
     modifier: Modifier = Modifier,
@@ -134,7 +135,7 @@ fun CreditScreen(
 @Composable
 private fun TotalDebtCard(
     cardCount: Int,
-    purchases: List<MockCreditPurchase>,
+    purchases: List<CreditPurchase>,
     mainCurrency: String,
 ) {
     // The main currency leads (even at zero); every other currency owed gets its own line.
@@ -171,15 +172,15 @@ private fun TotalDebtCard(
 
 /** "2 pagos pendientes · vence 5 oct" for the closest due date of [purchases]. */
 @Composable
-fun pendingPaymentsLabel(purchases: List<MockCreditPurchase>): String = stringResource(
+fun pendingPaymentsLabel(purchases: List<CreditPurchase>): String = stringResource(
     R.string.credit_pending_due,
     pluralStringResource(R.plurals.credit_pending_payments, purchases.size, purchases.size),
     formatDayMonth(purchases.minOf { it.dueDate }),
 )
 
 @Composable
-fun dueLabel(purchase: MockCreditPurchase): String {
-    val days = purchase.daysUntilDue.toInt()
+fun dueLabel(purchase: CreditPurchase): String {
+    val days = purchase.daysUntilDue(LocalToday.current).toInt()
     val date = formatDayMonth(purchase.dueDate)
     return when {
         days < -1 -> stringResource(R.string.credit_overdue_days, -days)
@@ -196,14 +197,15 @@ fun dueLabel(purchase: MockCreditPurchase): String {
  */
 @Composable
 private fun CreditCardCard(
-    card: MockCreditCard,
-    purchases: List<MockCreditPurchase>,
+    card: CreditCard,
+    purchases: List<CreditPurchase>,
     onClick: () -> Unit,
-    onPay: (MockCreditPurchase) -> Unit,
+    onPay: (CreditPurchase) -> Unit,
 ) {
     // The card's own currency leads; a card that only owes another one shows that one instead.
     val currencies = purchases.debtCurrencies(card.currency).ifEmpty { listOf(card.currency) }
-    val urgent = purchases.any { it.isUrgent }
+    val today = LocalToday.current
+    val urgent = purchases.any { it.isUrgent(today) }
     // Cards with pending payments start open.
     var expanded by rememberSaveable(card.id) { mutableStateOf(purchases.isNotEmpty()) }
     val chevronRotation by animateFloatAsState(if (expanded) 180f else 0f, label = "chevron")
@@ -317,7 +319,7 @@ private fun CreditCardCard(
 }
 
 @Composable
-private fun PurchaseItem(purchase: MockCreditPurchase, onPay: () -> Unit) {
+private fun PurchaseItem(purchase: CreditPurchase, onPay: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
             purchase.description,
@@ -349,10 +351,11 @@ private fun PurchaseItem(purchase: MockCreditPurchase, onPay: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Urgent: due in 3 days or less, or overdue.
+        val urgent = purchase.isUrgent(LocalToday.current)
         StatusChip(
             dueLabel(purchase),
-            container = if (purchase.isUrgent) ExpenseSoft else NeutralSoft,
-            content = if (purchase.isUrgent) Expense else Neutral,
+            container = if (urgent) ExpenseSoft else NeutralSoft,
+            content = if (urgent) Expense else Neutral,
         )
         Spacer(Modifier.weight(1f))
     }
@@ -368,7 +371,7 @@ private fun PurchaseItem(purchase: MockCreditPurchase, onPay: () -> Unit) {
 @Preview(name = "Tarjeta de crédito", widthDp = 390, heightDp = 1400)
 @Composable
 private fun CreditPreview() {
-    OrbitaTheme {
+    OrbitaPreview {
         CreditScreen(
             SampleData.creditCards,
             SampleData.creditPurchases,
@@ -383,7 +386,7 @@ private fun CreditPreview() {
 @Preview(name = "Tarjeta de crédito · sin deudas", widthDp = 390, heightDp = 844)
 @Composable
 private fun CreditEmptyPreview() {
-    OrbitaTheme {
+    OrbitaPreview {
         CreditScreen(
             SampleData.creditCards,
             emptyList(),

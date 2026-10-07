@@ -1,5 +1,8 @@
 package com.atmosferast.orbita.ui.feature.categories
 
+import com.atmosferast.orbita.ui.components.toHex
+import com.atmosferast.orbita.ui.components.color
+import com.atmosferast.orbita.domain.model.CategoryDraft
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,9 +26,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,24 +53,25 @@ import com.atmosferast.orbita.ui.components.PillButton
 import com.atmosferast.orbita.ui.components.PrimaryButton
 import com.atmosferast.orbita.ui.components.ScreenScaffold
 import com.atmosferast.orbita.ui.components.SegmentedControl
-import com.atmosferast.orbita.ui.mock.MockCategory
-import com.atmosferast.orbita.ui.mock.MovementKind
-import com.atmosferast.orbita.ui.mock.SampleData
+import com.atmosferast.orbita.domain.model.Category
+import com.atmosferast.orbita.domain.model.MovementKind
+import com.atmosferast.orbita.data.demo.SampleData
 import com.atmosferast.orbita.ui.theme.CategoryPalette
 import com.atmosferast.orbita.ui.theme.DividerSoft
 import com.atmosferast.orbita.ui.theme.Expense
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
-import com.atmosferast.orbita.ui.theme.OrbitaTheme
+import com.atmosferast.orbita.ui.components.OrbitaPreview
 import com.atmosferast.orbita.ui.theme.Primary
 import com.atmosferast.orbita.ui.theme.PrimarySoft
 
 /** Manage income and expense categories. Not in the original mockups (docs/05, section 9). */
 @Composable
 fun CategoriesScreen(
+    categories: List<Category>,
     onBack: () -> Unit,
-    onCategoryClick: (MockCategory) -> Unit,
+    onCategoryClick: (Category) -> Unit,
     onNewCategory: (MovementKind) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -103,7 +107,7 @@ fun CategoriesScreen(
         )
         Spacer(Modifier.height(12.dp))
         OrbitaCard(contentPadding = PaddingValues(vertical = 4.dp)) {
-            SampleData.categoriesOf(kind).forEachIndexed { index, category ->
+            categories.filter { it.kind == kind }.forEachIndexed { index, category ->
                 if (index > 0) {
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 16.dp),
@@ -146,11 +150,12 @@ fun CategoriesScreen(
 /** New category ([category] = null) or rename / recolor / archive an existing one. */
 @Composable
 fun CategoryFormScreen(
-    category: MockCategory?,
+    category: Category?,
     onClose: () -> Unit,
-    onSave: () -> Unit,
+    onSave: (CategoryDraft) -> Unit,
     modifier: Modifier = Modifier,
     initialKind: MovementKind = MovementKind.EXPENSE,
+    onArchive: () -> Unit = {},
 ) {
     val editing = category != null
     var name by remember { mutableStateOf(category?.name.orEmpty()) }
@@ -177,7 +182,7 @@ fun CategoryFormScreen(
                 stringResource(
                     if (editing) R.string.action_save_changes else R.string.category_save,
                 ),
-                onSave,
+                onClick = { onSave(CategoryDraft(name, kind, color.toHex())) },
             )
         },
     ) {
@@ -237,7 +242,7 @@ fun CategoryFormScreen(
             confirmLabel = stringResource(R.string.action_archive),
             onConfirm = {
                 confirmArchive = false
-                onSave()
+                onArchive()
             },
             onDismiss = { confirmArchive = false },
         )
@@ -270,19 +275,21 @@ private fun ColorSwatch(color: Color, selected: Boolean, label: String, onClick:
 @Preview(name = "Categorías", widthDp = 390, heightDp = 844)
 @Composable
 private fun CategoriesPreview() {
-    OrbitaTheme { CategoriesScreen(onBack = {}, onCategoryClick = {}, onNewCategory = {}) }
+    OrbitaPreview {
+        CategoriesScreen(SampleData.categories, onBack = {}, onCategoryClick = {}, onNewCategory = {})
+    }
 }
 
 @Preview(name = "Nueva categoría", widthDp = 390, heightDp = 844)
 @Composable
 private fun CategoryNewPreview() {
-    OrbitaTheme { CategoryFormScreen(category = null, onClose = {}, onSave = {}) }
+    OrbitaPreview { CategoryFormScreen(category = null, onClose = {}, onSave = {}) }
 }
 
 @Preview(name = "Editar categoría", widthDp = 390, heightDp = 844)
 @Composable
 private fun CategoryEditPreview() {
-    OrbitaTheme {
-        CategoryFormScreen(SampleData.expenseCategories.first(), onClose = {}, onSave = {})
+    OrbitaPreview {
+        CategoryFormScreen(SampleData.categories.first(), onClose = {}, onSave = {})
     }
 }

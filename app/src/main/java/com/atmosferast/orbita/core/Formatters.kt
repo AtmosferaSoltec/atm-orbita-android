@@ -72,6 +72,12 @@ fun formatDate(date: LocalDate): String =
 fun formatDayMonth(date: LocalDate): String =
     "${date.dayOfMonth} ${monthsShort[date.monthValue - 1]}"
 
+/** `oct`, for [month] 1–12. */
+fun monthShortName(month: Int): String = monthsShort[month - 1]
+
+/** Initials of the days of the week, Sunday first. */
+val weekdayInitials = listOf("D", "L", "M", "M", "J", "V", "S")
+
 /** `octubre` */
 fun monthName(date: LocalDate): String = monthsLong[date.monthValue - 1]
 

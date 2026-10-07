@@ -1,13 +1,14 @@
 package com.atmosferast.orbita.ui.feature.credit
 
+import com.atmosferast.orbita.domain.model.CreditCardDraft
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -26,20 +27,21 @@ import com.atmosferast.orbita.ui.components.OrbitaTextField
 import com.atmosferast.orbita.ui.components.PillButton
 import com.atmosferast.orbita.ui.components.PrimaryButton
 import com.atmosferast.orbita.ui.components.ScreenScaffold
-import com.atmosferast.orbita.ui.mock.MockCreditCard
-import com.atmosferast.orbita.ui.mock.SampleData
+import com.atmosferast.orbita.domain.model.CreditCard
+import com.atmosferast.orbita.data.demo.SampleData
 import com.atmosferast.orbita.ui.theme.Expense
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
-import com.atmosferast.orbita.ui.theme.OrbitaTheme
+import com.atmosferast.orbita.ui.components.OrbitaPreview
 
 /** New credit card ([card] = null) or edit credit card (v1.1). */
 @Composable
 fun CreditCardFormScreen(
-    card: MockCreditCard?,
+    card: CreditCard?,
     onClose: () -> Unit,
-    onSave: () -> Unit,
+    onSave: (CreditCardDraft) -> Unit,
     modifier: Modifier = Modifier,
     defaultCurrency: String = PEN,
+    onArchive: () -> Unit = {},
 ) {
     val editing = card != null
     var name by remember { mutableStateOf(card?.name.orEmpty()) }
@@ -66,7 +68,7 @@ fun CreditCardFormScreen(
                 stringResource(
                     if (editing) R.string.action_save_changes else R.string.credit_card_save,
                 ),
-                onSave,
+                onClick = { onSave(CreditCardDraft(name, currency)) },
             )
         },
     ) {
@@ -110,7 +112,7 @@ fun CreditCardFormScreen(
             confirmLabel = stringResource(R.string.action_archive),
             onConfirm = {
                 confirmArchive = false
-                onSave()
+                onArchive()
             },
             onDismiss = { confirmArchive = false },
         )
@@ -120,13 +122,13 @@ fun CreditCardFormScreen(
 @Preview(name = "Nueva tarjeta", widthDp = 390, heightDp = 844)
 @Composable
 private fun CreditCardNewPreview() {
-    OrbitaTheme { CreditCardFormScreen(card = null, onClose = {}, onSave = {}) }
+    OrbitaPreview { CreditCardFormScreen(card = null, onClose = {}, onSave = {}) }
 }
 
 @Preview(name = "Editar tarjeta", widthDp = 390, heightDp = 844)
 @Composable
 private fun CreditCardEditPreview() {
-    OrbitaTheme {
+    OrbitaPreview {
         CreditCardFormScreen(SampleData.creditCards.first(), onClose = {}, onSave = {})
     }
 }

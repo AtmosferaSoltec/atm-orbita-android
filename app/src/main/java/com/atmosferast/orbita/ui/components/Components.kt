@@ -162,16 +162,22 @@ fun CircleIconButton(
     modifier: Modifier = Modifier,
     container: Color = Surface,
     tint: Color = Ink,
+    enabled: Boolean = true,
 ) {
     Box(
         modifier = modifier
             .size(48.dp)
             .clip(CircleShape)
             .background(container)
-            .clickable(role = Role.Button, onClick = onClick),
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription, tint = tint, modifier = Modifier.size(22.dp))
+        Icon(
+            icon,
+            contentDescription,
+            tint = if (enabled) tint else tint.copy(alpha = 0.3f),
+            modifier = Modifier.size(22.dp),
+        )
     }
 }
 

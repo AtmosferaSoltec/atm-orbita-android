@@ -13,13 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DateRangePicker
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,31 +29,37 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atmosferast.orbita.R
-import com.atmosferast.orbita.core.PEN
+import com.atmosferast.orbita.core.currencyInfo
 import com.atmosferast.orbita.core.formatDate
 import com.atmosferast.orbita.core.formatDayMonth
 import com.atmosferast.orbita.core.formatMoney
-import com.atmosferast.orbita.core.formatMonthYear
 import com.atmosferast.orbita.core.formatSignedMoney
+import com.atmosferast.orbita.data.demo.SampleData
+import com.atmosferast.orbita.domain.model.CategoryTotal
+import com.atmosferast.orbita.domain.model.CurrencyReport
+import com.atmosferast.orbita.domain.model.MovementKind
+import com.atmosferast.orbita.domain.model.percentOf
+import com.atmosferast.orbita.domain.model.total
+import com.atmosferast.orbita.ui.common.Load
 import com.atmosferast.orbita.ui.components.CardDivider
 import com.atmosferast.orbita.ui.components.CircleIconButton
+import com.atmosferast.orbita.ui.components.DateRangeDialog
 import com.atmosferast.orbita.ui.components.FieldLabel
 import com.atmosferast.orbita.ui.components.HintText
-import com.atmosferast.orbita.ui.components.IconBadge
 import com.atmosferast.orbita.ui.components.LabelValueRow
+import com.atmosferast.orbita.ui.components.MonthSelector
 import com.atmosferast.orbita.ui.components.OrbitaCard
 import com.atmosferast.orbita.ui.components.OrbitaIcons
+import com.atmosferast.orbita.ui.components.OrbitaPreview
 import com.atmosferast.orbita.ui.components.PickerField
 import com.atmosferast.orbita.ui.components.ScreenHeader
 import com.atmosferast.orbita.ui.components.ScreenScaffold
 import com.atmosferast.orbita.ui.components.SectionTitle
 import com.atmosferast.orbita.ui.components.SegmentedControl
+import com.atmosferast.orbita.ui.components.SkeletonBlock
 import com.atmosferast.orbita.ui.components.StateMessage
 import com.atmosferast.orbita.ui.components.StatusChip
-import com.atmosferast.orbita.ui.mock.MockCategoryTotal
-import com.atmosferast.orbita.ui.mock.SampleData
-import com.atmosferast.orbita.ui.mock.percentOf
-import com.atmosferast.orbita.ui.mock.total
+import com.atmosferast.orbita.ui.components.color
 import com.atmosferast.orbita.ui.theme.Background
 import com.atmosferast.orbita.ui.theme.Expense
 import com.atmosferast.orbita.ui.theme.Income
@@ -66,36 +67,27 @@ import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
 import com.atmosferast.orbita.ui.theme.Neutral
 import com.atmosferast.orbita.ui.theme.NeutralSoft
-import com.atmosferast.orbita.ui.theme.OrbitaTheme
-import com.atmosferast.orbita.ui.theme.Primary
-import com.atmosferast.orbita.ui.theme.PrimarySoft
-import com.atmosferast.orbita.ui.mock.MovementKind
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
-
-private enum class ReportMode { MONTH, RANGE }
 
 /**
- * [focus] is set when coming from a month card of Inicio: the ranking of that kind goes first.
+ * Incomes and expenses of a month, a year or a range of dates. [focus] is set when coming from a
+ * month card of Inicio: the ranking of that kind goes first.
  */
 @Composable
 fun ReportsScreen(
+    state: ReportsUiState,
+    onModeChange: (ReportMode) -> Unit,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit,
+    onPreviousYear: () -> Unit,
+    onNextYear: () -> Unit,
+    onRangeChange: (LocalDate, LocalDate) -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
-    initialMonth: LocalDate = SampleData.reportMonth,
     focus: MovementKind? = null,
 ) {
-    var mode by remember { mutableStateOf(ReportMode.MONTH) }
-    var month by remember { mutableStateOf(initialMonth) }
-    var rangeFrom by remember { mutableStateOf(SampleData.reportMonth) }
-    var rangeTo by remember { mutableStateOf(SampleData.reportMonth.withDayOfMonth(30)) }
+    val selection = state.selection
     var pickingRange by remember { mutableStateOf(false) }
-    // The sample data only covers September and October 2026: a range shows the first of those
-    // months it touches, whole (the mockup has no per-day data to add up).
-    val report = if (mode == ReportMode.MONTH) SampleData.reportFor(month)
-    else listOf(SampleData.reportMonth, SampleData.currentMonth)
-        .firstOrNull { !it.isAfter(rangeTo) && !it.plusMonths(1).minusDays(1).isBefore(rangeFrom) }
-        ?.let(SampleData::reportFor)
 
     ScreenScaffold(
         modifier = modifier,
@@ -117,29 +109,45 @@ fun ReportsScreen(
         SegmentedControl(
             options = listOf(
                 ReportMode.MONTH to stringResource(R.string.reports_by_month),
+                ReportMode.YEAR to stringResource(R.string.reports_by_year),
                 ReportMode.RANGE to stringResource(R.string.reports_by_range),
             ),
-            selected = mode,
-            onSelect = { mode = it },
+            selected = selection.mode,
+            onSelect = onModeChange,
         )
         Spacer(Modifier.height(12.dp))
 
-        if (mode == ReportMode.MONTH) {
-            MonthSelector(
-                month = month,
-                onPrevious = { month = month.minusMonths(1) },
-                onNext = { month = month.plusMonths(1) },
+        when (selection.mode) {
+            ReportMode.MONTH -> MonthSelector(
+                month = selection.month,
+                onPrevious = onPreviousMonth,
+                onNext = onNextMonth,
+                // There is no data from the future: the current month is the last one.
+                canGoNext = selection.canGoToNextMonth,
             )
-        } else {
-            RangeSelector(rangeFrom, rangeTo, onClick = { pickingRange = true })
+
+            ReportMode.YEAR -> YearSelector(
+                year = selection.year,
+                today = selection.today,
+                onPrevious = onPreviousYear,
+                onNext = onNextYear,
+                canGoNext = selection.canGoToNextYear,
+            )
+
+            ReportMode.RANGE -> RangeSelector(
+                selection.rangeFrom,
+                selection.rangeTo,
+                onClick = { pickingRange = true },
+            )
         }
         if (pickingRange) {
             DateRangeDialog(
-                from = rangeFrom,
-                to = rangeTo,
+                title = stringResource(R.string.reports_range_title),
+                from = selection.rangeFrom,
+                to = selection.rangeTo,
+                today = selection.today,
                 onConfirm = { from, to ->
-                    rangeFrom = from
-                    rangeTo = to
+                    onRangeChange(from, to)
                     pickingRange = false
                 },
                 onDismiss = { pickingRange = false },
@@ -147,70 +155,100 @@ fun ReportsScreen(
         }
         Spacer(Modifier.height(12.dp))
 
-        if (report == null) {
-            StateMessage(OrbitaIcons.Chart, stringResource(R.string.reports_empty))
-            return@ScreenScaffold
-        }
+        when (val reports = state.reports) {
+            Load.Loading -> ReportSkeleton()
 
-        val (expenses, incomes) = report
-        val income = incomes.total()
-        val expense = expenses.total()
-        val balance = income - expense
-        OrbitaCard {
-            Row {
-                SummaryColumn(
-                    stringResource(R.string.reports_income),
-                    formatMoney(income, PEN),
-                    Income,
-                    Modifier.weight(1f),
-                )
-                SummaryColumn(
-                    stringResource(R.string.reports_expense),
-                    formatMoney(expense, PEN),
-                    Expense,
-                    Modifier.weight(1f),
+            Load.Failed -> StateMessage(
+                icon = OrbitaIcons.Alert,
+                title = stringResource(R.string.error_load_title),
+                message = stringResource(R.string.error_load_message),
+                actionLabel = stringResource(R.string.action_retry),
+                onAction = onRetry,
+            )
+
+            is Load.Ready -> if (reports.value.isEmpty()) {
+                StateMessage(OrbitaIcons.Chart, stringResource(R.string.reports_empty))
+            } else {
+                // Currencies are never mixed: one block per currency, the main one first.
+                val severalCurrencies = reports.value.size > 1
+                reports.value.forEach { report ->
+                    if (severalCurrencies) SectionTitle(currencyInfo(report.currency).label)
+                    CurrencyReportBlock(report, focus)
+                }
+                HintText(
+                    stringResource(R.string.reports_hint),
+                    Modifier.padding(top = 14.dp, start = 4.dp, end = 4.dp),
                 )
             }
-            CardDivider()
-            LabelValueRow(
-                stringResource(R.string.reports_balance),
-                formatSignedMoney(balance, PEN, positive = balance.signum() >= 0),
-                valueColor = if (balance.signum() >= 0) Income else Expense,
-                valueStyle = MaterialTheme.typography.titleMedium,
-            )
         }
-
-        val expenseRanking = @Composable {
-            SectionTitle(stringResource(R.string.reports_top_expenses))
-            CategoryRanking(expenses)
-        }
-        val incomeRanking = @Composable {
-            SectionTitle(stringResource(R.string.reports_income_sources))
-            CategoryRanking(incomes)
-        }
-        if (focus == MovementKind.INCOME) {
-            incomeRanking()
-            expenseRanking()
-        } else {
-            expenseRanking()
-            incomeRanking()
-        }
-
-        HintText(
-            stringResource(R.string.reports_hint),
-            Modifier.padding(top = 14.dp, start = 4.dp, end = 4.dp),
-        )
     }
 }
 
 @Composable
-private fun MonthSelector(month: LocalDate, onPrevious: () -> Unit, onNext: () -> Unit) {
-    val lastDay = month.withDayOfMonth(month.lengthOfMonth())
+private fun CurrencyReportBlock(report: CurrencyReport, focus: MovementKind?) {
+    val balance = report.balance
+    OrbitaCard {
+        Row {
+            SummaryColumn(
+                stringResource(R.string.reports_income),
+                formatMoney(report.incomeTotal, report.currency),
+                Income,
+                Modifier.weight(1f),
+            )
+            SummaryColumn(
+                stringResource(R.string.reports_expense),
+                formatMoney(report.expenseTotal, report.currency),
+                Expense,
+                Modifier.weight(1f),
+            )
+        }
+        CardDivider()
+        LabelValueRow(
+            stringResource(R.string.reports_balance),
+            formatSignedMoney(balance, report.currency, positive = balance.signum() >= 0),
+            valueColor = if (balance.signum() >= 0) Income else Expense,
+            valueStyle = MaterialTheme.typography.titleMedium,
+        )
+    }
+
+    // A period can have only incomes or only expenses: the empty ranking is left out.
+    val expenseRanking = @Composable {
+        if (report.expenses.isNotEmpty()) {
+            SectionTitle(stringResource(R.string.reports_top_expenses))
+            CategoryRanking(report.expenses, report.currency)
+        }
+    }
+    val incomeRanking = @Composable {
+        if (report.incomes.isNotEmpty()) {
+            SectionTitle(stringResource(R.string.reports_income_sources))
+            CategoryRanking(report.incomes, report.currency)
+        }
+    }
+    if (focus == MovementKind.INCOME) {
+        incomeRanking()
+        expenseRanking()
+    } else {
+        expenseRanking()
+        incomeRanking()
+    }
+}
+
+/** Year stepper, the twin of [MonthSelector]. The year in course ends today. */
+@Composable
+private fun YearSelector(
+    year: Int,
+    today: LocalDate,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    canGoNext: Boolean,
+) {
+    val firstDay = LocalDate.of(year, 1, 1)
+    val lastDay = LocalDate.of(year, 12, 31)
     OrbitaCard(contentPadding = PaddingValues(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             CircleIconButton(
                 OrbitaIcons.ChevronLeft,
-                stringResource(R.string.reports_prev_month),
+                stringResource(R.string.calendar_prev_year),
                 onPrevious,
                 container = Background,
             )
@@ -221,24 +259,45 @@ private fun MonthSelector(month: LocalDate, onPrevious: () -> Unit, onNext: () -
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    formatMonthYear(month),
+                    year.toString(),
                     style = MaterialTheme.typography.titleSmall,
                     color = Ink,
                     maxLines = 1,
                 )
                 Text(
-                    "1 – ${formatDayMonth(lastDay)}",
+                    if (year == today.year) {
+                        stringResource(R.string.reports_year_until_today, formatDayMonth(firstDay))
+                    } else {
+                        "${formatDayMonth(firstDay)} – ${formatDayMonth(lastDay)}"
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = Muted,
                 )
             }
             CircleIconButton(
                 OrbitaIcons.ChevronRight,
-                stringResource(R.string.reports_next_month),
+                stringResource(R.string.calendar_next_year),
                 onNext,
                 container = Background,
+                enabled = canGoNext,
             )
         }
+    }
+}
+
+@Composable
+private fun ReportSkeleton() {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SkeletonBlock(
+            Modifier
+                .fillMaxWidth()
+                .height(120.dp),
+        )
+        SkeletonBlock(
+            Modifier
+                .fillMaxWidth()
+                .height(260.dp),
+        )
     }
 }
 
@@ -254,65 +313,6 @@ private fun RangeSelector(from: LocalDate, to: LocalDate, onClick: () -> Unit) {
             FieldLabel(stringResource(R.string.field_until))
             PickerField(formatDate(to), onClick = onClick)
         }
-    }
-}
-
-private fun LocalDate.toUtcMillis(): Long = atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-
-private fun Long.toUtcDate(): LocalDate = Instant.ofEpochMilli(this).atZone(ZoneOffset.UTC).toLocalDate()
-
-/** Calendar to pick a start and an end date. "Aceptar" needs both. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DateRangeDialog(
-    from: LocalDate,
-    to: LocalDate,
-    onConfirm: (LocalDate, LocalDate) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    // The picker works in UTC milliseconds.
-    val state = rememberDateRangePickerState(
-        initialSelectedStartDateMillis = from.toUtcMillis(),
-        initialSelectedEndDateMillis = to.toUtcMillis(),
-    )
-    val start = state.selectedStartDateMillis
-    val end = state.selectedEndDateMillis
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                onClick = { if (start != null && end != null) onConfirm(start.toUtcDate(), end.toUtcDate()) },
-                enabled = start != null && end != null,
-            ) { Text(stringResource(R.string.action_accept)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
-        },
-    ) {
-        DateRangePicker(
-            state = state,
-            // The range picker scrolls through months, so it needs a bounded height.
-            modifier = Modifier.height(480.dp),
-            title = {
-                Text(
-                    stringResource(R.string.reports_range_title),
-                    modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp),
-                )
-            },
-            headline = {
-                Text(
-                    stringResource(
-                        R.string.reports_range_headline,
-                        start?.let { formatDayMonth(it.toUtcDate()) }
-                            ?: stringResource(R.string.field_from),
-                        end?.let { formatDayMonth(it.toUtcDate()) }
-                            ?: stringResource(R.string.field_until),
-                    ),
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(start = 24.dp, end = 12.dp, bottom = 12.dp),
-                )
-            },
-        )
     }
 }
 
@@ -333,7 +333,7 @@ private fun SummaryColumn(label: String, amount: String, color: Color, modifier:
 
 /** Horizontal bars: width = share of the currency total, largest first, category color. */
 @Composable
-private fun CategoryRanking(items: List<MockCategoryTotal>) {
+private fun CategoryRanking(items: List<CategoryTotal>, currency: String) {
     val total = items.total()
     OrbitaCard {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -357,7 +357,7 @@ private fun CategoryRanking(items: List<MockCategoryTotal>) {
                             modifier = Modifier.weight(1f),
                         )
                         Text(
-                            "${formatMoney(item.total, PEN)} · ${percent.toPlainString()}%",
+                            "${formatMoney(item.total, currency)} · ${percent.toPlainString()}%",
                             style = MaterialTheme.typography.labelMedium,
                             color = Muted,
                         )
@@ -384,8 +384,34 @@ private fun CategoryRanking(items: List<MockCategoryTotal>) {
     }
 }
 
-@Preview(name = "Reportes", widthDp = 390, heightDp = 1200)
 @Composable
-private fun ReportsPreview() {
-    OrbitaTheme { ReportsScreen() }
+private fun ReportsPreviewContent(mode: ReportMode) {
+    val selection = ReportSelection(
+        mode = mode,
+        month = SampleData.reportMonth,
+        year = SampleData.today.year,
+        rangeFrom = SampleData.reportMonth,
+        rangeTo = SampleData.today,
+        today = SampleData.today,
+    )
+    OrbitaPreview {
+        ReportsScreen(
+            state = ReportsUiState(selection, Load.Ready(SampleData.reportFor(selection.period))),
+            onModeChange = {},
+            onPreviousMonth = {},
+            onNextMonth = {},
+            onPreviousYear = {},
+            onNextYear = {},
+            onRangeChange = { _, _ -> },
+            onRetry = {},
+        )
+    }
 }
+
+@Preview(name = "Reportes · mes", widthDp = 390, heightDp = 1200)
+@Composable
+private fun ReportsPreview() = ReportsPreviewContent(ReportMode.MONTH)
+
+@Preview(name = "Reportes · año", widthDp = 390, heightDp = 1200)
+@Composable
+private fun ReportsYearPreview() = ReportsPreviewContent(ReportMode.YEAR)

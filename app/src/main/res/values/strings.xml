@@ -53,6 +53,30 @@
     <!-- Errors -->
     <string name="error_load_title">No se pudo cargar</string>
     <string name="error_load_message">Revisa tu conexión e inténtalo de nuevo.</string>
+    <string name="error_network">Sin conexión. Revisa tu internet e inténtalo de nuevo.</string>
+    <string name="error_unknown">Algo salió mal. Inténtalo de nuevo.</string>
+    <string name="error_not_found">Este registro ya no existe.</string>
+    <string name="error_invalid_credentials">Correo o contraseña incorrectos.</string>
+    <string name="error_email_registered">Ese correo ya tiene una cuenta. Inicia sesión.</string>
+    <string name="error_email_not_confirmed">Revisa tu correo y confirma tu cuenta para poder ingresar.</string>
+    <string name="error_email_invalid">Escribe un correo válido.</string>
+    <string name="error_password_too_short">La contraseña debe tener al menos 8 caracteres.</string>
+    <string name="error_name_required">Escribe un nombre.</string>
+    <string name="error_name_too_long">El nombre puede tener hasta 60 caracteres.</string>
+    <string name="error_amount_required">Escribe un monto mayor que cero.</string>
+    <string name="error_account_required">Elige una cuenta.</string>
+    <string name="error_category_required">Elige una categoría.</string>
+    <string name="error_card_required">Elige una tarjeta de crédito.</string>
+    <string name="error_description_too_long">El texto puede tener hasta 500 caracteres.</string>
+    <string name="error_same_account">Elige dos cuentas distintas.</string>
+    <string name="error_rate_required">Escribe un tipo de cambio mayor que cero.</string>
+    <string name="error_future_date">La fecha no puede ser posterior a hoy.</string>
+    <string name="error_due_date_past">La fecha límite de pago no puede ser anterior a hoy.</string>
+    <string name="error_no_accounts_title">Aún no tienes cuentas</string>
+    <string name="error_no_accounts_message">Crea una cuenta para poder registrar movimientos.</string>
+    <string name="error_two_accounts_title">Necesitas dos cuentas</string>
+    <string name="error_two_accounts_message">Una transferencia mueve dinero entre dos cuentas tuyas.</string>
+    <string name="error_no_categories">No tienes categorías de este tipo. Créalas en Ajustes.</string>
 
     <!-- Login / sign-up -->
     <string name="auth_login_title">Inicia sesión</string>
@@ -72,7 +96,7 @@
     <string name="auth_error_credentials">Correo o contraseña incorrectos.</string>
 
     <!-- Home -->
-    <string name="home_title">👋 Bienvenido</string>
+    <string name="home_title">Bienvenido</string>
     <string name="home_subtitle">Revisa cómo van tus finanzas</string>
     <string name="savings_total">Ahorro total</string>
     <string name="savings_equivalent_manual">o %1$s · cambio %2$s (manual)</string>
@@ -105,6 +129,10 @@
     <!-- Movements -->
     <string name="movement_new_title">Nuevo movimiento</string>
     <string name="movement_edit_title">Editar movimiento</string>
+    <string name="movement_intro_expense_title">Registrar egreso</string>
+    <string name="movement_intro_expense_subtitle">¿En qué gastaste?</string>
+    <string name="movement_intro_income_title">Registrar ingreso</string>
+    <string name="movement_intro_income_subtitle">¿De dónde recibiste dinero?</string>
     <string name="movement_from_account">Sale de la cuenta</string>
     <string name="movement_to_account">Ingresa a la cuenta</string>
     <string name="movement_description_placeholder">Ej. Almuerzo con equipo</string>
@@ -122,13 +150,14 @@
     <string name="movements_title">Movimientos</string>
     <string name="movements_search">Buscar por descripción</string>
     <string name="filter_all_accounts">Todas las cuentas</string>
-    <string name="filter_category_all">Categoría: todas</string>
-    <string name="filter_dates_all">Fechas: todas</string>
     <string name="movements_empty">No hay movimientos con estos filtros</string>
+    <string name="movements_empty_month">No hay movimientos en este mes</string>
 
     <!-- Transfer -->
     <string name="transfer_title">Transferir</string>
     <string name="transfer_edit_title">Editar transferencia</string>
+    <string name="transfer_intro_title">Registrar transferencia</string>
+    <string name="transfer_intro_subtitle">¿Entre qué cuentas moviste dinero?</string>
     <string name="transfer_from">Desde</string>
     <string name="transfer_to">Hacia</string>
     <string name="transfer_swap">Invertir cuentas</string>
@@ -149,8 +178,10 @@
     <!-- Reports -->
     <string name="reports_title">Reportes</string>
     <string name="reports_pdf_soon">PDF · próximamente</string>
-    <string name="reports_by_month">Por mes</string>
-    <string name="reports_by_range">Rango de fechas</string>
+    <string name="reports_by_month">Mes</string>
+    <string name="reports_by_year">Año</string>
+    <string name="reports_year_until_today">%1$s – hoy</string>
+    <string name="reports_by_range">Rango</string>
     <string name="reports_prev_month">Mes anterior</string>
     <string name="reports_next_month">Mes siguiente</string>
     <string name="reports_income">Ingresos</string>
@@ -160,6 +191,10 @@
     <string name="reports_income_sources">Tus fuentes de ingreso</string>
     <string name="reports_hint">Las compras con tarjeta aparecen aquí solo cuando las marcas como pagadas. Las transferencias entre tus cuentas no cuentan como ingreso ni gasto.</string>
     <string name="reports_range_title">Elige el rango de fechas</string>
+    <string name="calendar_date_title">Elige la fecha</string>
+    <string name="calendar_pick_month">Elegir mes y año</string>
+    <string name="calendar_prev_year">Año anterior</string>
+    <string name="calendar_next_year">Año siguiente</string>
     <string name="reports_range_headline">%1$s – %2$s</string>
     <string name="reports_empty">No hay movimientos en este periodo</string>
 
