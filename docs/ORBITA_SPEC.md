@@ -1,12 +1,12 @@
 # ORBITA_SPEC · Especificación funcional de Orbita
 
-> **Para qué sirve este archivo.** Describe **todo lo que hace la aplicación**, pantalla por pantalla y flujo por flujo, sin depender de Android. Es la referencia para construir **la misma app en iOS**: quien la porte debe poder hacerlo leyendo solo este archivo (más `docs/03` para el SQL).
+> **Para qué sirve este archivo.** Describe **todo lo que hace la aplicación**, pantalla por pantalla y flujo por flujo, sin depender de Android. Es la referencia para construir **la misma app en iOS**: quien la porte debe poder hacerlo leyendo solo este archivo (más el contrato del backend en `atm-orbita-api/docs/plans/`).
 >
 > **Regla de mantenimiento.** Este archivo se actualiza **en el mismo cambio** en que se agrega o modifica un módulo, pantalla, regla o flujo en Android. Al terminar, se añade una fila al [registro de cambios](#13-registro-de-cambios) y se ajusta la columna *Estado* de la [tabla de módulos](#2-estado-de-los-módulos). Si el código y este archivo no coinciden, es un error que hay que corregir.
 
 - App: **Orbita** · `applicationId` Android: `com.atmosferast.orbita`
 - Última actualización: **7 oct 2026**
-- Documentos relacionados: `01` visión y alcance · `02` arquitectura Android · `03` modelo de datos y SQL · `04` guía Supabase · `05` maquetas y tokens · `06` plan y pruebas
+- Documentos relacionados: `01` visión y alcance · `02` arquitectura Android · `03` modelo de datos · `04` guía del API · `05` maquetas y tokens · `06` plan y pruebas · planes del backend en `atm-orbita-api/docs/plans/`
 
 ---
 
@@ -14,17 +14,17 @@
 
 App personal para registrar **ingresos y egresos** separados por **cuenta** (efectivo, débito, ahorro, billetera), en **soles (PEN)** y **dólares (USD)**, con **transferencias** entre cuentas propias, **compras con tarjeta de crédito pendientes de pago** y **reportes**. Es multiusuario: cada persona inicia sesión y solo ve sus datos.
 
-- Backend: **Supabase** (Postgres + Auth + Row Level Security). No hay servidor propio; la app habla directo con Supabase usando la clave pública.
+- Backend: **API propio** (`atm-orbita-api`: NestJS + PostgreSQL + Prisma), con autenticación propia. **No se usa Supabase ni ningún otro backend gestionado** (decisión del 7 oct 2026). Todas las plataformas hablan solo con ese API, por HTTPS y JSON, bajo `/api/v1`.
 - Solo funciona **con internet** en el MVP.
 - Idioma de la interfaz: **español (es-PE)**. Solo tema claro.
 
 ## 2. Estado de los módulos
 
-Estados: **Maqueta** = pantalla navegable con datos de ejemplo fijos, sin lógica · **Funcional (datos de ejemplo)** = toda la lógica de la pantalla funciona de punta a punta (leer, crear, editar, eliminar, validar), pero sobre datos en memoria que se pierden al cerrar la app · **Implementado** = conectado a Supabase y probado · **Pendiente** = aún no existe.
+Estados: **Maqueta** = pantalla navegable con datos de ejemplo fijos, sin lógica · **Funcional (datos de ejemplo)** = toda la lógica de la pantalla funciona de punta a punta (leer, crear, editar, eliminar, validar), pero sobre datos en memoria que se pierden al cerrar la app · **Implementado** = conectado al API y probado · **Pendiente** = aún no existe.
 
 | Módulo | Pantallas | Versión | Estado Android |
 |---|---|---|---|
-| Autenticación | Iniciar sesión, Registro | MVP | Funcional (datos de ejemplo) · **lista para Supabase** (ver abajo) |
+| Autenticación | Iniciar sesión, Registro | MVP | Funcional (datos de ejemplo). Falta conectarla al API, y las pantallas de recuperar contraseña y eliminar cuenta |
 | Inicio | Inicio | MVP | Funcional (datos de ejemplo) |
 | Cuentas | Cuentas, Nueva/Editar cuenta | MVP | Funcional (datos de ejemplo) |
 | Movimientos | Nuevo/Editar movimiento, Lista de movimientos | MVP | Funcional (datos de ejemplo) |
@@ -33,13 +33,13 @@ Estados: **Maqueta** = pantalla navegable con datos de ejemplo fijos, sin lógic
 | Categorías | Categorías, Nueva/Editar categoría | MVP | Funcional (datos de ejemplo) |
 | Ajustes | Ajustes | MVP | Funcional (datos de ejemplo) |
 | Tarjeta de crédito | Crédito, Nueva/Editar tarjeta, Marcar como pagada | v1.1 | Funcional (datos de ejemplo) |
-| Base de datos (Supabase) | — | MVP | Pendiente (Fase 0). La migración del MVP ya está en `supabase/migrations/0001_init.sql`, lista para `db push` |
+| Backend (API propio) | — | MVP | Pendiente: planificado en `atm-orbita-api/docs/plans/`, aún sin construir. El esquema vive solo en las migraciones de Prisma de ese repositorio |
 
-**Qué funciona hoy (7 oct 2026).** La app ya no es una maqueta: **todo se guarda, se edita y se elimina de verdad**, y cada total se **calcula** a partir de los movimientos (saldos, ahorro total, totales del mes, reportes), con las mismas reglas que tendrá el backend. Lo único que falta es **dónde** viven los datos: hoy están en memoria, sembrados con los [datos de ejemplo](#11-datos-de-ejemplo), y se pierden al cerrar la app. Funciona: iniciar y cerrar sesión, crear/editar/archivar cuentas, categorías y tarjetas, registrar/editar/eliminar ingresos, egresos y transferencias, registrar compras con tarjeta y pagarlas, cambiar monedas y tipo de cambio, los reportes por mes, año y rango, todos los selectores de fecha y las validaciones con su mensaje. **No** funciona todavía: la persistencia real (Supabase), la paginación de listas y la exportación a PDF.
+**Qué funciona hoy (7 oct 2026).** La app ya no es una maqueta: **todo se guarda, se edita y se elimina de verdad**, y cada total se **calcula** a partir de los movimientos (saldos, ahorro total, totales del mes, reportes), con las mismas reglas que tendrá el backend. Lo único que falta es **dónde** viven los datos: hoy están en memoria, sembrados con los [datos de ejemplo](#11-datos-de-ejemplo), y se pierden al cerrar la app. Funciona: iniciar y cerrar sesión, crear/editar/archivar cuentas, categorías y tarjetas, registrar/editar/eliminar ingresos, egresos y transferencias, registrar compras con tarjeta y pagarlas, cambiar monedas y tipo de cambio, los reportes por mes, año y rango, todos los selectores de fecha y las validaciones con su mensaje. **No** funciona todavía: la persistencia real (el API), la paginación de listas, la exportación a PDF, recuperar la contraseña, eliminar la cuenta, y editar o eliminar una compra con tarjeta pendiente.
 
-**Cómo está armada para conectar los datos reales (Android).** Las pantallas no saben de dónde vienen los datos: hablan con **ViewModels**, y estos solo con los **repositorios** del dominio (`domain/repository`). Hoy cada repositorio tiene una implementación en memoria (`data/demo`). Conectar un módulo a Supabase es escribir su implementación en `data/remote` y cambiar **una línea** en `di/AppModule.kt`; ni las pantallas ni las reglas se tocan. **Autenticación ya tiene las dos**: si `local.properties` trae `SUPABASE_URL` y `SUPABASE_ANON_KEY`, el inicio de sesión, el registro y la sesión persistente son reales contra Supabase Auth; sin esas claves, la app arranca en **modo demo** (cualquier correo y contraseña entran). En ambos modos los datos siguen siendo los de ejemplo hasta que se migre cada módulo, fase por fase (`docs/06`).
+**Cómo está armada para conectar los datos reales (Android).** Las pantallas no saben de dónde vienen los datos: hablan con **ViewModels**, y estos solo con los **repositorios** del dominio (`domain/repository`). Hoy cada repositorio tiene una implementación en memoria (`data/demo`). Conectar un módulo al API es escribir su implementación en `data/remote` y cambiar **una línea** en `di/AppModule.kt`; ni las pantallas ni las reglas se tocan. Con `API_BASE_URL` en `local.properties` la app usará el API; sin ella arranca en **modo demo** (cualquier correo y contraseña entran). Los datos siguen siendo los de ejemplo hasta que se migre cada módulo, fase por fase (`docs/06`). El código y las dependencias de Supabase se retiraron el 7 oct 2026: hasta que exista la implementación contra el API, **la sesión también está en modo demo**.
 
-**Pendiente antes de conectar los datos** (decisiones de esquema, `docs/03`): tabla de tarjetas de crédito y su relación con las compras; moneda secundaria del perfil; hora del movimiento. La migración `0002_credit_purchases` no se generó por eso.
+**Decisiones de esquema ya tomadas** (7 oct 2026; detalle en `atm-orbita-api/docs/plans/02-modelo-de-datos.md`): hay tabla de tarjetas de crédito y cada compra pertenece a una; el perfil guarda la moneda secundaria y la **zona horaria**; el movimiento guarda **solo la fecha**, sin hora editable; el nombre de categoría es único por usuario y tipo; el tipo de cambio puede no existir.
 
 Las pantallas de Autenticación, Lista de movimientos, Editar movimiento/transferencia, Nueva/Editar cuenta y Categorías **no estaban en la maqueta original** (`docs/05`, sección 9): su diseño es una propuesta pendiente de confirmación.
 
@@ -49,12 +49,12 @@ Las pantallas de Autenticación, Lista de movimientos, Editar movimiento/transfe
 |---|---|
 | **Cuenta** | Lugar donde hay dinero. Tiene nombre editable, tipo (`cash` Efectivo, `debit` Débito, `savings` Ahorro, `other` Otra), **una sola moneda** y el interruptor "Contar en el total de ahorros" (activado por defecto). Se puede archivar. |
 | **Movimiento** | Un **ingreso** o un **egreso** en una cuenta, con categoría, monto, fecha y descripción opcional. Hereda la moneda de su cuenta. |
-| **Categoría** | Clasifica movimientos. Es de ingreso **o** de egreso, tiene nombre y color. Al registrarse el usuario recibe: egreso → Alimentación, Transporte, Vivienda, Salud, Ocio, Otros; ingreso → Sueldo, Freelance, Otros ingresos. |
+| **Categoría** | Clasifica movimientos. Es de ingreso **o** de egreso, tiene nombre y color. **El nombre no se repite dentro del mismo tipo**, sin distinguir mayúsculas ni tildes (sección 7.11). Al registrarse el usuario recibe: egreso → Alimentación, Transporte, Vivienda, Salud, Ocio, Otros; ingreso → Sueldo, Freelance, Otros ingresos. |
 | **Transferencia** | Mueve dinero entre dos cuentas propias distintas. **No es ingreso ni gasto.** Puede cambiar de moneda. |
-| **Moneda principal y secundaria** | Las dos monedas del usuario, elegidas en Ajustes (por defecto soles y dólares). La principal es la de las cuentas y tarjetas nuevas; la secundaria sirve para ver equivalentes. El tipo de cambio manual es entre ambas. |
+| **Moneda principal y secundaria** | Las dos monedas del usuario. La principal **se elige al registrarse** (por defecto soles) y ambas se pueden cambiar en Ajustes; la secundaria nace en dólares, o en soles si la principal ya es dólares. La principal es la de las cuentas y tarjetas nuevas; la secundaria sirve para ver equivalentes. El tipo de cambio manual es entre ambas. |
 | **Tarjeta de crédito** | Cuenta de deuda. Tiene nombre editable, **una moneda** (por defecto la principal) y se puede archivar. Las compras nuevas se registran en la moneda de su tarjeta. Agrupa compras pendientes; su deuda es la suma de esas compras, por moneda. El usuario puede tener varias. |
-| **Compra con tarjeta de crédito** | Pertenece a **una** tarjeta de crédito. Gasto pendiente de pago. Es un **recordatorio**: no afecta saldos, ahorros ni reportes hasta que se marca como pagada; recién entonces se crea un egreso. |
-| **Tipo de cambio** | Unidades de la moneda destino por 1 unidad de la moneda origen (1 US$ = S/ 3.20). En el MVP lo fija el usuario a mano. |
+| **Compra con tarjeta de crédito** | Pertenece a **una** tarjeta de crédito. Gasto pendiente de pago. Es un **recordatorio**: no afecta saldos, ahorros ni reportes hasta que se marca como pagada; recién entonces se crea un egreso. Mientras está pendiente **se puede editar y eliminar**; eso solo cambia la deuda de su tarjeta. |
+| **Tipo de cambio** | Unidades de la moneda destino por 1 unidad de la moneda origen (1 US$ = S/ 3.20). En el MVP lo fija el usuario a mano. **Puede no existir**: un usuario nuevo no lo tiene hasta que lo escribe en Ajustes (regla 10 y sección 7.12). |
 | **Ahorro total** | Suma de los saldos de las cuentas no archivadas con el interruptor activado, convertida a la moneda de visualización. |
 
 Reglas que no cambian entre plataformas:
@@ -65,8 +65,10 @@ Reglas que no cambian entre plataformas:
 4. Los totales de reportes se muestran **por moneda, sin mezclar**.
 5. **Borrado lógico**: eliminar marca `deleted_at`; nada se borra físicamente desde la app.
 6. Los identificadores son **UUID generados en el cliente**.
-7. La app solo lleva la clave pública de Supabase; la seguridad por usuario la impone RLS.
+7. **Cada persona ve solo sus datos, y lo garantiza el API.** La app no lleva ninguna clave ni envía nunca un identificador de usuario: solo su token de sesión. Un recurso de otra persona se comporta como si no existiera.
 8. **No hay datos del futuro.** Un movimiento o una transferencia no puede llevar fecha posterior a hoy, y los reportes no pasan del mes ni del día actual. Hacia atrás **no hay tope**. La única excepción son las fechas de **crédito** (fecha límite de pago, vencimientos), que son futuras por naturaleza.
+9. **"Hoy" depende de la zona horaria del usuario.** El perfil guarda su zona horaria (identificador IANA, por ejemplo `America/Lima`), que la app envía al registrarse. El backend calcula "hoy" con ella, tanto para fechar un movimiento nuevo como para validar que una fecha no sea futura. La fecha de un movimiento se guarda **como fecha**, ya calculada, no como un instante: no cambia aunque la persona viaje.
+10. **Sin tipo de cambio no hay otra moneda.** Mientras el usuario no haya configurado su tipo de cambio, todos sus datos están en la moneda principal: no puede crear cuentas ni tarjetas en otra moneda, ni ver el ahorro total en la secundaria. La app muestra el estado "Configura tu tipo de cambio" (sección 7.12).
 
 ## 4. Formatos y textos
 
@@ -106,12 +108,22 @@ Al tocar el botón de guardar, el formulario se revisa **en este orden** y se mu
 | Contraseña de menos de 8 caracteres | "La contraseña debe tener al menos 8 caracteres." |
 | Correo o contraseña incorrectos | "Correo o contraseña incorrectos." |
 | Registro con un correo que ya existe | "Ese correo ya tiene una cuenta. Inicia sesión." |
-| Registro en un proyecto que exige confirmar el correo | "Revisa tu correo y confirma tu cuenta para poder ingresar." |
+| Registro cuando se exige confirmar el correo | "Revisa tu correo y confirma tu cuenta para poder ingresar." |
+| Nombre de categoría que ya existe en ese tipo | "Ya tienes una categoría de este tipo con ese nombre." — **bajo el campo Nombre**, no en el aviso |
+| Operación en otra moneda sin tipo de cambio | "Configura tu tipo de cambio en Ajustes para usar otra moneda." |
+| Editar, eliminar o pagar una compra que ya está pagada | "Esta compra ya está pagada." |
+| Archivar una tarjeta de crédito con pagos pendientes | "Esta tarjeta tiene pagos pendientes. Págalos o elimínalos antes de archivarla." |
+| Confirmación al eliminar el egreso de un pago con tarjeta | "Este egreso es el pago de una compra con tarjeta. Al eliminarlo, la compra volverá a estar pendiente." |
+| Enlace de recuperación de contraseña usado o vencido | "El enlace ya no es válido. Pide uno nuevo." |
+| Demasiados intentos seguidos | "Demasiados intentos. Espera un momento." |
+| La sesión terminó en el servidor | "Tu sesión terminó. Inicia sesión de nuevo." |
 | Sin conexión | "Sin conexión. Revisa tu internet e inténtalo de nuevo." |
 | El registro ya no existe | "Este registro ya no existe." |
 | Cualquier otro fallo | "Algo salió mal. Inténtalo de nuevo." |
 
 Orden de revisión por formulario: **movimiento** → monto, cuenta, categoría, largo de la descripción, fecha · **compra con tarjeta** → monto, tarjeta, categoría, largo de la descripción, fecha límite · **transferencia** → cuentas distintas, montos, tipo de cambio, largo de la nota, fecha · **pago de compra** → cuenta, monto, fecha · **sesión** → correo, contraseña. En modo demo la sesión no se valida: cualquier correo y contraseña entran.
+
+Las validaciones de la app dan respuesta inmediata; **el API vuelve a validar todo y es quien decide**. Sus errores llegan con un código estable (por ejemplo `CATEGORY_NAME_TAKEN`, `FX_RATE_NOT_CONFIGURED`), y la app elige el texto. El API no envía textos de interfaz.
 
 Formularios que no se pueden llenar todavía muestran un aviso a pantalla completa en lugar del formulario: Nuevo movimiento sin ninguna cuenta → "Aún no tienes cuentas — Crea una cuenta para poder registrar movimientos."; Transferir con menos de dos cuentas → "Necesitas dos cuentas — Una transferencia mueve dinero entre dos cuentas tuyas.". Dentro de Nuevo movimiento, si no hay categorías del tipo elegido, en lugar del desplegable va "No tienes categorías de este tipo. Créalas en Ajustes."; y con el interruptor de crédito activado y sin tarjetas, "Aún no tienes tarjetas de crédito".
 
@@ -186,7 +198,7 @@ Con sesión:   barra inferior  Inicio · Cuentas · [ + ] · Reportes · Crédit
 
 ## 7. Pantallas
 
-Cada pantalla indica: qué muestra, cómo se comporta, validaciones, estados y qué lee o escribe en el backend (nombres de `docs/03`).
+Cada pantalla indica: qué muestra, cómo se comporta, validaciones, estados y qué lee o escribe en el backend (endpoints del API; lista completa en la sección 10).
 
 ### 7.1 Iniciar sesión y Registro
 
@@ -198,9 +210,13 @@ Cada pantalla indica: qué muestra, cómo se comporta, validaciones, estados y q
 
 **Validaciones:** correo con formato válido; contraseña de 8 caracteres o más. Mensajes: "Correo o contraseña incorrectos.", correo ya registrado, sin conexión.
 
-**Backend:** Supabase Auth con correo y contraseña. La sesión se guarda y se renueva sola: al abrir la app con sesión vigente se entra directo a Inicio. Al registrarse, un trigger crea el perfil, las 9 categorías iniciales y la cuenta "Efectivo" (PEN).
+**Backend:** autenticación propia del API con correo y contraseña (`POST /auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout`). La app recibe un token de acceso de 15 minutos y un token de renovación que guarda cifrado; con él la sesión se renueva sola, y al abrir la app con sesión vigente se entra directo a Inicio. Al registrarse, el API crea en una sola operación el perfil (con la zona horaria que envía la app), las 9 categorías iniciales y la cuenta "Efectivo" **en la moneda principal elegida**. El usuario nace **sin tipo de cambio**.
 
-**Fuera de alcance:** "Olvidé mi contraseña", acceso con Google.
+**Moneda al registrarse** (decidido el 7 oct 2026; campo aún sin diseño). La pantalla de Registro incluye un desplegable **Moneda** con las 9 monedas admitidas (7.12). Arranca en la moneda de la región del teléfono si es una de ellas; si no, en soles. La app la envía al registrarse (`mainCurrency`). Con ella nacen la moneda principal del perfil y la cuenta "Efectivo". La moneda secundaria nace en dólares, o en soles si la principal es dólares. Antes todo usuario nacía con soles y dólares y "Efectivo" en soles.
+
+**Recuperar contraseña** (requisito para publicar; pantallas aún sin diseño). En Iniciar sesión, el enlace "¿Olvidaste tu contraseña?" pide el correo y muestra siempre "Si ese correo tiene una cuenta, te enviamos un enlace", exista o no. El correo trae un enlace **de un solo uso que vence a los 30 minutos**; abre la app en una pantalla para escribir la contraseña nueva. Al guardarla se cierran todas las sesiones abiertas y se vuelve a Iniciar sesión. Un enlace usado o vencido muestra "El enlace ya no es válido. Pide uno nuevo." Endpoints: `POST /auth/forgot-password` y `POST /auth/reset-password`.
+
+**Fuera de alcance:** acceso con Google.
 
 ### 7.2 Inicio
 
@@ -229,7 +245,9 @@ Cada pantalla indica: qué muestra, cómo se comporta, validaciones, estados y q
 
 **Estados:** cargando (bloques grises con la forma del contenido) · sin movimientos ("Registra tu primer movimiento", totales en cero, sin "Ver todos") · sin cuentas · error ("No se pudo cargar" + "Reintentar").
 
-**Backend:** vista `account_balances`; tipo de cambio vigente de `exchange_rates`; `report_period_summary` del mes actual; últimos `transactions` y `transfers`; conteo de `credit_purchases` pendientes (v1.1).
+**Sin tipo de cambio configurado** (usuario nuevo): la tarjeta "Ahorro total" muestra el total en la moneda principal, el selector de moneda aparece desactivado y, en lugar de la línea "o US$ … · cambio …", va el enlace **"Configura tu tipo de cambio ›"**, que abre Ajustes.
+
+**Backend:** `GET /home` devuelve en una sola petición el ahorro total en ambas monedas, el tipo de cambio vigente, los totales del mes actual, los últimos movimientos y transferencias, y el resumen de compras pendientes (v1.1).
 
 ### 7.3 Cuentas
 
@@ -239,7 +257,9 @@ Cada pantalla indica: qué muestra, cómo se comporta, validaciones, estados y q
 
 **Comportamiento:** el interruptor guarda `include_in_savings` y actualiza el total **al instante** (aquí y en Inicio). Tocar la parte superior de la tarjeta abre Editar cuenta.
 
-**Backend:** `account_balances`; `update` de `accounts.include_in_savings`.
+**Sin tipo de cambio configurado:** igual que en Inicio: total en la moneda principal y el enlace "Configura tu tipo de cambio ›" en lugar del equivalente. Ninguna cuenta muestra `≈`.
+
+**Backend:** `GET /accounts` (cuentas con su saldo calculado y el ahorro total); `PATCH /accounts/{id}` para el interruptor.
 
 ### 7.4 Nueva cuenta / Editar cuenta
 
@@ -253,7 +273,9 @@ Cada pantalla indica: qué muestra, cómo se comporta, validaciones, estados y q
 
 Botón al pie: "Guardar cuenta" / "Guardar cambios". En Editar hay además **"Archivar cuenta"** (rojo suave) con el texto "La cuenta deja de aparecer en las listas, pero conserva sus movimientos." y diálogo de confirmación "¿Archivar esta cuenta?".
 
-**Backend:** `insert` / `update` en `accounts` (`is_archived = true` al archivar).
+**Sin tipo de cambio configurado:** el desplegable de Moneda queda fijo en la moneda principal, con la ayuda "Configura tu tipo de cambio en Ajustes para usar otras monedas."
+
+**Backend:** `POST /accounts`, `PATCH /accounts/{id}` y `POST /accounts/{id}/archive`. La moneda y el saldo inicial no se pueden cambiar después de crear la cuenta.
 
 ### 7.5 Nuevo movimiento / Editar movimiento
 
@@ -292,11 +314,12 @@ Botón al pie: "Guardar cuenta" / "Guardar cambios". En Editar hay además **"Ar
 - Con el interruptor de crédito **activado**: se oculta el desplegable de cuenta, aparecen dentro de la tarjeta el desplegable **"Tarjeta"** (las tarjetas de crédito no archivadas; por defecto la primera) y el campo "Fecha límite de pago", y el botón dice "Guardar compra pendiente". Se guarda una compra pendiente, **no** un movimiento.
 - Texto del botón: "Guardar egreso" / "Guardar ingreso" / "Guardar compra pendiente" / "Guardar cambios" (Editar).
 - La papelera pide confirmación: "¿Eliminar este movimiento?" — "Dejará de contar en tus saldos y reportes."
+- **Si el egreso es el pago de una compra con tarjeta** (decidido el 7 oct 2026), el texto de la confirmación es: "Este egreso es el pago de una compra con tarjeta. Al eliminarlo, la compra volverá a estar pendiente." Al confirmar, el egreso se elimina y **la compra reaparece en la deuda de su tarjeta**, como si no se hubiera pagado. Desde aquí **nunca se elimina la compra**: eso solo se hace en Crédito, y solo mientras está pendiente, para no alterar la información.
 - Al guardar o eliminar se vuelve a la pantalla anterior y se actualizan saldos y listas.
 
 **Validaciones:** monto > 0 (el teclado ya garantiza 2 decimales); cuenta obligatoria (salvo crédito); categoría obligatoria; descripción ≤ 500; fecha límite ≥ fecha de compra.
 
-**Backend:** `insert` / `update` en `transactions`; borrado lógico con `deleted_at`; con crédito, `insert` en `credit_purchases` (estado `pending`). Un trigger rechaza una categoría de tipo distinto al del movimiento. Al crear, la app no envía fecha: `occurred_on` toma el día actual y `created_at` guarda la fecha y hora exactas. **Pendiente de decidir:** `occurred_on` es solo fecha, así que hoy la **hora** queda registrada (`created_at`) pero no se puede editar; si se quiere editar también la hora hace falta una migración que agregue ese dato.
+**Backend:** `POST /transactions`, `PATCH /transactions/{id}` y `DELETE /transactions/{id}` (borrado lógico); con crédito, `POST /credit-purchases` (compra pendiente). El API rechaza una categoría de tipo distinto al del movimiento. Al crear, la app no envía fecha: **el API pone el día de hoy según la zona horaria del perfil** y lo guarda como fecha; aparte guarda el instante exacto de creación, que desempata el orden dentro del día. **Decidido (7 oct 2026):** el movimiento guarda solo la fecha; la hora no se edita.
 
 ### 7.6 Transferir / Editar transferencia
 
@@ -331,7 +354,7 @@ Botón al pie: "Guardar cuenta" / "Guardar cambios". En Editar hay además **"Ar
 
 **Validaciones:** montos > 0; cuentas distintas; cambio > 0 cuando las monedas difieren.
 
-**Backend:** `insert` / `update` en `transfers` con `from_amount`, `to_amount`, `exchange_rate` (nulo si es la misma moneda), fecha y nota. Un trigger exige montos iguales en la misma moneda y cambio en monedas distintas.
+**Backend:** `POST /transfers`, `PATCH /transfers/{id}` y `DELETE /transfers/{id}`, con monto que sale, monto que entra, tipo de cambio (nulo si es la misma moneda), fecha y nota. El API exige montos iguales en la misma moneda y tipo de cambio en monedas distintas. Los que mueven los saldos son los dos montos; el tipo de cambio guardado es informativo. Sin tipo de cambio configurado no pueden existir dos cuentas de monedas distintas, así que toda transferencia es en la misma moneda.
 
 ### 7.7 Lista de movimientos
 
@@ -348,7 +371,7 @@ Es un **vistazo a lo reciente**, un mes a la vez; el historial más antiguo se c
 
 **Estados:** mes sin movimientos → "No hay movimientos en este mes" · sin resultados con búsqueda o cuenta activas → "No hay movimientos con estos filtros".
 
-**Backend:** `transactions` y `transfers` del mes visible (fecha entre el primer y el último día), ordenados por fecha y creación descendentes, combinados en el cliente. Sin paginación.
+**Backend:** `GET /entries?from&to` con el primer y el último día del mes visible. El API devuelve movimientos y transferencias ya mezclados y ordenados por fecha y creación descendentes, por páginas. Admite además filtrar por cuenta (`accountId`) y buscar por texto (`q`) en el servidor.
 
 ### 7.8 Reportes
 
@@ -369,7 +392,7 @@ Es un **vistazo a lo reciente**, un mes a la vez; el historial más antiguo se c
 
 **Estados:** sin datos → "No hay movimientos en este periodo" · cargando → dos bloques grises en lugar del resumen y el ranking · error → "No se pudo cargar — Revisa tu conexión e inténtalo de nuevo." con "Reintentar".
 
-**Backend:** `report_period_summary(desde, hasta)` y `report_by_category(tipo, desde, hasta)` para `expense` e `income`. El porcentaje se calcula en la app.
+**Backend:** `GET /reports/summary?from&to`. Devuelve, por moneda, los totales, el balance y el ranking de egresos e ingresos por categoría, **con el porcentaje ya calculado**, para que todas las plataformas muestren lo mismo. El PDF saldrá de `GET /reports/summary.pdf` con las mismas cifras.
 
 ### 7.9 Tarjeta de crédito (v1.1)
 
@@ -383,7 +406,7 @@ Funciona **igual que Cuentas, pero para deudas**: un total arriba y, debajo, la 
 
 **Orden de los bloques:** primero la tarjeta con la fecha límite más próxima; las tarjetas sin deuda van al final.
 
-**Nueva tarjeta / Editar tarjeta:** formulario con **Nombre** (obligatorio, 1–60 caracteres, placeholder "Ej. Visa Clásica"), **Moneda** (desplegable con las monedas admitidas de 7.12; en una tarjeta nueva arranca en la **moneda principal** del usuario; ayuda "Las compras que registres con esta tarjeta usarán esta moneda.") y botón "Guardar tarjeta" / "Guardar cambios". En Editar hay además "Archivar tarjeta" (rojo suave) con el texto "La tarjeta deja de aparecer en las listas, pero conserva sus compras." y diálogo de confirmación "¿Archivar esta tarjeta?". Se abre con "+ Nueva tarjeta de crédito" o con "Editar tarjeta" dentro de un bloque desplegado.
+**Nueva tarjeta / Editar tarjeta:** formulario con **Nombre** (obligatorio, 1–60 caracteres, placeholder "Ej. Visa Clásica"), **Moneda** (desplegable con las monedas admitidas de 7.12; en una tarjeta nueva arranca en la **moneda principal** del usuario; ayuda "Las compras que registres con esta tarjeta usarán esta moneda.") y botón "Guardar tarjeta" / "Guardar cambios". En Editar hay además "Archivar tarjeta" (rojo suave) con el texto "La tarjeta deja de aparecer en las listas, pero conserva sus compras." y diálogo de confirmación "¿Archivar esta tarjeta?". **Una tarjeta con pagos pendientes no se puede archivar** (decidido el 7 oct 2026): hay que pagarlos o eliminarlos primero. En ese caso, en lugar del diálogo se muestra "Esta tarjeta tiene pagos pendientes. Págalos o elimínalos antes de archivarla." Así no queda deuda en una tarjeta que ya no se ve. Se abre con "+ Nueva tarjeta de crédito" o con "Editar tarjeta" dentro de un bloque desplegado.
 
 **Replegar y desplegar:** cada bloque es plegable. Tocar su fila superior alterna entre **replegado** (solo icono, nombre, subtítulo y deuda) y **desplegado** (además, sus compras pendientes y, al final, tras un divisor, el enlace centrado "✎ Editar tarjeta"). A la derecha de la deuda hay una flecha **⌄** que gira 180° al desplegar; el contenido aparece y desaparece con animación. Por defecto, las tarjetas **con** pagos pendientes empiezan desplegadas y las que no deben nada, replegadas. El estado de cada bloque se conserva al rotar la pantalla.
 
@@ -406,7 +429,16 @@ Funciona **igual que Cuentas, pero para deudas**: un total arriba y, debajo, la 
 
 **Estados:** sin tarjetas → "Aún no tienes tarjetas de crédito" · tarjeta sin deuda → "Sin pagos pendientes" y sin lista de compras.
 
-**Backend:** `credit_purchases` con `status = 'pending'`, agrupadas por tarjeta. **Pendiente en `docs/03`:** hoy el esquema no tiene tarjetas de crédito; hace falta una tabla nueva (p. ej. `credit_cards`: nombre, archivada) y una columna en `credit_purchases` que apunte a ella, con su RLS, en una migración versionada.
+**Editar y eliminar una compra pendiente** (aprobado el 7 oct 2026; pantalla aún sin diseño). Tocar una compra pendiente abre su edición: el mismo formulario de "Compra con tarjeta" con los datos cargados (monto, tarjeta, categoría, descripción, fecha límite) y una papelera con confirmación — "¿Eliminar esta compra?" — "Dejará de contar en la deuda de la tarjeta." Reglas:
+
+- Solo se edita o elimina una compra **pendiente**. Una ya pagada muestra "Esta compra ya está pagada."
+- Al editar, la fecha límite **puede ser anterior a hoy** (una compra vencida debe poder corregirse); solo no puede ser anterior a la fecha de compra.
+- Si se cambia la tarjeta, la compra toma la moneda de la tarjeta nueva.
+- **No cambia ningún saldo ni reporte**, porque una compra pendiente no es un movimiento. Cambian la deuda de su tarjeta, la deuda total, el conteo de pagos pendientes y la fecha de vencimiento más próxima. Ninguna de esas cifras está guardada: se suman al leerlas.
+
+**Sin tipo de cambio configurado:** en Nueva/Editar tarjeta, el desplegable de Moneda queda fijo en la moneda principal.
+
+**Backend:** `GET /credit-cards` (tarjetas con su deuda por moneda), `POST` y `PATCH /credit-cards`, `POST /credit-cards/{id}/archive`; `GET /credit-purchases?status=pending`, `POST`, `PATCH` y `DELETE /credit-purchases/{id}`. El esquema ya tiene la tabla de tarjetas y cada compra apunta a la suya.
 
 ### 7.10 Marcar como pagada (v1.1)
 
@@ -414,7 +446,7 @@ Funciona **igual que Cuentas, pero para deudas**: un total arriba y, debajo, la 
 
 **Comportamiento:** la cuenta inicial es la primera **en la moneda de la compra** (ahí no hay conversión); si no hay ninguna, la primera de la lista. Si la moneda de la cuenta coincide con la de la compra se **sugiere** el monto de la compra; si no, el campo queda vacío y es obligatorio. Al cambiar de cuenta se recalcula la sugerencia. La **fecha de pago** empieza en hoy y se cambia con el calendario de la app; **no admite fechas futuras** (el pago se convierte en un egreso). La vista previa se actualiza mientras se escribe. Al confirmar se vuelve a Crédito, la compra desaparece de pendientes y el egreso aparece en movimientos y reportes con la fecha de pago y la categoría original.
 
-**Backend:** `pay_credit_purchase(compra, cuenta, monto_real, fecha)`, atómica: crea el egreso y marca la compra como `paid`. No se puede pagar dos veces.
+**Backend:** `POST /credit-purchases/{id}/pay` con cuenta, monto real y fecha. Es atómica: crea el egreso y marca la compra como pagada, o no hace nada. No se puede pagar dos veces: el segundo intento recibe "Esta compra ya está pagada."
 
 ### 7.11 Categorías y Nueva/Editar categoría
 
@@ -422,9 +454,22 @@ Funciona **igual que Cuentas, pero para deudas**: un total arriba y, debajo, la 
 
 **Formulario:** Nombre (1–60 caracteres, placeholder "Ej. Mascotas"); Tipo Egreso/Ingreso (**solo al crear**; después no cambia); Color (7 muestras circulares, la elegida con anillo); botón "Guardar categoría" / "Guardar cambios". En Editar: "Archivar categoría" con confirmación — "Deja de aparecer al registrar movimientos, pero los anteriores se conservan."
 
-**Validaciones:** el nombre no se repite dentro del mismo tipo (sin distinguir mayúsculas).
+**Validaciones:** el nombre no se repite **dentro del mismo tipo**. Criterio de comparación:
 
-**Backend:** `insert` / `update` en `categories`.
+| Aspecto | Criterio |
+|---|---|
+| Mayúsculas | Se ignoran: "alimentación" choca con "Alimentación" |
+| Espacios al inicio, al final y repetidos | Se ignoran |
+| Tildes y diéresis | **Se ignoran**: "Alimentación", "alimentacion" y "ALIMENTACIÓN" son la misma categoría |
+| Letra `ñ` | Se conserva: "Año" y "Ano" son distintas |
+| Lo que se muestra | Siempre el nombre **tal como lo escribió el usuario**. La versión sin tildes y en minúsculas la calcula y la guarda el backend solo para comparar; la app nunca la ve |
+| Tipo | Se puede tener "Otros" en egresos y "Otros" en ingresos |
+| Archivadas | No cuentan: se puede volver a usar el nombre de una categoría archivada |
+| Renombrar | Cambiar solo mayúsculas o tildes de una categoría ("ocio" → "Ocio") está permitido: no choca consigo misma |
+
+Si el nombre ya existe, el mensaje va **bajo el campo Nombre**, en rojo y con el campo marcado en rojo: "Ya tienes una categoría de este tipo con ese nombre." Es el único error de la app que se muestra bajo su campo en lugar de en el aviso de validación. Desaparece cuando el usuario cambia el texto. La app puede avisar antes de enviar comparando con la lista que ya tiene; quien decide es el API.
+
+**Backend:** `GET` y `POST /categories`, `PATCH /categories/{id}`, `POST /categories/{id}/archive`. Un nombre repetido responde `409` con el código `CATEGORY_NAME_TAKEN`.
 
 ### 7.12 Ajustes
 
@@ -434,20 +479,35 @@ Funciona **igual que Cuentas, pero para deudas**: un total arriba y, debajo, la 
   - **"Moneda predeterminada"** (la *principal*; por defecto soles), con la ayuda "Es la moneda con la que se crean tus cuentas nuevas. Puedes cambiarla cuando quieras; tus cuentas actuales conservan la suya."
   - **"Moneda secundaria"** (por defecto **dólares**), con la ayuda "Sirve para ver el equivalente de tus ahorros en otra moneda. El tipo de cambio de abajo es entre estas dos monedas."
   - **"Ver ahorro total en"** con un selector de dos opciones: `[principal] | [secundaria]` (p. ej. `S/ | US$`; el mismo valor que en Inicio).
-  - **Las dos monedas nunca coinciden:** si en un desplegable se elige la moneda que está en el otro, se **intercambian** (y el tipo de cambio pasa a su inverso). Si se elige cualquier otra moneda, **el tipo de cambio vuelve a 1.00** porque no hay valor conocido para el nuevo par, y el usuario debe escribirlo. Si la moneda en la que se veía el ahorro deja de estar en el par, la vista pasa a la principal.
+  - **Las dos monedas nunca coinciden:** si en un desplegable se elige la moneda que está en el otro, se **intercambian** (y el tipo de cambio pasa a su inverso). Si se elige cualquier otra moneda, **el campo del tipo de cambio queda vacío**, porque no hay valor conocido para el nuevo par: la app no inventa uno (antes ponía `1.00`). **El par nuevo no se guarda hasta que el usuario escribe un valor mayor que cero**; si sale de la pantalla sin escribirlo, se conserva el par anterior. Si la moneda en la que se veía el ahorro deja de estar en el par, la vista pasa a la principal.
   - **Monedas admitidas** (código ISO · símbolo · nombre): `PEN` S/ Soles · `USD` US$ Dólares · `EUR` € Euros · `MXN` MX$ Pesos mexicanos · `COP` COL$ Pesos colombianos · `CLP` CLP$ Pesos chilenos · `ARS` AR$ Pesos argentinos · `BOB` Bs Bolivianos · `BRL` R$ Reales. Cada opción se muestra como `Soles (S/)` con el código a la derecha.
   - **Dónde se usan las dos monedas:** la principal es la moneda inicial de las **cuentas nuevas** y de las **tarjetas de crédito nuevas**, la que encabeza la "Deuda total" de Crédito y aquella en la que se muestra el `≈` de las cuentas en otra moneda. El par principal/secundaria alimenta el selector y el equivalente ("o US$ …") del ahorro total en Inicio y Cuentas, y el tipo de cambio sugerido en Transferir.
-  - **Límite actual: solo hay tipo de cambio entre la principal y la secundaria.** Una cuenta en una tercera moneda **no entra en el ahorro total** ni muestra `≈`, y una transferencia que la involucre arranca con tipo de cambio 1.00 para escribirlo a mano. Los datos de ejemplo siguen en soles y dólares, y las tarjetas del mes de Inicio y los Reportes siguen mostrando soles. Para admitir más de dos monedas a la vez hará falta un tipo de cambio por cada par (la tabla `exchange_rates` ya lo permite).
-- **Tipo de cambio:** control **Manual | Automático · pronto** (Automático aún no se puede elegir); `1 [secundaria] = [principal] [valor]` editable, p. ej. `1 US$ = S/ [3.20]`; "Equivale a 1 S/ = US$ 0.3125"; ayuda "Al cambiar de monedas el tipo de cambio vuelve a 1.00: escribe el valor correcto."; ayuda: "Se usa para el total de ahorros y como valor sugerido en las transferencias. Puedes cambiarlo cuando quieras."
+  - **Límite actual: solo hay tipo de cambio entre la principal y la secundaria.** Una cuenta en una tercera moneda **no entra en el ahorro total** ni muestra `≈`, y una transferencia que la involucre arranca con el tipo de cambio **vacío**, para escribirlo a mano (no se guarda sin un valor mayor que cero). Los datos de ejemplo siguen en soles y dólares, y las tarjetas del mes de Inicio y los Reportes siguen mostrando soles. Para admitir más de dos monedas a la vez hará falta un tipo de cambio por cada par (la tabla `exchange_rates` ya lo permite).
+- **Tipo de cambio:** control **Manual | Automático · pronto** (Automático aún no se puede elegir); `1 [secundaria] = [principal] [valor]` editable, p. ej. `1 US$ = S/ [3.20]`; "Equivale a 1 S/ = US$ 0.3125"; ayuda "Al cambiar de monedas, escribe el tipo de cambio entre las dos para guardar."; ayuda: "Se usa para el total de ahorros y como valor sugerido en las transferencias. Puedes cambiarlo cuando quieras."
 - **Categorías:** fila "Gestionar categorías".
-- **Seguridad:** "Inicias sesión con tu correo y contraseña. Cada persona solo ve sus propios datos.", el correo de la sesión y el botón rojo suave "Cerrar sesión".
+- **Seguridad:** "Inicias sesión con tu correo y contraseña. Cada persona solo ve sus propios datos.", el correo de la sesión, el botón rojo suave "Cerrar sesión" y, debajo, **"Eliminar cuenta"** (ver más abajo).
 - **Próximamente:** Exportar a PDF · Modo sin internet · Cambio automático diario · Acceso con Google.
 
 **Comportamiento:** el inverso se recalcula al escribir, con 4 decimales; si el valor no es válido muestra "—". Cerrar sesión limpia el estado en memoria y vuelve a Iniciar sesión.
 
 **Validaciones:** tipo de cambio > 0.
 
-**Backend:** la moneda predeterminada se guarda en `profiles.default_currency` (el esquema ya acepta cualquier código de 3 letras). **Pendiente en `docs/03`:** no hay dónde guardar la moneda secundaria (hace falta una columna nueva en `profiles`) ni la moneda de cada tarjeta de crédito (va en la tabla de tarjetas, también pendiente). Editar el cambio **inserta una fila nueva** en `exchange_rates` (`source = 'manual'`, fecha de hoy); no modifica la anterior. La moneda de visualización se guarda en `profiles.display_currency`.
+**Sin tipo de cambio configurado.** Un usuario nuevo **no tiene tipo de cambio**: el backend no conoce el valor y no inventa uno. Mientras no exista:
+
+- En esta pantalla, el campo del tipo de cambio aparece **vacío y resaltado**, con el aviso **"Configura tu tipo de cambio"**; el inverso muestra "—".
+- En Inicio y Cuentas, la tarjeta de ahorro muestra el total en la moneda principal, desactiva el selector de moneda y reemplaza el equivalente por el enlace "Configura tu tipo de cambio ›", que trae aquí.
+- **No se puede operar en otra moneda.** En Nueva cuenta y en Nueva/Editar tarjeta, la moneda queda fija en la principal, con la ayuda "Configura tu tipo de cambio en Ajustes para usar otras monedas." Tampoco se puede elegir la moneda secundaria en "Ver ahorro total en".
+- Todo lo que es en la moneda principal funciona con normalidad: cuentas, movimientos, transferencias, compras con tarjeta y reportes.
+
+El estado termina al escribir un tipo de cambio mayor que cero y guardarlo. **No se puede volver a él**: el tipo de cambio se puede modificar, pero no quitar.
+
+Regla que lo resume: *sin tipo de cambio, todos los datos del usuario están en su moneda principal.* Así ninguna pantalla tiene que mostrar un total a medias.
+
+**Cambio de par (decidido el 7 oct 2026).** Al elegir un par de monedas nuevo, el campo del tipo de cambio queda vacío y resaltado, igual que en el estado sin configurar, y el botón o la acción de guardar no se completa hasta que haya un valor mayor que cero. Con el campo vacío o en cero se muestra "Escribe un tipo de cambio mayor que cero." El backend valida lo mismo y rechaza un par sin tipo de cambio. Intercambiar las dos monedas del par no vacía el campo: el valor pasa a su inverso, que sí se conoce.
+
+**Eliminar cuenta** (requisito para publicar y de Google Play; aún sin diseño). Acción destructiva en rojo al final de la sección Seguridad. Abre un diálogo — "¿Eliminar tu cuenta?" — "Se borrarán todos tus datos: cuentas, movimientos, categorías y tarjetas. No se puede deshacer." — que pide la **contraseña** para confirmar. Al confirmar se borran de verdad todos los datos de la persona en el backend (no es un archivado ni un borrado lógico) y se vuelve a Iniciar sesión. Con el mismo correo se puede crear después una cuenta nueva, que empieza vacía. La misma eliminación debe poder hacerse desde una página web, sin la app.
+
+**Backend:** `GET /settings` (las dos monedas, la de visualización, la zona horaria, `fxConfigured` y el tipo de cambio, que puede ser nulo); `PUT /settings/fx` para el par de monedas y su tipo de cambio — **cada valor se guarda como una fila nueva**, sin modificar la anterior —; `PATCH /settings` para la moneda de visualización y la zona horaria; `DELETE /me` para eliminar la cuenta. El perfil ya guarda la moneda secundaria y cada tarjeta de crédito, su moneda.
 
 ## 8. Flujos completos
 
@@ -479,26 +539,44 @@ porcentaje(categoría) = redondear( total_categoría × 100 ÷ total_de_la_moned
 días_para_vencer      = fecha_límite − hoy       (urgente si ≤ 3)
 ```
 
-El tipo de cambio vigente es la fila más reciente del usuario para el par de monedas. Si no hay ninguna, la app pide configurarlo en Ajustes antes de mostrar conversiones.
+El tipo de cambio vigente es el más reciente del usuario para el par de monedas. **Si no hay ninguno**, `convertir` entre monedas distintas no da resultado, el ahorro total se muestra solo en la moneda principal y la app pide configurarlo ("Configura tu tipo de cambio", sección 7.12).
+
+"Hoy", en `días_para_vencer` y en toda validación de fechas, es el día según la zona horaria del perfil.
+
+Editar o eliminar una compra con tarjeta pendiente no entra en ninguna de estas fórmulas salvo en la deuda, que es la suma de las compras pendientes por moneda.
 
 Casos de prueba que ambas plataformas deben cumplir: `docs/06`, tabla "Pruebas unitarias obligatorias".
 
 ## 10. Backend compartido
 
-Android e iOS usan **el mismo proyecto de Supabase** sin cambios. Esquema, RLS, triggers y funciones: `docs/03`. Operación: `docs/04`.
+Android, iOS y la web usan **el mismo API** (`atm-orbita-api`: NestJS + PostgreSQL + Prisma), sin Supabase ni ningún otro backend gestionado. El contrato completo, el esquema, la seguridad y las pruebas están en `atm-orbita-api/docs/plans/`. Cómo conectar la app: `docs/04`.
+
+Todas las rutas van bajo `/api/v1` y, salvo las de autenticación, exigen el token de acceso.
 
 | Necesidad | Recurso |
 |---|---|
-| Sesión | Supabase Auth (correo y contraseña) |
-| Saldos | vista `account_balances` |
-| Movimientos | tabla `transactions` (con `categories` y `accounts` embebidos) |
-| Transferencias | tabla `transfers` |
-| Reportes | funciones `report_period_summary`, `report_by_category` |
-| Tipo de cambio | tabla `exchange_rates` |
-| Preferencias | tabla `profiles` |
-| Crédito (v1.1) | tabla `credit_purchases`, funciones `pay_credit_purchase`, `unpay_credit_purchase` |
+| Sesión | `POST /auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout` |
+| Recuperar contraseña | `POST /auth/forgot-password`, `/auth/reset-password` |
+| Eliminar cuenta | `DELETE /me` |
+| Inicio | `GET /home` |
+| Saldos y ahorro total | `GET /accounts` |
+| Movimientos | `POST`, `PATCH`, `DELETE /transactions` |
+| Transferencias | `POST`, `PATCH`, `DELETE /transfers` |
+| Lista mezclada | `GET /entries` |
+| Reportes | `GET /reports/summary` (y `.pdf`) |
+| Tipo de cambio y preferencias | `GET /settings`, `PUT /settings/fx`, `PATCH /settings` |
+| Categorías | `GET`, `POST`, `PATCH /categories`, `POST …/archive` |
+| Crédito (v1.1) | `/credit-cards`, `/credit-purchases`, `POST /credit-purchases/{id}/pay` |
+| Monedas admitidas | `GET /currencies` |
 
-Postgres devuelve los montos como número JSON: hay que leerlos como texto/decimal, nunca como `Double`.
+Reglas del contrato que toda plataforma debe respetar:
+
+- **Los montos viajan como texto** (`"1245.80"`), nunca como número JSON: hay que leerlos como decimal, nunca como `Double`.
+- Las fechas van como `YYYY-MM-DD`, sin hora ni zona.
+- Los identificadores son UUID generados en el cliente; repetir una creación con el mismo identificador no duplica.
+- Los errores traen un `code` estable; el texto lo pone cada app (sección 4.1).
+- Un recurso de otra persona responde igual que uno que no existe.
+- Hay que ignorar los campos desconocidos de las respuestas, para que una versión antigua de la app siga funcionando cuando el API agregue datos.
 
 ## 11. Datos de ejemplo
 
@@ -528,9 +606,11 @@ Son la semilla del **modo demo**, de las vistas previas y de las pruebas. "Hoy" 
 |---|---|
 | Kotlin + Jetpack Compose | Swift + SwiftUI |
 | `BigDecimal`, HALF_UP | `Decimal` con redondeo `.plain` |
-| `supabase-kt` (Auth, Postgrest) | `supabase-swift` |
+| Cliente HTTP Ktor contra el API, con renovación de sesión de una en una | `URLSession` (o equivalente) con el mismo esquema de tokens |
+| Token de renovación cifrado con el Android Keystore; respaldos del dispositivo desactivados | Token de renovación en el llavero del sistema, excluido de los respaldos |
+| `FxPair.rate: BigDecimal?` | `rate: Decimal?` |
 | ViewModel + `StateFlow<UiState>` | `@Observable` / `ObservableObject` por pantalla |
-| Repositorios del dominio (interfaces) con dos implementaciones: memoria (demo) y Supabase | Protocolos con las mismas dos implementaciones; así la app se puede probar entera sin backend |
+| Repositorios del dominio (interfaces) con dos implementaciones: memoria (demo) y API | Protocolos con las mismas dos implementaciones; así la app se puede probar entera sin backend |
 | Navigation Compose, barra inferior | `TabView` + `NavigationStack`; formularios como `fullScreenCover` |
 | `DropdownMenu` | `Menu` o `Picker` con estilo de menú |
 | Teclado de monto (composable propio) | Vista propia en SwiftUI anclada al pie (no `keyboardType`); vibración con `UIImpactFeedbackGenerator` |
@@ -581,3 +661,14 @@ Son la semilla del **modo demo**, de las vistas previas y de las pruebas. "Hoy" 
 | 7 oct 2026 | Datos de ejemplo: septiembre gana movimientos para que la lista sume exactamente el reporte (ingresos 4,200.00, gastos 2,148.60); los saldos pasan a calcularse desde el saldo inicial. |
 | 7 oct 2026 | Transferir: "Monto que sale" y "Monto que entra" pasan a escribirse con el **teclado de monto de la app** (el punto decimal se coloca solo), como en Nuevo movimiento; el teclado empieza cerrado y escribe en el monto que se toque. El tipo de cambio sigue con el teclado del sistema. |
 | 7 oct 2026 | Inicio: el título vuelve a "Bienvenido", **sin emoji**. |
+| 7 oct 2026 | **Cambio de backend.** Ya no se usa Supabase: el backend es un API propio (`atm-orbita-api`: NestJS + PostgreSQL + Prisma) con autenticación propia. Se reescriben las secciones 1, 2 y 10, la regla 7 y el apartado "Backend" de cada pantalla, que pasa de nombrar tablas y funciones SQL a nombrar endpoints. `docs/04` pasa a ser la guía del API. |
+| 7 oct 2026 | Regla nueva 9: **"hoy" según la zona horaria del perfil**; la fecha del movimiento se guarda como fecha ya calculada. Queda decidido que el movimiento guarda solo la fecha. |
+| 7 oct 2026 | Regla nueva 10: **el tipo de cambio puede no existir.** Estado "Configura tu tipo de cambio" en Inicio, Cuentas y Ajustes; sin él no se opera en otra moneda (secciones 7.2, 7.3, 7.4, 7.9 y 7.12). |
+| 7 oct 2026 | Categorías: nombre único **por usuario y tipo**, sin distinguir mayúsculas **ni tildes** ("Alimentación" = "alimentacion" = "ALIMENTACIÓN"); se muestra siempre el nombre original; el mensaje de nombre repetido va **bajo el campo** (7.11). |
+| 7 oct 2026 | Ajustes: al cambiar de par de monedas, el tipo de cambio **queda vacío** en lugar de volver a `1.00`, y el par solo se guarda con un valor mayor que cero (7.12). Lo mismo en una transferencia con una moneda fuera del par. |
+| 7 oct 2026 | Registro: la **moneda principal se elige al registrarse** (propuesta según la región del teléfono) y la cuenta "Efectivo" nace en ella (7.1). |
+| 7 oct 2026 | Crédito: **eliminar el egreso de un pago devuelve la compra a pendiente**; una compra solo se elimina desde Crédito y mientras está pendiente (7.5). **No se puede archivar una tarjeta con pagos pendientes** (7.9). Se confirman: la `ñ` se conserva y las categorías archivadas dejan libre su nombre (7.11). |
+| 7 oct 2026 | **Supabase retirado del repositorio:** se eliminaron la migración SQL, las dependencias, las claves de configuración y el repositorio de sesión. La app queda entera en modo demo, también la sesión, hasta conectar el API. |
+| 7 oct 2026 | Crédito: una compra **pendiente se puede editar y eliminar**, sin efecto en saldos ni reportes (7.9). |
+| 7 oct 2026 | **Requisitos para publicar:** recuperar contraseña con enlace de un solo uso de 30 minutos (7.1) y eliminar cuenta con borrado real desde Ajustes (7.12). Mensajes nuevos en 4.1. |
+| 7 oct 2026 | Seguridad Android: `allowBackup="false"` y reglas de extracción que excluyen todo en Android 12+, para que la sesión no salga del dispositivo. |

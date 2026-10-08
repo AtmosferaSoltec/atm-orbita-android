@@ -122,7 +122,7 @@ Descripción   ┌ Almuerzo con equipo             ┐   ← caja de texto de va
 ```
 - **Egreso** y **Ingreso** cambian la lista de categorías (egreso: Alimentación, Transporte, Vivienda, Salud, Ocio, Otros; ingreso: Sueldo, Freelance, Otros ingresos) y el color del monto (ingreso en `income`). Al cambiar de tipo se selecciona la primera categoría.
 - El símbolo del monto sigue la moneda de la cuenta elegida (`S/` o `US$`).
-- Con "Compra con tarjeta de crédito" **activado**: se ocultan las cuentas, aparece "Fecha límite de pago", y el botón dice **"Guardar compra pendiente"** (crea una fila en `credit_purchases`, no un movimiento). Solo aplica a egresos.
+- Con "Compra con tarjeta de crédito" **activado**: se ocultan las cuentas, aparece "Fecha límite de pago", y el botón dice **"Guardar compra pendiente"** (crea una compra pendiente con `POST /credit-purchases`, no un movimiento). Solo aplica a egresos.
 - Botón: "Guardar egreso" / "Guardar ingreso" / "Guardar compra pendiente".
 - Fecha: al crear no se elige; se toma la fecha y hora del momento de guardar. Solo al **editar** aparece el selector de fecha de Material 3.
 - Monto: se escribe con un teclado numérico propio de la app (sin tecla de punto; los dígitos entran por la derecha y el decimal se coloca solo). Detalle en `ORBITA_SPEC.md`, sección 7.5.
@@ -156,7 +156,7 @@ Saldos después de transferir
 - Si las monedas son **iguales**, se oculta el tipo de cambio y "entra" = "sale".
 - Si son **distintas**, el cambio sugerido es el vigente (manual); los tres campos están enlazados (ver reglas en `docs/03`, sección 5). Para el par inverso (S/ → US$), mostrar "1 S/ = US$ x" o convertir con la inversa.
 - "Saldos después" se recalcula en vivo. Si un saldo quedara negativo, **avisar pero no bloquear**.
-- Guarda en `transfers` con `from_amount`, `to_amount`, `exchange_rate`, fecha (hoy, editable) y nota opcional.
+- Guarda con `POST /transfers`: monto que sale, monto que entra, tipo de cambio, fecha (hoy, editable) y nota opcional.
 
 ## 7. Reportes
 ```
@@ -177,7 +177,7 @@ Tus fuentes de ingreso
  Sueldo S/ 3,500.00 · 83.3% · Freelance S/ 600.00 · 14.3% · Otros ingresos S/ 100.00 · 2.4%
 Las compras con tarjeta aparecen aquí solo cuando las marcas como pagadas. …
 ```
-- **Por mes**: selector de mes/año (por defecto el mes actual) con flechas anterior/siguiente. **Rango**: selector de rango de Material 3. Ambos llaman a `report_period_summary` y `report_by_category` (`expense` e `income`).
+- **Por mes**: selector de mes/año (por defecto el mes actual) con flechas anterior/siguiente. **Rango**: selector de rango de Material 3. Ambos llaman a `GET /reports/summary` con las fechas del periodo; el API devuelve los totales y el ranking de egresos e ingresos.
 - Barras: ancho = % del total de esa moneda; ordenadas de mayor a menor; color de la categoría; el porcentaje se calcula en la app sobre el total de la moneda.
 - Con varias monedas en el periodo, repetir los bloques **por moneda** (S/ primero). Conversión a una sola moneda: fuera del MVP.
 - El botón/etiqueta "PDF" es solo un marcador visible pero inactivo (o se omite); el PDF viene después.
@@ -220,9 +220,10 @@ Fecha de pago · hoy, editable   [ 2 oct 2026 ]
 └──────────────────────────────────────────────────────────┘
 [ Confirmar pago ]
 ```
-- Confirmar llama a `pay_credit_purchase`. Después vuelve a Crédito (la compra desaparece de pendientes) y el egreso aparece en movimientos y reportes con la fecha de pago.
+- Confirmar llama a `POST /credit-purchases/{id}/pay`. Después vuelve a Crédito (la compra desaparece de pendientes) y el egreso aparece en movimientos y reportes con la fecha de pago.
 - Moneda de la cuenta ≠ moneda de la compra: el monto real es obligatorio y lo escribe el usuario; si coinciden, se sugiere el monto de la compra.
-- Más adelante: marcar varias compras a la vez; deshacer un pago (`unpay_credit_purchase`).
+- **Editar y eliminar una compra pendiente** (aprobado el 7 oct 2026, pantalla aún sin maquetar): mismo formulario de "Compra con tarjeta" con los datos cargados y una papelera con confirmación. No cambia saldos ni reportes; solo la deuda de la tarjeta. Una compra ya pagada no se edita.
+- Más adelante: marcar varias compras a la vez; deshacer un pago (`POST /credit-purchases/{id}/unpay`).
 - Solo se muestran como destino las cuentas no archivadas.
 
 ## 9. Ajustes y pantallas no maquetadas
@@ -236,15 +237,16 @@ Tipo de cambio: [ Manual● | Automático · pronto ]
 Seguridad:      Inicias sesión con tu correo y contraseña. Cada persona solo ve sus propios datos.
 Próximamente:   Exportar a PDF · Modo sin internet · Cambio automático diario · Acceso con Google o Apple
 ```
-- Editar el cambio inserta una fila nueva en `exchange_rates` (`source = 'manual'`, fecha de hoy); el inverso se muestra con 4 decimales. Validar `> 0`.
-- **Agregar (no maquetado)**: botón "Cerrar sesión" y el correo de la cuenta.
+- Editar el cambio llama a `PUT /settings/fx`; el API guarda cada valor como una fila nueva y conserva el historial. El inverso se muestra con 4 decimales. Validar `> 0`.
+- **Sin tipo de cambio** (usuario nuevo): el campo aparece vacío y resaltado con el aviso **"Configura tu tipo de cambio"**, y el inverso muestra "—". En Inicio y Cuentas, la tarjeta de ahorro reemplaza la línea "≈ US$ …" por el enlace "Configura tu tipo de cambio ›" y desactiva el selector `S/ | US$`. En Nueva cuenta y Nueva tarjeta, la moneda queda fija en la principal.
+- **Agregar (no maquetado)**: botón "Cerrar sesión", el correo de la cuenta y **"Eliminar cuenta"** (acción destructiva con confirmación y contraseña; requisito para publicar).
 - "Acceso con Google o Apple": en Android solo Google y más adelante.
 
 **Pantallas necesarias que no están maquetadas** — implementarlas en el mismo estilo y **confirmar con el usuario** antes de darlas por cerradas:
-1. **Login / Registro**: correo, contraseña (mostrar/ocultar), botón principal, enlace a la otra pantalla, errores en español. "Olvidé mi contraseña": después.
+1. **Login / Registro**: correo, contraseña (mostrar/ocultar), botón principal, enlace a la otra pantalla, errores en español. **"¿Olvidaste tu contraseña?"** (pedir el correo, y pantalla de nueva contraseña que se abre desde el enlace recibido): requisito para publicar, aún sin maquetar.
 2. **Lista completa de movimientos** (desde "Últimos movimientos"): scroll infinito con paginación y filtros por cuenta, categoría y fechas; búsqueda por descripción.
 3. **Editar/Eliminar movimiento y transferencia**: mismo formulario que "Nuevo" con datos cargados y acción "Eliminar" (borrado lógico) con confirmación.
-4. **Editar cuenta** y **gestionar categorías** (crear, renombrar, color, archivar).
+4. **Editar cuenta** y **gestionar categorías** (crear, renombrar, color, archivar). Si el nombre ya existe en ese tipo, el mensaje va **bajo el campo Nombre**, en rojo: "Ya tienes una categoría de este tipo con ese nombre."
 
 ## 10. Textos y formatos
 - Idioma: español (es-PE). Fechas: `2 oct 2026` (`d MMM yyyy`, mes en minúscula, sin punto). Mes: `Septiembre 2026`.
