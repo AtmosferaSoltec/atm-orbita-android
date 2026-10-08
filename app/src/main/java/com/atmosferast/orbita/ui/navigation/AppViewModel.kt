@@ -52,7 +52,7 @@ class AppViewModel @Inject constructor(
         if (_authBusy.value) return
         val credentials = Credentials(email, password)
         // The demo has no server to check anything against: it lets anyone in.
-        val invalid = if (config.usesSupabase) credentials.validate() else null
+        val invalid = if (config.usesApi) credentials.validate() else null
         if (invalid != null) {
             _authError.value = UiMessage.Invalid(invalid)
             return

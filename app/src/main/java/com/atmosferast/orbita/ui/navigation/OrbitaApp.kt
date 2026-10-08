@@ -93,7 +93,7 @@ private sealed interface Screen {
 /**
  * Root of the app: login or sign-up without a session, the screens with one. Every screen gets
  * its data from its ViewModel, which only talks to the repositories of the domain; whether
- * those are the demo data or Supabase is decided in di/AppModule.
+ * those are the demo data or the API is decided in di/AppModule.
  *
  * Navigation is still an in-memory back stack; moving it to Navigation Compose is pending.
  */

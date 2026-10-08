@@ -39,7 +39,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 
 // In-memory implementations of the repositories, seeded with SampleData. They behave like the
-// real backend is specified to (docs/03) so every screen works end to end before Supabase is
+// real backend is specified to (docs/03) so every screen works end to end before the API is
 // connected; nothing survives closing the app.
 
 /** The demo data pins "today" to the day its sample was written for. */

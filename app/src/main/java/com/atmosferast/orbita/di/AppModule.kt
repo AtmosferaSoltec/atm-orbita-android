@@ -9,7 +9,6 @@ import com.atmosferast.orbita.data.demo.DemoDateProvider
 import com.atmosferast.orbita.data.demo.DemoEntriesRepository
 import com.atmosferast.orbita.data.demo.DemoReportsRepository
 import com.atmosferast.orbita.data.demo.DemoSettingsRepository
-import com.atmosferast.orbita.data.remote.SupabaseAuthRepository
 import com.atmosferast.orbita.domain.repository.AccountsRepository
 import com.atmosferast.orbita.domain.repository.AuthRepository
 import com.atmosferast.orbita.domain.repository.CategoriesRepository
@@ -22,25 +21,19 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import io.github.jan.supabase.SupabaseClient
-import io.github.jan.supabase.auth.Auth
-import io.github.jan.supabase.createSupabaseClient
-import io.github.jan.supabase.postgrest.Postgrest
-import javax.inject.Provider
 import javax.inject.Singleton
 
 /**
- * Where the app takes its data from. Without the Supabase keys in local.properties everything
- * is the in-memory demo; with them, the session is real.
+ * Where the app takes its data from. Without the URL of the Orbita API in local.properties
+ * everything is the in-memory demo.
  */
-data class AppConfig(val supabaseUrl: String, val supabaseAnonKey: String) {
-    val usesSupabase: Boolean get() = supabaseUrl.isNotBlank() && supabaseAnonKey.isNotBlank()
+data class AppConfig(val apiBaseUrl: String) {
+    val usesApi: Boolean get() = apiBaseUrl.isNotBlank()
 }
 
 /**
  * The single place that decides which implementation is behind each repository. To move one to
- * Supabase: write its implementation in data/remote and return it here when
- * [AppConfig.usesSupabase], exactly as [provideAuthRepository] does.
+ * the API: write its implementation in data/remote and return it here when [AppConfig.usesApi].
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -48,26 +41,14 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideAppConfig() = AppConfig(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_ANON_KEY)
+    fun provideAppConfig() = AppConfig(BuildConfig.API_BASE_URL)
 
-    /** Only created when something asks for it, that is, when the keys are set. */
-    @Provides
-    @Singleton
-    fun provideSupabaseClient(config: AppConfig): SupabaseClient =
-        createSupabaseClient(config.supabaseUrl, config.supabaseAnonKey) {
-            install(Auth)
-            install(Postgrest)
-        }
+    // Everything is still on demo data, whatever the config: each repository moves to the API
+    // phase by phase (docs/06), the session first.
 
     @Provides
     @Singleton
-    fun provideAuthRepository(
-        config: AppConfig,
-        demo: Provider<DemoAuthRepository>,
-        supabase: Provider<SupabaseAuthRepository>,
-    ): AuthRepository = if (config.usesSupabase) supabase.get() else demo.get()
-
-    // Still on demo data, whatever the config: they move to Supabase phase by phase (docs/06).
+    fun provideAuthRepository(demo: DemoAuthRepository): AuthRepository = demo
 
     /** The demo data is dated: while it is in use, so is "today". */
     @Provides

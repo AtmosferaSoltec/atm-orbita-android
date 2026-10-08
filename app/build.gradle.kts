@@ -8,8 +8,8 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
-// Supabase URL and public key live in local.properties, which is not committed (docs/04).
-// Without them the app runs on the in-memory demo data.
+// The URL of the Orbita API lives in local.properties, which is not committed (docs/04).
+// Without it the app runs on the in-memory demo data.
 val localProperties = Properties().apply {
     val file = rootProject.file("local.properties")
     if (file.exists()) file.inputStream().use(::load)
@@ -32,9 +32,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Only the public (anon / publishable) key ever goes here, never the service_role one.
-        buildConfigField("String", "SUPABASE_URL", "\"${localProperty("SUPABASE_URL")}\"")
-        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProperty("SUPABASE_ANON_KEY")}\"")
+        // No key or secret ever goes here: the app only knows where the API is.
+        buildConfigField("String", "API_BASE_URL", "\"${localProperty("API_BASE_URL")}\"")
     }
 
     buildTypes {
@@ -71,9 +70,6 @@ dependencies {
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
-    implementation(platform(libs.supabase.bom))
-    implementation(libs.supabase.auth)
-    implementation(libs.supabase.postgrest)
     implementation(libs.ktor.client.okhttp)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

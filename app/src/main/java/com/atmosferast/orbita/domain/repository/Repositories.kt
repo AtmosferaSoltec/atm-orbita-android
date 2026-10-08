@@ -22,7 +22,7 @@ import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 
 // The screens only know these contracts. Today they are backed by the in-memory demo data
-// (data/demo); each one moves to Supabase (data/remote) without touching ui or domain.
+// (data/demo); each one moves to the API (data/remote) without touching ui or domain.
 //
 // Reads are Flows that emit again whenever the data changes. Writes are suspend functions that
 // throw DataException on failure; the drafts they receive are expected to be valid already.

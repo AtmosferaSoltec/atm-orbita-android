@@ -28,7 +28,7 @@ import org.junit.Test
 
 /**
  * The demo repositories must behave as the backend is specified to (docs/03 and docs/06), so
- * the screens built on them keep working when Supabase takes their place.
+ * the screens built on them keep working when the API takes their place.
  */
 class DemoRepositoriesTest {
 
