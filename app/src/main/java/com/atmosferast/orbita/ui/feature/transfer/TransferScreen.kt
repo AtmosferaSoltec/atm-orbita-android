@@ -101,10 +101,12 @@ private enum class AmountField { OUT, IN }
 
 /**
  * Manual rate: units of [to]'s currency per 1 unit of [from]'s. Outside the user's pair of
- * currencies there is no rate, so it starts at 1 for the user to type.
+ * currencies there is no rate: it is left empty for the user to type, never made up.
  */
-private fun referenceRate(from: Account, to: Account, fx: FxPair): BigDecimal =
-    fx.rateBetween(from.currency, to.currency) ?: BigDecimal.ONE
+private fun referenceRate(from: Account, to: Account, fx: FxPair): BigDecimal? =
+    fx.rateBetween(from.currency, to.currency)
+
+private fun rateText(rate: BigDecimal?): String = rate?.let(::formatRate).orEmpty()
 
 /**
  * Transfer between two own accounts, both chosen by the user. With different currencies the
@@ -132,7 +134,7 @@ fun TransferScreen(
     // A new transfer starts empty; an edited one, with what was saved. Both amounts are typed
     // with the in-app keypad, so they are kept in cents like the amount of a movement.
     var outCents by remember { mutableStateOf(editing?.let { amountToCents(it.fromAmount) } ?: 0L) }
-    var rate by remember { mutableStateOf(formatRate(editing?.exchangeRate ?: referenceRate)) }
+    var rate by remember { mutableStateOf(rateText(editing?.exchangeRate ?: referenceRate)) }
     var inCents by remember { mutableStateOf(editing?.let { amountToCents(it.toAmount) } ?: 0L) }
     // The amount the keypad is typing into; null while it is closed.
     var keypadField by remember { mutableStateOf<AmountField?>(null) }
@@ -154,7 +156,9 @@ fun TransferScreen(
     fun setAccounts(newFrom: Account, newTo: Account) {
         from = newFrom
         to = newTo
-        rate = formatRate(referenceRate(newFrom, newTo, fx))
+        rate = rateText(referenceRate(newFrom, newTo, fx))
+        // Without a rate for the new pair, what comes in is unknown until the user types it.
+        if (rate.isEmpty() && newFrom.currency != newTo.currency) inCents = 0L
         recalculateIncoming(outCents, rate)
     }
 
@@ -368,14 +372,17 @@ fun TransferScreen(
                         modifier = Modifier.onFocusChanged { if (it.hasFocus) keypadField = null },
                     )
                     Spacer(Modifier.weight(1f))
-                    Text(
-                        stringResource(
-                            R.string.transfer_reference_manual,
-                            formatRate(referenceRate),
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Muted,
-                    )
+                    // Only when there is a manual rate for this pair of currencies.
+                    if (referenceRate != null) {
+                        Text(
+                            stringResource(
+                                R.string.transfer_reference_manual,
+                                formatRate(referenceRate),
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Muted,
+                        )
+                    }
                 }
                 CardDivider()
                 CardLabel(stringResource(R.string.transfer_amount_in))

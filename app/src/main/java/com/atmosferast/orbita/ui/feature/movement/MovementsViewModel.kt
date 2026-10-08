@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.atmosferast.orbita.domain.model.Account
 import com.atmosferast.orbita.domain.model.Category
 import com.atmosferast.orbita.domain.model.CreditCard
+import com.atmosferast.orbita.domain.model.CreditPurchase
 import com.atmosferast.orbita.domain.model.CreditPurchaseDraft
 import com.atmosferast.orbita.domain.model.DatePeriod
 import com.atmosferast.orbita.domain.model.Entry
@@ -75,7 +76,20 @@ class MovementsViewModel @Inject constructor(
     fun delete(movement: Movement, onDone: () -> Unit) =
         act(onDone = onDone) { entries.deleteMovement(movement.id) }
 
-    /** "Compra con tarjeta de crédito": a pending purchase instead of a movement. */
-    fun savePurchase(draft: CreditPurchaseDraft, onDone: () -> Unit) =
-        act(draft.validate(dates.today()), onDone) { credit.createPurchase(draft) }
+    /**
+     * "Compra con tarjeta de crédito": a pending purchase instead of a movement. Creates it, or
+     * updates [editing] when it is set; an existing one may already be overdue.
+     */
+    fun savePurchase(editing: CreditPurchase?, draft: CreditPurchaseDraft, onDone: () -> Unit) =
+        if (editing == null) {
+            act(draft.validate(dates.today()), onDone) { credit.createPurchase(draft) }
+        } else {
+            act(draft.validateEdit(editing.purchaseDate), onDone) {
+                credit.updatePurchase(editing.id, draft)
+            }
+        }
+
+    /** Only a purchase that is still pending; it changes no balance nor report. */
+    fun deletePurchase(purchase: CreditPurchase, onDone: () -> Unit) =
+        act(onDone = onDone) { credit.deletePurchase(purchase.id) }
 }

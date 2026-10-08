@@ -9,11 +9,13 @@ import com.atmosferast.orbita.core.formatMoney
 import com.atmosferast.orbita.data.demo.SampleData
 import com.atmosferast.orbita.data.remote.BigDecimalSerializer
 import com.atmosferast.orbita.domain.model.DatePeriod
+import com.atmosferast.orbita.domain.model.normalizeName
 import com.atmosferast.orbita.domain.model.percentOf
 import java.math.BigDecimal
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -40,6 +42,51 @@ class MoneyRulesTest {
     @Test
     fun `a currency outside the pair has no rate`() {
         assertNull(fx.convert(BigDecimal("10.00"), "EUR", PEN))
+    }
+
+    @Test
+    fun `without a rate nothing is converted and the total stays in the main currency`() {
+        val unset = fx.copy(rate = null)
+        assertEquals(false, unset.isConfigured)
+        assertNull(unset.convert(BigDecimal("20.00"), USD, PEN))
+        assertNull(unset.rateBetween(USD, PEN))
+        // The same currency needs no rate.
+        assertEquals(BigDecimal("20.00"), unset.convert(BigDecimal("20.00"), PEN, PEN))
+        // Only the accounts already in soles add up: 320.50 + 1,245.80 + 4,800.00
+        assertEquals(BigDecimal("6366.30"), unset.savingsTotal(SampleData.accounts, PEN))
+    }
+
+    @Test
+    fun `a new pair of currencies has no rate until the user types it`() {
+        // Any other currency leaves the rate empty: no value is made up.
+        assertNull(fx.withSecondary("EUR").rate)
+        assertNull(fx.withMain("MXN").rate)
+        // Swapping the two keeps a known rate: its inverse.
+        val swapped = fx.withMain(USD)
+        assertEquals(USD, swapped.main)
+        assertEquals(PEN, swapped.secondary)
+        assertEquals(BigDecimal("0.312500"), swapped.rate)
+        // Swapping a pair without a rate leaves it without one.
+        assertNull(fx.copy(rate = null).withMain(USD).rate)
+    }
+
+    @Test
+    fun `names are compared without case nor accents, but the n with tilde stays`() {
+        val key = normalizeName("Alimentación")
+        assertEquals("alimentacion", key)
+        assertEquals(key, normalizeName("alimentacion"))
+        assertEquals(key, normalizeName("ALIMENTACIÓN"))
+        assertEquals(key, normalizeName("  Alimentación "))
+        assertEquals("otros gastos", normalizeName("  Otros   gastos "))
+        assertEquals("pinguinos", normalizeName("Pingüinos"))
+        assertEquals("aeiou aeiou", normalizeName("ÁÉÍÓÚ áéíóú"))
+        // The ñ is a letter of its own, however it was typed.
+        assertEquals("año nuevo", normalizeName("Año nuevo"))
+        assertEquals("año", normalizeName("Año"))
+        assertNotEquals(normalizeName("Año"), normalizeName("Ano"))
+        // Accents typed as combining marks give the same key; normalizing twice changes nothing.
+        assertEquals(key, normalizeName("Alimentación"))
+        assertEquals(key, normalizeName(key))
     }
 
     @Test

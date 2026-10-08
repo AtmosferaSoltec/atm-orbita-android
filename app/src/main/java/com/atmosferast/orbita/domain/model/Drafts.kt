@@ -119,6 +119,19 @@ data class CreditPurchaseDraft(
         dueDate.isBefore(today) -> ValidationError.DUE_DATE_PAST
         else -> null
     }
+
+    /**
+     * For a purchase that already exists. Its due date may be in the past (an overdue purchase
+     * must still be fixable), but never before the day it was bought.
+     */
+    fun validateEdit(purchaseDate: LocalDate): ValidationError? = when {
+        !amount.isPositive() -> ValidationError.AMOUNT_REQUIRED
+        cardId == null -> ValidationError.CARD_REQUIRED
+        categoryId == null -> ValidationError.CATEGORY_REQUIRED
+        description.length > TEXT_MAX_LENGTH -> ValidationError.DESCRIPTION_TOO_LONG
+        dueDate.isBefore(purchaseDate) -> ValidationError.DUE_DATE_PAST
+        else -> null
+    }
 }
 
 /** [paidAmount] is what the bank really charged, in the currency of the paying account. */

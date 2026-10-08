@@ -15,9 +15,12 @@ import com.atmosferast.orbita.domain.model.DatePeriod
 import com.atmosferast.orbita.domain.model.Entry
 import com.atmosferast.orbita.domain.model.FxPair
 import com.atmosferast.orbita.domain.model.MovementDraft
+import com.atmosferast.orbita.domain.model.MovementKind
 import com.atmosferast.orbita.domain.model.SessionState
 import com.atmosferast.orbita.domain.model.TransferDraft
 import com.atmosferast.orbita.domain.model.UserSettings
+import com.atmosferast.orbita.domain.model.cleanName
+import com.atmosferast.orbita.domain.model.normalizeName
 import com.atmosferast.orbita.domain.repository.AccountsRepository
 import com.atmosferast.orbita.domain.repository.AuthRepository
 import com.atmosferast.orbita.domain.repository.CategoriesRepository
@@ -63,6 +66,26 @@ private fun newId(): String = UUID.randomUUID().toString()
 
 private fun notFound(): Nothing = throw DataException(DataError.NOT_FOUND)
 
+/** Without an exchange rate, nothing can be in a currency other than the main one. */
+private fun DemoState.requireUsable(currency: String) {
+    if (!settings.fx.isConfigured && currency != settings.fx.main) {
+        throw DataException(DataError.FX_NOT_CONFIGURED)
+    }
+}
+
+/**
+ * A category name is unique per kind among the ones not archived, ignoring case and accents.
+ * [exceptId] is the category being renamed, which never clashes with itself.
+ */
+private fun DemoState.requireFreeName(name: String, kind: MovementKind, exceptId: String? = null) {
+    val key = normalizeName(name)
+    val taken = categories.any {
+        !it.archived && it.category.kind == kind && it.category.id != exceptId &&
+            normalizeName(it.category.name) == key
+    }
+    if (taken) throw DataException(DataError.NAME_TAKEN)
+}
+
 /** Accepts any credentials: there is no server to check them against. */
 @Singleton
 class DemoAuthRepository @Inject constructor() : AuthRepository {
@@ -85,6 +108,7 @@ class DemoAccountsRepository @Inject constructor(private val store: DemoStore) :
     override fun observeAccounts(): Flow<List<Account>> = store.observe { it.activeAccounts }
 
     override suspend fun create(draft: AccountDraft) = store.write { state ->
+        state.requireUsable(draft.currency)
         state.copy(
             accounts = state.accounts + AccountRecord(
                 id = newId(),
@@ -116,15 +140,27 @@ class DemoCategoriesRepository @Inject constructor(private val store: DemoStore)
     override fun observeCategories(): Flow<List<Category>> = store.observe { it.activeCategories }
 
     override suspend fun create(draft: CategoryDraft) = store.write { state ->
+        state.requireFreeName(draft.name, draft.kind)
         state.copy(
             categories = state.categories +
-                CategoryRecord(Category(newId(), draft.name.trim(), draft.kind, draft.colorHex)),
+                CategoryRecord(Category(newId(), cleanName(draft.name), draft.kind, draft.colorHex)),
         )
     }
 
-    override suspend fun update(id: String, draft: CategoryDraft) = change(id) { record ->
-        record.copy(
-            category = record.category.copy(name = draft.name.trim(), colorHex = draft.colorHex),
+    // The name is kept as typed; only its comparison ignores case and accents.
+    override suspend fun update(id: String, draft: CategoryDraft) = store.write { state ->
+        val current = state.categories.firstOrNull { it.category.id == id } ?: notFound()
+        state.requireFreeName(draft.name, current.category.kind, exceptId = id)
+        state.copy(
+            categories = state.categories.map { record ->
+                if (record.category.id != id) record
+                else record.copy(
+                    category = record.category.copy(
+                        name = cleanName(draft.name),
+                        colorHex = draft.colorHex,
+                    ),
+                )
+            },
         )
     }
 
@@ -178,7 +214,18 @@ class DemoEntriesRepository @Inject constructor(
     }
 
     override suspend fun deleteMovement(id: String) = store.write { state ->
-        state.copy(movements = state.movements.filterNot { it.id == id })
+        // Deleting the expense of a payment undoes the payment: the purchase is pending again.
+        // Its card comes back if it was archived meanwhile, so no debt is ever out of sight.
+        val unpaid = state.purchases.firstOrNull { it.paymentMovementId == id }
+        state.copy(
+            movements = state.movements.filterNot { it.id == id },
+            purchases = state.purchases.map {
+                if (it.id == unpaid?.id) it.copy(paid = false, paymentMovementId = null) else it
+            },
+            cards = state.cards.map {
+                if (it.card.id == unpaid?.cardId) it.copy(archived = false) else it
+            },
+        )
     }
 
     override suspend fun createTransfer(draft: TransferDraft) = store.write { state ->
@@ -236,24 +283,64 @@ class DemoCreditRepository @Inject constructor(
         store.observe { it.pendingPurchases }
 
     override suspend fun createCard(draft: CreditCardDraft) = store.write { state ->
+        state.requireUsable(draft.currency)
         state.copy(
             cards = state.cards + CardRecord(CreditCard(newId(), draft.name.trim(), draft.currency)),
         )
     }
 
-    override suspend fun updateCard(id: String, draft: CreditCardDraft) = changeCard(id) { record ->
-        record.copy(card = record.card.copy(name = draft.name.trim(), currency = draft.currency))
+    override suspend fun updateCard(id: String, draft: CreditCardDraft) = store.write { state ->
+        state.requireUsable(draft.currency)
+        state.changeCard(id) { record ->
+            record.copy(card = record.card.copy(name = draft.name.trim(), currency = draft.currency))
+        }
     }
 
-    override suspend fun archiveCard(id: String) = changeCard(id) { it.copy(archived = true) }
+    override suspend fun archiveCard(id: String) = store.write { state ->
+        // A card that still owes something stays in sight: pay or delete its purchases first.
+        if (state.purchases.any { it.cardId == id && !it.paid }) {
+            throw DataException(DataError.CARD_HAS_PENDING_PURCHASES)
+        }
+        state.changeCard(id) { it.copy(archived = true) }
+    }
 
-    private fun changeCard(id: String, change: (CardRecord) -> CardRecord) = store.write { state ->
-        if (state.cards.none { it.card.id == id }) notFound()
-        state.copy(cards = state.cards.map { if (it.card.id == id) change(it) else it })
+    private fun DemoState.changeCard(id: String, change: (CardRecord) -> CardRecord): DemoState {
+        if (cards.none { it.card.id == id }) notFound()
+        return copy(cards = cards.map { if (it.card.id == id) change(it) else it })
+    }
+
+    override suspend fun updatePurchase(id: String, draft: CreditPurchaseDraft) = store.write { state ->
+        val current = state.purchases.firstOrNull { it.id == id } ?: notFound()
+        if (current.paid) throw DataException(DataError.PURCHASE_ALREADY_PAID)
+        val card = state.cards.firstOrNull { it.card.id == draft.cardId && !it.archived }?.card
+            ?: notFound()
+        state.copy(
+            purchases = state.purchases.map { record ->
+                if (record.id != id) record
+                else record.copy(
+                    cardId = card.id,
+                    description = draft.description.trim(),
+                    categoryId = draft.categoryId ?: notFound(),
+                    dueDate = draft.dueDate,
+                    amount = (draft.amount ?: notFound()).setScale(2, RoundingMode.HALF_UP),
+                    // Moved to another card, it takes that card's currency; otherwise it keeps
+                    // the one it was bought in, even if its card changed currency since.
+                    currency = if (card.id == record.cardId) record.currency else card.currency,
+                )
+            },
+        )
+    }
+
+    override suspend fun deletePurchase(id: String) = store.write { state ->
+        // Already gone: deleting twice is not an error.
+        val current = state.purchases.firstOrNull { it.id == id } ?: return@write state
+        if (current.paid) throw DataException(DataError.PURCHASE_ALREADY_PAID)
+        state.copy(purchases = state.purchases.filterNot { it.id == id })
     }
 
     override suspend fun createPurchase(draft: CreditPurchaseDraft) = store.write { state ->
-        val card = state.cards.firstOrNull { it.card.id == draft.cardId }?.card ?: notFound()
+        val card = state.cards.firstOrNull { it.card.id == draft.cardId && !it.archived }?.card
+            ?: notFound()
         state.copy(
             purchases = state.purchases + PurchaseRecord(
                 id = newId(),
@@ -270,12 +357,15 @@ class DemoCreditRepository @Inject constructor(
 
     /** Same as pay_credit_purchase (docs/03): the expense and the paid mark go together. */
     override suspend fun pay(payment: CreditPayment) = store.write { state ->
-        val purchase = state.purchases.firstOrNull { it.id == payment.purchaseId && !it.paid }
-            ?: notFound()
+        val purchase = state.purchases.firstOrNull { it.id == payment.purchaseId } ?: notFound()
+        if (purchase.paid) throw DataException(DataError.PURCHASE_ALREADY_PAID)
+        val movementId = newId()
         state.copy(
-            purchases = state.purchases.map { if (it.id == purchase.id) it.copy(paid = true) else it },
+            purchases = state.purchases.map {
+                if (it.id == purchase.id) it.copy(paid = true, paymentMovementId = movementId) else it
+            },
             movements = state.movements + MovementRecord(
-                id = newId(),
+                id = movementId,
                 description = purchase.description,
                 categoryId = purchase.categoryId,
                 accountId = payment.accountId ?: notFound(),
@@ -292,6 +382,8 @@ class DemoSettingsRepository @Inject constructor(private val store: DemoStore) :
     override fun observeSettings(): Flow<UserSettings> = store.observe { it.settings }
 
     override suspend fun setFx(fx: FxPair) = store.write { state ->
+        // A pair of currencies is only saved together with its rate, and never with a made-up one.
+        if (fx.rate == null || fx.rate.signum() <= 0) throw DataException(DataError.FX_NOT_CONFIGURED)
         // The total is always shown in one of the two currencies of the pair.
         val display = state.settings.displayCurrency
             .takeIf { it == fx.main || it == fx.secondary } ?: fx.main
@@ -299,6 +391,7 @@ class DemoSettingsRepository @Inject constructor(private val store: DemoStore) :
     }
 
     override suspend fun setDisplayCurrency(currency: String) = store.write { state ->
+        state.requireUsable(currency)
         state.copy(settings = state.settings.copy(displayCurrency = currency))
     }
 }

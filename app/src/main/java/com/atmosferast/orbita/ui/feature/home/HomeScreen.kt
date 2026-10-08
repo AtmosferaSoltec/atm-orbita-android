@@ -127,7 +127,10 @@ fun HomeScreen(
             )
 
             else -> {
-                SavingsHeroCard(accounts, fx, displayCurrency, onDisplayCurrencyChange, onOpenAccounts)
+                SavingsHeroCard(
+                    accounts, fx, displayCurrency, onDisplayCurrencyChange, onOpenAccounts,
+                    onConfigureFx = onOpenSettings,
+                )
                 Spacer(Modifier.height(12.dp))
                 val empty = state == HomeState.EMPTY
                 MonthCards(
@@ -173,16 +176,19 @@ private fun SavingsHeroCard(
     displayCurrency: String,
     onDisplayCurrencyChange: (String) -> Unit,
     onOpenAccounts: () -> Unit,
+    onConfigureFx: () -> Unit,
 ) {
     val otherCurrency = fx.other(displayCurrency)
     val total = fx.savingsTotal(accounts, displayCurrency)
+    val rate = fx.rate
     HeroCard(scrim = true) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             HeroLabel(stringResource(R.string.savings_total), Modifier.weight(1f))
             SegmentedControl(
                 options = listOf(fx.main, fx.secondary).map { it to currencySymbol(it) },
                 selected = displayCurrency,
-                onSelect = onDisplayCurrencyChange,
+                // Without an exchange rate the total can only be seen in the main currency.
+                onSelect = { if (rate != null) onDisplayCurrencyChange(it) },
                 fill = false,
                 onHero = true,
             )
@@ -196,18 +202,28 @@ private fun SavingsHeroCard(
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.height(4.dp))
-        // Plain supporting line: the same total in the other currency.
-        Text(
-            stringResource(
-                R.string.savings_equivalent_manual,
-                formatMoney(fx.savingsTotal(accounts, otherCurrency), otherCurrency),
-                formatRate(fx.rate),
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.White.copy(alpha = 0.85f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        if (rate == null) {
+            // A new user has no exchange rate yet: the line leads to where it is set.
+            Text(
+                stringResource(R.string.fx_configure_link),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White,
+                modifier = Modifier.clickable(role = Role.Button, onClick = onConfigureFx),
+            )
+        } else {
+            // Plain supporting line: the same total in the other currency.
+            Text(
+                stringResource(
+                    R.string.savings_equivalent_manual,
+                    formatMoney(fx.savingsTotal(accounts, otherCurrency), otherCurrency),
+                    formatRate(rate),
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.85f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         Spacer(Modifier.height(18.dp))
         Row(
             modifier = Modifier

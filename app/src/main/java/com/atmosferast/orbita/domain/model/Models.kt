@@ -43,6 +43,11 @@ data class Movement(
     val account: Account,
     override val date: LocalDate,
     val amount: BigDecimal,
+    /**
+     * Set when this expense is the payment of a purchase with a credit card. Deleting it undoes
+     * the payment: the purchase is pending again.
+     */
+    val creditPurchaseId: String? = null,
 ) : Entry {
     val kind: MovementKind get() = category.kind
 }

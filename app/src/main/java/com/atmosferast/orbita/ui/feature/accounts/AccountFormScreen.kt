@@ -51,6 +51,8 @@ fun AccountFormScreen(
     onSave: (AccountDraft) -> Unit,
     modifier: Modifier = Modifier,
     defaultCurrency: String = PEN,
+    /** Without an exchange rate, a new account can only be in the main currency. */
+    fxConfigured: Boolean = true,
     onArchive: () -> Unit = {},
 ) {
     val editing = account != null
@@ -120,14 +122,24 @@ fun AccountFormScreen(
                 Modifier.padding(top = 8.dp),
             )
         } else {
-            // Starts on the user's default currency (Ajustes).
-            DropdownField(
-                options = supportedCurrencies,
-                selected = currencyInfo(currency),
-                onSelect = { currency = it.code },
-                label = { it.label },
-                detail = { it.code },
-            )
+            if (fxConfigured) {
+                // Starts on the user's default currency (Ajustes).
+                DropdownField(
+                    options = supportedCurrencies,
+                    selected = currencyInfo(currency),
+                    onSelect = { currency = it.code },
+                    label = { it.label },
+                    detail = { it.code },
+                )
+            } else {
+                ChipGroup {
+                    OrbitaChip(currencyInfo(currency).label, selected = true, onClick = {})
+                }
+                HintText(
+                    stringResource(R.string.fx_currency_locked_hint),
+                    Modifier.padding(top = 8.dp),
+                )
+            }
             FieldLabel(stringResource(R.string.account_initial_balance))
             OrbitaTextField(
                 value = initialBalance,

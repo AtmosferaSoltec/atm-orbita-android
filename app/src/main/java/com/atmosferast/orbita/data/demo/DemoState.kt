@@ -66,6 +66,8 @@ internal data class PurchaseRecord(
     val amount: BigDecimal,
     val currency: String,
     val paid: Boolean = false,
+    /** The expense created when it was paid; deleting that expense undoes the payment. */
+    val paymentMovementId: String? = null,
 )
 
 internal data class DemoState(
@@ -112,6 +114,9 @@ internal data class DemoState(
     val entries: List<Entry>
         get() {
             val byId = accounts.associate { it.id to it.toAccount() }
+            val purchaseByPayment = purchases
+                .filter { it.paymentMovementId != null }
+                .associate { it.paymentMovementId to it.id }
             val all = movements.map { record ->
                 record.order to Movement(
                     id = record.id,
@@ -120,6 +125,7 @@ internal data class DemoState(
                     account = byId.getValue(record.accountId),
                     date = record.date,
                     amount = record.amount,
+                    creditPurchaseId = purchaseByPayment[record.id],
                 )
             } + transfers.map { record ->
                 record.order to Transfer(

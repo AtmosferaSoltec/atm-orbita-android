@@ -31,6 +31,10 @@ val UiMessage.textRes: Int
             DataError.EMAIL_ALREADY_REGISTERED -> R.string.error_email_registered
             DataError.EMAIL_NOT_CONFIRMED -> R.string.error_email_not_confirmed
             DataError.NOT_FOUND -> R.string.error_not_found
+            DataError.NAME_TAKEN -> R.string.error_name_taken
+            DataError.FX_NOT_CONFIGURED -> R.string.error_fx_not_configured
+            DataError.PURCHASE_ALREADY_PAID -> R.string.error_purchase_paid
+            DataError.CARD_HAS_PENDING_PURCHASES -> R.string.error_card_has_pending
             DataError.UNKNOWN -> R.string.error_unknown
         }
     }

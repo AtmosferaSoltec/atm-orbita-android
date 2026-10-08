@@ -70,15 +70,27 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     email: String = SampleData.userEmail,
 ) {
-    // The text restarts whenever the pair of currencies changes.
-    var rate by remember(fx.main, fx.secondary) { mutableStateOf(formatRate(fx.rate)) }
+    // The pair on screen. A pair of currencies is only saved together with its rate, so a new
+    // pair stays here, unsaved, until the user types one; leaving the screen discards it.
+    var pair by remember(fx) { mutableStateOf(fx) }
+    // The text restarts whenever the pair of currencies changes; empty when there is no rate.
+    var rate by remember(pair.main, pair.secondary) {
+        mutableStateOf(pair.rate?.let(::formatRate).orEmpty())
+    }
     val parsedRate = rate.replace(',', '.').toBigDecimalOrNull()?.takeIf { it.signum() > 0 }
     // Shown with 4 decimals; the rate must be > 0.
     val inverse = parsedRate
         ?.let { BigDecimal.ONE.divide(it, 4, RoundingMode.HALF_UP).toPlainString() }
         ?: "—"
-    val mainSymbol = currencySymbol(fx.main)
-    val secondarySymbol = currencySymbol(fx.secondary)
+    val mainSymbol = currencySymbol(pair.main)
+    val secondarySymbol = currencySymbol(pair.secondary)
+
+    // Swapping the two currencies keeps a known rate (its inverse) and is saved at once; any
+    // other currency leaves the rate empty and waits for the user to type it.
+    fun choosePair(next: FxPair) {
+        pair = next
+        if (next.rate != null) onFxChange(next)
+    }
 
     ScreenScaffold(
         modifier = modifier,
@@ -101,8 +113,8 @@ fun SettingsScreen(
             Spacer(Modifier.height(8.dp))
             DropdownField(
                 options = supportedCurrencies,
-                selected = currencyInfo(fx.main),
-                onSelect = { onFxChange(fx.withMain(it.code)) },
+                selected = currencyInfo(pair.main),
+                onSelect = { choosePair(pair.withMain(it.code)) },
                 label = { it.label },
                 detail = { it.code },
             )
@@ -117,8 +129,8 @@ fun SettingsScreen(
             Spacer(Modifier.height(8.dp))
             DropdownField(
                 options = supportedCurrencies,
-                selected = currencyInfo(fx.secondary),
-                onSelect = { onFxChange(fx.withSecondary(it.code)) },
+                selected = currencyInfo(pair.secondary),
+                onSelect = { choosePair(pair.withSecondary(it.code)) },
                 label = { it.label },
                 detail = { it.code },
             )
@@ -133,9 +145,10 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f),
                 )
                 SegmentedControl(
-                    options = listOf(fx.main to mainSymbol, fx.secondary to secondarySymbol),
+                    options = listOf(pair.main to mainSymbol, pair.secondary to secondarySymbol),
                     selected = displayCurrency,
-                    onSelect = onDisplayCurrencyChange,
+                    // Only between the two saved currencies, and only once there is a rate.
+                    onSelect = { if (pair == fx && fx.isConfigured) onDisplayCurrencyChange(it) },
                     fill = false,
                 )
             }
@@ -164,14 +177,24 @@ fun SettingsScreen(
                     value = rate,
                     onValueChange = { text ->
                         rate = text
-                        // Only a valid rate (> 0) reaches the rest of the app.
+                        // Only a valid rate (> 0) is saved, together with the pair on screen.
                         text.replace(',', '.').toBigDecimalOrNull()
                             ?.takeIf { it.signum() > 0 }
-                            ?.let { onFxChange(fx.copy(rate = it)) }
+                            ?.let { onFxChange(pair.copy(rate = it)) }
                     },
                     placeholder = "0.00",
                     keyboardType = KeyboardType.Decimal,
                     modifier = Modifier.width(120.dp),
+                )
+            }
+            if (parsedRate == null) {
+                // No rate yet (a new user, or a pair just chosen): nothing is saved until it is typed.
+                Spacer(Modifier.height(8.dp))
+                HintText(
+                    stringResource(
+                        if (rate.isBlank()) R.string.fx_configure else R.string.error_rate_required,
+                    ),
+                    color = Expense,
                 )
             }
             Spacer(Modifier.height(10.dp))

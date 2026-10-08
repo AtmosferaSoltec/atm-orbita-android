@@ -20,7 +20,9 @@ import com.atmosferast.orbita.core.supportedCurrencies
 import com.atmosferast.orbita.ui.components.ConfirmDialog
 import com.atmosferast.orbita.ui.components.DropdownField
 import com.atmosferast.orbita.ui.components.FieldLabel
+import com.atmosferast.orbita.ui.components.ChipGroup
 import com.atmosferast.orbita.ui.components.HintText
+import com.atmosferast.orbita.ui.components.OrbitaChip
 import com.atmosferast.orbita.ui.components.ModalTopBar
 import com.atmosferast.orbita.ui.components.OrbitaIcons
 import com.atmosferast.orbita.ui.components.OrbitaTextField
@@ -41,6 +43,10 @@ fun CreditCardFormScreen(
     onSave: (CreditCardDraft) -> Unit,
     modifier: Modifier = Modifier,
     defaultCurrency: String = PEN,
+    /** Without an exchange rate, a card can only be in the main currency. */
+    fxConfigured: Boolean = true,
+    /** A card that still owes something cannot be archived. */
+    hasPendingPurchases: Boolean = false,
     onArchive: () -> Unit = {},
 ) {
     val editing = card != null
@@ -48,6 +54,7 @@ fun CreditCardFormScreen(
     // A new card starts on the user's main currency (Ajustes).
     var currency by remember { mutableStateOf(card?.currency ?: defaultCurrency) }
     var confirmArchive by remember { mutableStateOf(false) }
+    var archiveBlocked by remember { mutableStateOf(false) }
 
     ScreenScaffold(
         modifier = modifier,
@@ -80,28 +87,47 @@ fun CreditCardFormScreen(
         )
 
         FieldLabel(stringResource(R.string.field_currency))
-        DropdownField(
-            options = supportedCurrencies,
-            selected = currencyInfo(currency),
-            onSelect = { currency = it.code },
-            label = { it.label },
-            detail = { it.code },
-        )
-        HintText(stringResource(R.string.credit_card_currency_hint), Modifier.padding(top = 8.dp))
+        if (fxConfigured) {
+            DropdownField(
+                options = supportedCurrencies,
+                selected = currencyInfo(currency),
+                onSelect = { currency = it.code },
+                label = { it.label },
+                detail = { it.code },
+            )
+            HintText(
+                stringResource(R.string.credit_card_currency_hint),
+                Modifier.padding(top = 8.dp),
+            )
+        } else {
+            ChipGroup {
+                OrbitaChip(currencyInfo(currency).label, selected = true, onClick = {})
+            }
+            HintText(stringResource(R.string.fx_currency_locked_hint), Modifier.padding(top = 8.dp))
+        }
 
         if (editing) {
             Spacer(Modifier.height(24.dp))
             PillButton(
                 stringResource(R.string.credit_card_archive),
-                onClick = { confirmArchive = true },
+                // With pending payments there is nothing to confirm: it cannot be archived.
+                onClick = { if (hasPendingPurchases) archiveBlocked = true else confirmArchive = true },
                 icon = OrbitaIcons.Archive,
                 container = ExpenseSoft,
                 content = Expense,
             )
-            HintText(
-                stringResource(R.string.credit_card_archive_hint),
-                Modifier.padding(top = 8.dp),
-            )
+            if (archiveBlocked && hasPendingPurchases) {
+                HintText(
+                    stringResource(R.string.error_card_has_pending),
+                    Modifier.padding(top = 8.dp),
+                    color = Expense,
+                )
+            } else {
+                HintText(
+                    stringResource(R.string.credit_card_archive_hint),
+                    Modifier.padding(top = 8.dp),
+                )
+            }
         }
     }
 

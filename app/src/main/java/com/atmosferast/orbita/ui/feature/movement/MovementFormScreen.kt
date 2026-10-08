@@ -4,6 +4,7 @@ import com.atmosferast.orbita.core.centsToAmount
 import com.atmosferast.orbita.ui.components.DateDialog
 import com.atmosferast.orbita.ui.components.color
 import com.atmosferast.orbita.ui.components.LocalToday
+import com.atmosferast.orbita.domain.model.CreditPurchase
 import com.atmosferast.orbita.domain.model.CreditPurchaseDraft
 import com.atmosferast.orbita.domain.model.MovementDraft
 import com.atmosferast.orbita.domain.model.CreditCard
@@ -82,7 +83,8 @@ private const val DEFAULT_DAYS_TO_PAY = 13L
 
 /**
  * New movement, or edit/delete when [editing] is set. With "Compra con tarjeta de crédito" on,
- * it saves a pending purchase instead of a movement (v1.1).
+ * it saves a pending purchase instead of a movement (v1.1); with [editingPurchase] it edits or
+ * deletes a purchase that is still pending.
  */
 @Composable
 fun MovementFormScreen(
@@ -98,26 +100,38 @@ fun MovementFormScreen(
     defaultAccount: Account? = null,
     onSavePurchase: (CreditPurchaseDraft) -> Unit = {},
     onDelete: () -> Unit = {},
+    editingPurchase: CreditPurchase? = null,
+    onDeletePurchase: () -> Unit = {},
 ) {
     val today = LocalToday.current
     fun categoriesOf(kind: MovementKind) = categories.filter { it.kind == kind }
+    // Nothing exists yet: neither a movement nor a pending purchase is being edited.
+    val isNew = editing == null && editingPurchase == null
 
     var kind by remember { mutableStateOf(editing?.kind ?: MovementKind.EXPENSE) }
-    var amountCents by remember { mutableStateOf(editing?.let { amountToCents(it.amount) } ?: 0L) }
+    var amountCents by remember {
+        mutableStateOf((editing?.amount ?: editingPurchase?.amount)?.let(::amountToCents) ?: 0L)
+    }
     // A new movement starts on the amount, with the in-app keypad open.
-    var keypadOpen by remember { mutableStateOf(editing == null) }
+    var keypadOpen by remember { mutableStateOf(isNew) }
     var accountId by remember {
         mutableStateOf((editing?.account ?: defaultAccount ?: accounts.firstOrNull())?.id)
     }
     var category by remember {
-        mutableStateOf(editing?.category ?: categoriesOf(kind).firstOrNull())
+        mutableStateOf(
+            editing?.category ?: editingPurchase?.category ?: categoriesOf(kind).firstOrNull(),
+        )
     }
-    var description by remember { mutableStateOf(editing?.description.orEmpty()) }
+    var description by remember {
+        mutableStateOf(editing?.description ?: editingPurchase?.description.orEmpty())
+    }
     var date by remember { mutableStateOf(editing?.date) }
     var pickingDate by remember { mutableStateOf(false) }
-    var credit by remember { mutableStateOf(initialCredit) }
-    var creditCard by remember { mutableStateOf(creditCards.firstOrNull()) }
-    var dueDate by remember { mutableStateOf(today.plusDays(DEFAULT_DAYS_TO_PAY)) }
+    var credit by remember { mutableStateOf(initialCredit || editingPurchase != null) }
+    var creditCard by remember { mutableStateOf(editingPurchase?.card ?: creditCards.firstOrNull()) }
+    var dueDate by remember {
+        mutableStateOf(editingPurchase?.dueDate ?: today.plusDays(DEFAULT_DAYS_TO_PAY))
+    }
     var pickingDueDate by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
 
@@ -126,8 +140,13 @@ fun MovementFormScreen(
     val account = accounts.firstOrNull { it.id == accountId } ?: editing?.account
     val isExpense = kind == MovementKind.EXPENSE
     val onCredit = credit && isExpense && editing == null
-    // A credit purchase is registered in the currency of its card.
-    val symbol = currencySymbol((if (onCredit) creditCard?.currency else account?.currency) ?: PEN)
+    // A credit purchase is registered in the currency of its card. One being edited keeps the
+    // currency it was bought in unless it is moved to another card.
+    val purchaseCurrency = when {
+        editingPurchase != null && creditCard?.id == editingPurchase.card.id -> editingPurchase.currency
+        else -> creditCard?.currency
+    }
+    val symbol = currencySymbol((if (onCredit) purchaseCurrency else account?.currency) ?: PEN)
     val focusManager = LocalFocusManager.current
 
     BackHandler(enabled = keypadOpen) { keypadOpen = false }
@@ -137,13 +156,16 @@ fun MovementFormScreen(
         header = {
             ModalTopBar(
                 title = stringResource(
-                    if (editing != null) R.string.movement_edit_title
-                    else R.string.movement_new_title,
+                    when {
+                        editingPurchase != null -> R.string.purchase_edit_title
+                        editing != null -> R.string.movement_edit_title
+                        else -> R.string.movement_new_title
+                    },
                 ),
                 navigationIcon = OrbitaIcons.Close,
                 navigationLabel = stringResource(R.string.action_close),
                 onNavigate = onClose,
-                action = if (editing == null) null else {
+                action = if (isNew) null else {
                     {
                         CircleIconButton(
                             OrbitaIcons.Trash,
@@ -168,7 +190,7 @@ fun MovementFormScreen(
                 PrimaryButton(
                     stringResource(
                         when {
-                            editing != null -> R.string.action_save_changes
+                            !isNew -> R.string.action_save_changes
                             onCredit -> R.string.movement_save_credit
                             isExpense -> R.string.movement_save_expense
                             else -> R.string.movement_save_income
@@ -198,23 +220,27 @@ fun MovementFormScreen(
             // An existing movement cannot become a transfer.
             if (editing == null) add(FormTab.TRANSFER to stringResource(R.string.kind_transfer))
         }
-        SegmentedControl(
-            options = tabs,
-            selected = if (isExpense) FormTab.EXPENSE else FormTab.INCOME,
-            onSelect = { tab ->
-                when (tab) {
-                    FormTab.TRANSFER -> onOpenTransfer()
-                    else -> {
-                        kind = if (tab == FormTab.EXPENSE) MovementKind.EXPENSE else MovementKind.INCOME
-                        // Changing the type selects its first category.
-                        category = categoriesOf(kind).firstOrNull()
+        // A purchase with a credit card is always an expense: there is nothing to switch to.
+        if (editingPurchase == null) {
+            SegmentedControl(
+                options = tabs,
+                selected = if (isExpense) FormTab.EXPENSE else FormTab.INCOME,
+                onSelect = { tab ->
+                    when (tab) {
+                        FormTab.TRANSFER -> onOpenTransfer()
+                        else -> {
+                            kind =
+                                if (tab == FormTab.EXPENSE) MovementKind.EXPENSE else MovementKind.INCOME
+                            // Changing the type selects its first category.
+                            category = categoriesOf(kind).firstOrNull()
+                        }
                     }
-                }
-            },
-        )
+                },
+            )
+        }
 
         // Only when creating: the tabs alone do not tell the three forms apart.
-        if (editing == null) {
+        if (isNew) {
             Spacer(Modifier.height(16.dp))
             FormIntro(
                 icon = if (isExpense) OrbitaIcons.ArrowDownLeft else OrbitaIcons.ArrowUpRight,
@@ -316,7 +342,7 @@ fun MovementFormScreen(
         if (editing != null) {
             FieldLabel(stringResource(R.string.field_date))
             PickerField(formatDate(date ?: editing.date), onClick = { pickingDate = true })
-        } else {
+        } else if (isNew) {
             Row(
                 modifier = Modifier.padding(top = 14.dp, start = 4.dp, end = 4.dp),
                 verticalAlignment = Alignment.Top,
@@ -336,12 +362,15 @@ fun MovementFormScreen(
         if (isExpense && editing == null) {
             Spacer(Modifier.height(18.dp))
             OrbitaCard {
-                SwitchRow(
-                    label = stringResource(R.string.movement_credit_toggle),
-                    checked = credit,
-                    onCheckedChange = { credit = it },
-                    labelStyle = MaterialTheme.typography.titleSmall,
-                )
+                // A pending purchase stays one: it cannot be turned into a movement here.
+                if (editingPurchase == null) {
+                    SwitchRow(
+                        label = stringResource(R.string.movement_credit_toggle),
+                        checked = credit,
+                        onCheckedChange = { credit = it },
+                        labelStyle = MaterialTheme.typography.titleSmall,
+                    )
+                }
                 HintText(stringResource(R.string.movement_credit_hint))
                 if (credit) {
                     FieldLabel(stringResource(R.string.credit_card_field))
@@ -403,12 +432,22 @@ fun MovementFormScreen(
 
     if (confirmDelete) {
         ConfirmDialog(
-            title = stringResource(R.string.dialog_delete_movement_title),
-            text = stringResource(R.string.dialog_delete_text),
+            title = stringResource(
+                if (editingPurchase != null) R.string.dialog_delete_purchase_title
+                else R.string.dialog_delete_movement_title,
+            ),
+            text = stringResource(
+                when {
+                    editingPurchase != null -> R.string.dialog_delete_purchase_text
+                    // The expense of a payment: deleting it leaves the purchase pending again.
+                    editing?.creditPurchaseId != null -> R.string.dialog_delete_payment_text
+                    else -> R.string.dialog_delete_text
+                },
+            ),
             confirmLabel = stringResource(R.string.action_delete),
             onConfirm = {
                 confirmDelete = false
-                onDelete()
+                if (editingPurchase != null) onDeletePurchase() else onDelete()
             },
             onDismiss = { confirmDelete = false },
         )

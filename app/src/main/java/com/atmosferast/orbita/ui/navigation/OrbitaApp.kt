@@ -79,7 +79,12 @@ import kotlinx.coroutines.flow.collectLatest
 
 private sealed interface Screen {
     data object Main : Screen
-    data class MovementForm(val editing: Movement? = null, val credit: Boolean = false) : Screen
+    /** [purchase]: a pending purchase with a credit card being edited, instead of a movement. */
+    data class MovementForm(
+        val editing: Movement? = null,
+        val credit: Boolean = false,
+        val purchase: CreditPurchase? = null,
+    ) : Screen
     data class TransferForm(val editing: Transfer? = null) : Screen
     data class PayCredit(val purchase: CreditPurchase) : Screen
     data class CreditCardForm(val card: CreditCard?) : Screen
@@ -155,7 +160,7 @@ private fun AuthFlow(app: AppViewModel) {
 }
 
 // Never shown: Inicio draws its skeleton or its error instead of the totals while it has no data.
-private val PlaceholderFx = FxPair(PEN, USD, BigDecimal.ONE)
+private val PlaceholderFx = FxPair(PEN, USD, rate = null)
 
 @Composable
 private fun MainFlow(email: String, onLogout: () -> Unit) {
@@ -234,6 +239,7 @@ private fun MainFlow(email: String, onLogout: () -> Unit) {
                                 onTransfer = { push(Screen.TransferForm()) },
                                 onAccountClick = { account -> push(Screen.AccountForm(account)) },
                                 onNewAccount = { push(Screen.AccountForm(null)) },
+                                onConfigureFx = { push(Screen.Settings) },
                             )
                         }
                     }
@@ -264,6 +270,9 @@ private fun MainFlow(email: String, onLogout: () -> Unit) {
                                 onPay = { purchase -> push(Screen.PayCredit(purchase)) },
                                 onCardClick = { card -> push(Screen.CreditCardForm(card)) },
                                 onNewCard = { push(Screen.CreditCardForm(null)) },
+                                onPurchaseClick = { purchase ->
+                                    push(Screen.MovementForm(purchase = purchase))
+                                },
                             )
                         }
                     }
@@ -282,7 +291,8 @@ private fun MainFlow(email: String, onLogout: () -> Unit) {
         is Screen.MovementForm -> {
             val state by movements.state.collectAsStateWithLifecycle()
             state?.let {
-                if (it.accounts.isEmpty() && screen.editing == null) {
+                // A purchase with a credit card needs no account until it is paid.
+                if (it.accounts.isEmpty() && screen.editing == null && screen.purchase == null) {
                     NoticeScreen(
                         barTitle = stringResource(R.string.movement_new_title),
                         title = stringResource(R.string.error_no_accounts_title),
@@ -300,10 +310,18 @@ private fun MainFlow(email: String, onLogout: () -> Unit) {
                         editing = screen.editing,
                         initialCredit = screen.credit,
                         defaultAccount = it.defaultAccount,
-                        onSavePurchase = { draft -> movements.savePurchase(draft) { close(screen) } },
+                        onSavePurchase = { draft ->
+                            movements.savePurchase(screen.purchase, draft) { close(screen) }
+                        },
                         onDelete = {
                             screen.editing?.let { movement ->
                                 movements.delete(movement) { close(screen) }
+                            }
+                        },
+                        editingPurchase = screen.purchase,
+                        onDeletePurchase = {
+                            screen.purchase?.let { purchase ->
+                                movements.deletePurchase(purchase) { close(screen) }
                             }
                         },
                     )
@@ -364,6 +382,10 @@ private fun MainFlow(email: String, onLogout: () -> Unit) {
                 CreditCardFormScreen(
                     card = screen.card,
                     defaultCurrency = it.mainCurrency,
+                    fxConfigured = it.fxConfigured,
+                    hasPendingPurchases = it.pendingPurchases.any { purchase ->
+                        purchase.card.id == screen.card?.id
+                    },
                     onClose = ::pop,
                     onSave = { draft -> credit.saveCard(screen.card, draft) { close(screen) } },
                     onArchive = {
@@ -407,6 +429,7 @@ private fun MainFlow(email: String, onLogout: () -> Unit) {
                 AccountFormScreen(
                     account = screen.account,
                     defaultCurrency = it.fx.main,
+                    fxConfigured = it.fx.isConfigured,
                     onClose = ::pop,
                     onSave = { draft -> accounts.save(screen.account, draft) { close(screen) } },
                     onArchive = {
@@ -426,15 +449,21 @@ private fun MainFlow(email: String, onLogout: () -> Unit) {
             )
         }
 
-        is Screen.CategoryForm -> CategoryFormScreen(
-            category = screen.category,
-            onClose = ::pop,
-            onSave = { draft -> categories.save(screen.category, draft) { close(screen) } },
-            initialKind = screen.kind,
-            onArchive = {
-                screen.category?.let { category -> categories.archive(category) { close(screen) } }
-            },
-        )
+        is Screen.CategoryForm -> {
+            val list by categories.categories.collectAsStateWithLifecycle()
+            CategoryFormScreen(
+                category = screen.category,
+                onClose = ::pop,
+                onSave = { draft -> categories.save(screen.category, draft) { close(screen) } },
+                initialKind = screen.kind,
+                existing = list,
+                onArchive = {
+                    screen.category?.let { category ->
+                        categories.archive(category) { close(screen) }
+                    }
+                },
+            )
+        }
     }
 }
 

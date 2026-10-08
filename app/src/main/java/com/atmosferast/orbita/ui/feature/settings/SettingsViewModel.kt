@@ -3,6 +3,7 @@ package com.atmosferast.orbita.ui.feature.settings
 import androidx.lifecycle.viewModelScope
 import com.atmosferast.orbita.domain.model.FxPair
 import com.atmosferast.orbita.domain.model.UserSettings
+import com.atmosferast.orbita.domain.model.ValidationError
 import com.atmosferast.orbita.domain.repository.SettingsRepository
 import com.atmosferast.orbita.ui.common.ActionViewModel
 import com.atmosferast.orbita.ui.common.MessageBus
@@ -22,7 +23,10 @@ class SettingsViewModel @Inject constructor(
     val settings: StateFlow<UserSettings?> =
         repository.observeSettings().stateIn(viewModelScope, WhileScreenVisible, null)
 
-    fun setFx(fx: FxPair) = act { repository.setFx(fx) }
+    /** A pair of currencies is only saved together with its rate, which must be above zero. */
+    fun setFx(fx: FxPair) = act(
+        invalid = if ((fx.rate?.signum() ?: 0) > 0) null else ValidationError.RATE_REQUIRED,
+    ) { repository.setFx(fx) }
 
     fun setDisplayCurrency(currency: String) = act { repository.setDisplayCurrency(currency) }
 }

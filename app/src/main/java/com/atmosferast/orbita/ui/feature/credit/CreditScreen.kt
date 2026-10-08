@@ -84,6 +84,8 @@ fun CreditScreen(
     onNewCard: () -> Unit,
     mainCurrency: String = PEN,
     modifier: Modifier = Modifier,
+    /** Opens a pending purchase to edit or delete it. */
+    onPurchaseClick: (CreditPurchase) -> Unit = {},
 ) {
     ScreenScaffold(
         modifier = modifier,
@@ -120,6 +122,7 @@ fun CreditScreen(
                     purchases = byCard[card.id].orEmpty().sortedBy { it.dueDate },
                     onClick = { onCardClick(card) },
                     onPay = onPay,
+                    onPurchaseClick = onPurchaseClick,
                 )
             }
             DashedAddButton(stringResource(R.string.credit_new_card), onNewCard)
@@ -201,6 +204,7 @@ private fun CreditCardCard(
     purchases: List<CreditPurchase>,
     onClick: () -> Unit,
     onPay: (CreditPurchase) -> Unit,
+    onPurchaseClick: (CreditPurchase) -> Unit,
 ) {
     // The card's own currency leads; a card that only owes another one shows that one instead.
     val currencies = purchases.debtCurrencies(card.currency).ifEmpty { listOf(card.currency) }
@@ -288,7 +292,11 @@ private fun CreditCardCard(
             Column {
                 purchases.forEach { purchase ->
                     CardDivider()
-                    PurchaseItem(purchase, onPay = { onPay(purchase) })
+                    PurchaseItem(
+                        purchase,
+                        onPay = { onPay(purchase) },
+                        onClick = { onPurchaseClick(purchase) },
+                    )
                 }
                 CardDivider()
                 Row(
@@ -319,32 +327,44 @@ private fun CreditCardCard(
 }
 
 @Composable
-private fun PurchaseItem(purchase: CreditPurchase, onPay: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+private fun PurchaseItem(purchase: CreditPurchase, onPay: () -> Unit, onClick: () -> Unit) {
+    // Tapping what describes the purchase opens it to edit or delete it.
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(OrbitaShapes.Field)
+            .clickable(
+                role = Role.Button,
+                onClickLabel = stringResource(R.string.purchase_edit_title),
+                onClick = onClick,
+            ),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                purchase.description,
+                style = MaterialTheme.typography.titleSmall,
+                color = Ink,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                formatMoney(purchase.amount, purchase.currency),
+                style = MaterialTheme.typography.titleSmall,
+                color = Ink,
+            )
+        }
         Text(
-            purchase.description,
-            style = MaterialTheme.typography.titleSmall,
-            color = Ink,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(
-            formatMoney(purchase.amount, purchase.currency),
-            style = MaterialTheme.typography.titleSmall,
-            color = Ink,
+            stringResource(
+                R.string.credit_purchase_subtitle,
+                purchase.category.name,
+                formatDayMonth(purchase.purchaseDate),
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = Muted,
         )
     }
-    Text(
-        stringResource(
-            R.string.credit_purchase_subtitle,
-            purchase.category.name,
-            formatDayMonth(purchase.purchaseDate),
-        ),
-        style = MaterialTheme.typography.bodySmall,
-        color = Muted,
-    )
     Spacer(Modifier.height(10.dp))
     Row(
         modifier = Modifier.fillMaxWidth(),

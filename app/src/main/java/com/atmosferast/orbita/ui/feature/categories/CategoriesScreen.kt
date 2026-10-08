@@ -55,6 +55,7 @@ import com.atmosferast.orbita.ui.components.ScreenScaffold
 import com.atmosferast.orbita.ui.components.SegmentedControl
 import com.atmosferast.orbita.domain.model.Category
 import com.atmosferast.orbita.domain.model.MovementKind
+import com.atmosferast.orbita.domain.model.normalizeName
 import com.atmosferast.orbita.data.demo.SampleData
 import com.atmosferast.orbita.ui.theme.CategoryPalette
 import com.atmosferast.orbita.ui.theme.DividerSoft
@@ -62,6 +63,7 @@ import com.atmosferast.orbita.ui.theme.Expense
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
+import com.atmosferast.orbita.ui.theme.OrbitaShapes
 import com.atmosferast.orbita.ui.components.OrbitaPreview
 import com.atmosferast.orbita.ui.theme.Primary
 import com.atmosferast.orbita.ui.theme.PrimarySoft
@@ -155,6 +157,8 @@ fun CategoryFormScreen(
     onSave: (CategoryDraft) -> Unit,
     modifier: Modifier = Modifier,
     initialKind: MovementKind = MovementKind.EXPENSE,
+    /** The categories that already exist, to tell a repeated name before saving. */
+    existing: List<Category> = emptyList(),
     onArchive: () -> Unit = {},
 ) {
     val editing = category != null
@@ -162,6 +166,16 @@ fun CategoryFormScreen(
     var kind by remember { mutableStateOf(category?.kind ?: initialKind) }
     var color by remember { mutableStateOf(category?.color ?: CategoryPalette.first()) }
     var confirmArchive by remember { mutableStateOf(false) }
+    // Set when saving a repeated name; shown under the field until the name or the kind changes.
+    var nameTaken by remember { mutableStateOf(false) }
+
+    // Unique per kind, ignoring case and accents; a category never clashes with itself.
+    fun isTaken(): Boolean {
+        val key = normalizeName(name)
+        return existing.any {
+            it.kind == kind && it.id != category?.id && normalizeName(it.name) == key
+        }
+    }
 
     ScreenScaffold(
         modifier = modifier,
@@ -182,16 +196,31 @@ fun CategoryFormScreen(
                 stringResource(
                     if (editing) R.string.action_save_changes else R.string.category_save,
                 ),
-                onClick = { onSave(CategoryDraft(name, kind, color.toHex())) },
+                onClick = {
+                    if (name.isNotBlank() && isTaken()) nameTaken = true
+                    else onSave(CategoryDraft(name, kind, color.toHex()))
+                },
             )
         },
     ) {
         FieldLabel(stringResource(R.string.field_name))
         OrbitaTextField(
             value = name,
-            onValueChange = { name = it },
+            onValueChange = {
+                name = it
+                nameTaken = false
+            },
             placeholder = stringResource(R.string.category_name_placeholder),
+            modifier = if (nameTaken) Modifier.border(1.5.dp, Expense, OrbitaShapes.Field) else Modifier,
         )
+        // The one error shown under its field instead of in the validation notice.
+        if (nameTaken) {
+            HintText(
+                stringResource(R.string.error_name_taken),
+                Modifier.padding(top = 6.dp, start = 4.dp),
+                color = Expense,
+            )
+        }
 
         // The kind (income / expense) is fixed once the category exists.
         if (!editing) {
@@ -200,12 +229,18 @@ fun CategoryFormScreen(
                 OrbitaChip(
                     stringResource(R.string.kind_expense),
                     kind == MovementKind.EXPENSE,
-                    { kind = MovementKind.EXPENSE },
+                    {
+                        kind = MovementKind.EXPENSE
+                        nameTaken = false
+                    },
                 )
                 OrbitaChip(
                     stringResource(R.string.kind_income),
                     kind == MovementKind.INCOME,
-                    { kind = MovementKind.INCOME },
+                    {
+                        kind = MovementKind.INCOME
+                        nameTaken = false
+                    },
                 )
             }
         }

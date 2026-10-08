@@ -34,6 +34,18 @@ enum class DataError {
     EMAIL_ALREADY_REGISTERED,
     EMAIL_NOT_CONFIRMED,
     NOT_FOUND,
+
+    /** Another category of the same kind already has that name (ignoring case and accents). */
+    NAME_TAKEN,
+
+    /** Something in a currency other than the main one, before the exchange rate is set. */
+    FX_NOT_CONFIGURED,
+
+    /** A paid purchase is not edited nor deleted: undo its payment first. */
+    PURCHASE_ALREADY_PAID,
+
+    /** A credit card is not archived while it has pending purchases. */
+    CARD_HAS_PENDING_PURCHASES,
     UNKNOWN,
 }
 
@@ -81,6 +93,11 @@ interface EntriesRepository {
     fun observeRecentEntries(limit: Int): Flow<List<Entry>>
     suspend fun createMovement(draft: MovementDraft)
     suspend fun updateMovement(id: String, draft: MovementDraft)
+
+    /**
+     * Deleting the expense of a credit purchase payment undoes the payment: the purchase is
+     * pending again. The purchase itself is never deleted from here.
+     */
     suspend fun deleteMovement(id: String)
     suspend fun createTransfer(draft: TransferDraft)
     suspend fun updateTransfer(id: String, draft: TransferDraft)
@@ -100,8 +117,19 @@ interface CreditRepository {
     fun observePendingPurchases(): Flow<List<CreditPurchase>>
     suspend fun createCard(draft: CreditCardDraft)
     suspend fun updateCard(id: String, draft: CreditCardDraft)
+
+    /** Fails with [DataError.CARD_HAS_PENDING_PURCHASES] while the card owes anything. */
     suspend fun archiveCard(id: String)
     suspend fun createPurchase(draft: CreditPurchaseDraft)
+
+    /**
+     * Only while it is pending. It changes no balance nor report, only the debt of its card.
+     * Moved to another card, the purchase takes that card's currency.
+     */
+    suspend fun updatePurchase(id: String, draft: CreditPurchaseDraft)
+
+    /** Only while it is pending. */
+    suspend fun deletePurchase(id: String)
 
     /** Creates the expense in the paying account and takes the purchase out of the pending ones. */
     suspend fun pay(payment: CreditPayment)

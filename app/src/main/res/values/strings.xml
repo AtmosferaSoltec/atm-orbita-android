@@ -77,6 +77,13 @@
     <string name="error_two_accounts_title">Necesitas dos cuentas</string>
     <string name="error_two_accounts_message">Una transferencia mueve dinero entre dos cuentas tuyas.</string>
     <string name="error_no_categories">No tienes categorías de este tipo. Créalas en Ajustes.</string>
+    <string name="error_name_taken">Ya tienes una categoría de este tipo con ese nombre.</string>
+    <string name="error_fx_not_configured">Configura tu tipo de cambio en Ajustes para usar otra moneda.</string>
+    <string name="error_purchase_paid">Esta compra ya está pagada.</string>
+    <string name="error_card_has_pending">Esta tarjeta tiene pagos pendientes. Págalos o elimínalos antes de archivarla.</string>
+    <string name="fx_configure">Configura tu tipo de cambio</string>
+    <string name="fx_configure_link">Configura tu tipo de cambio ›</string>
+    <string name="fx_currency_locked_hint">Configura tu tipo de cambio en Ajustes para usar otras monedas.</string>
 
     <!-- Login / sign-up -->
     <string name="auth_login_title">Inicia sesión</string>
@@ -147,6 +154,10 @@
     <string name="movement_save_credit">Guardar compra pendiente</string>
     <string name="dialog_delete_movement_title">¿Eliminar este movimiento?</string>
     <string name="dialog_delete_text">Dejará de contar en tus saldos y reportes.</string>
+    <string name="dialog_delete_payment_text">Este egreso es el pago de una compra con tarjeta. Al eliminarlo, la compra volverá a estar pendiente.</string>
+    <string name="purchase_edit_title">Editar compra</string>
+    <string name="dialog_delete_purchase_title">¿Eliminar esta compra?</string>
+    <string name="dialog_delete_purchase_text">Dejará de contar en la deuda de la tarjeta.</string>
     <string name="movements_title">Movimientos</string>
     <string name="movements_search">Buscar por descripción</string>
     <string name="filter_all_accounts">Todas las cuentas</string>
@@ -255,7 +266,7 @@
     <string name="settings_default_currency_hint">Es la moneda con la que se crean tus cuentas nuevas. Puedes cambiarla cuando quieras; tus cuentas actuales conservan la suya.</string>
     <string name="settings_secondary_currency">Moneda secundaria</string>
     <string name="settings_secondary_currency_hint">Sirve para ver el equivalente de tus ahorros en otra moneda. El tipo de cambio de abajo es entre estas dos monedas.</string>
-    <string name="settings_fx_reset_hint">Al cambiar de monedas el tipo de cambio vuelve a 1.00: escribe el valor correcto.</string>
+    <string name="settings_fx_reset_hint">Al cambiar de monedas, escribe el tipo de cambio entre las dos para guardar.</string>
     <string name="settings_display_currency">Ver ahorro total en</string>
     <string name="settings_fx">Tipo de cambio</string>
     <string name="settings_fx_manual">Manual</string>

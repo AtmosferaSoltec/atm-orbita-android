@@ -25,6 +25,8 @@ data class CreditUiState(
     /** To pay a purchase from. */
     val accounts: List<Account>,
     val mainCurrency: String,
+    /** Without an exchange rate, a card can only be in the main currency. */
+    val fxConfigured: Boolean,
 )
 
 /** Credit cards, their pending purchases and paying them (v1.1). */
@@ -44,7 +46,9 @@ class CreditViewModel @Inject constructor(
         accounts.observeAccounts(),
         settings.observeSettings(),
     ) { cards, purchases, accountList, userSettings ->
-        CreditUiState(cards, purchases, accountList, userSettings.fx.main)
+        CreditUiState(
+            cards, purchases, accountList, userSettings.fx.main, userSettings.fx.isConfigured,
+        )
     }.stateIn(viewModelScope, WhileScreenVisible, null)
 
     /** Creates the card, or updates [editing] when it is set. */

@@ -73,6 +73,7 @@ fun AccountsScreen(
     onAccountClick: (Account) -> Unit,
     onNewAccount: () -> Unit,
     modifier: Modifier = Modifier,
+    onConfigureFx: () -> Unit = {},
 ) {
     ScreenScaffold(
         modifier = modifier,
@@ -89,7 +90,7 @@ fun AccountsScreen(
             )
         },
     ) {
-        SavingsSummaryCard(accounts, fx, displayCurrency)
+        SavingsSummaryCard(accounts, fx, displayCurrency, onConfigureFx)
         Spacer(Modifier.height(12.dp))
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             accounts.forEach { account ->
@@ -110,8 +111,14 @@ fun AccountsScreen(
 }
 
 @Composable
-private fun SavingsSummaryCard(accounts: List<Account>, fx: FxPair, displayCurrency: String) {
+private fun SavingsSummaryCard(
+    accounts: List<Account>,
+    fx: FxPair,
+    displayCurrency: String,
+    onConfigureFx: () -> Unit,
+) {
     val otherCurrency = fx.other(displayCurrency)
+    val rate = fx.rate
     HeroCard(scrim = true) {
         HeroLabel(
             stringResource(
@@ -123,18 +130,28 @@ private fun SavingsSummaryCard(accounts: List<Account>, fx: FxPair, displayCurre
         Spacer(Modifier.height(6.dp))
         HeroAmount(formatMoney(fx.savingsTotal(accounts, displayCurrency), displayCurrency))
         Spacer(Modifier.height(4.dp))
-        // Plain supporting line: the same total in the other currency.
-        Text(
-            stringResource(
-                R.string.savings_equivalent,
-                formatMoney(fx.savingsTotal(accounts, otherCurrency), otherCurrency),
-                formatRate(fx.rate),
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-            color = OnHero.copy(alpha = 0.85f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        if (rate == null) {
+            // A new user has no exchange rate yet: the line leads to where it is set.
+            Text(
+                stringResource(R.string.fx_configure_link),
+                style = MaterialTheme.typography.bodyMedium,
+                color = OnHero,
+                modifier = Modifier.clickable(role = Role.Button, onClick = onConfigureFx),
+            )
+        } else {
+            // Plain supporting line: the same total in the other currency.
+            Text(
+                stringResource(
+                    R.string.savings_equivalent,
+                    formatMoney(fx.savingsTotal(accounts, otherCurrency), otherCurrency),
+                    formatRate(rate),
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = OnHero.copy(alpha = 0.85f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
