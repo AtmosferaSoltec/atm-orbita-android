@@ -35,6 +35,7 @@ val UiMessage.textRes: Int
             DataError.FX_NOT_CONFIGURED -> R.string.error_fx_not_configured
             DataError.PURCHASE_ALREADY_PAID -> R.string.error_purchase_paid
             DataError.CARD_HAS_PENDING_PURCHASES -> R.string.error_card_has_pending
+            DataError.PAYMENT_LOCKED -> R.string.error_payment_locked
             DataError.UNKNOWN -> R.string.error_unknown
         }
     }

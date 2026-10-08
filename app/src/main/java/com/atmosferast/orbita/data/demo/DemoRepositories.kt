@@ -198,7 +198,15 @@ class DemoEntriesRepository @Inject constructor(
     }
 
     override suspend fun updateMovement(id: String, draft: MovementDraft) = store.write { state ->
-        if (state.movements.none { it.id == id }) notFound()
+        val current = state.movements.firstOrNull { it.id == id } ?: notFound()
+        // The expense of a payment keeps the category and the description of its purchase:
+        // only the account, the amount and the date of the payment can change.
+        val isPayment = state.purchases.any { it.paymentMovementId == id }
+        if (isPayment && (draft.categoryId != current.categoryId ||
+                draft.description.trim() != current.description)
+        ) {
+            throw DataException(DataError.PAYMENT_LOCKED)
+        }
         state.copy(
             movements = state.movements.map { record ->
                 if (record.id != id) record

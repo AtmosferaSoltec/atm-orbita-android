@@ -113,6 +113,7 @@ Al tocar el botón de guardar, el formulario se revisa **en este orden** y se mu
 | Operación en otra moneda sin tipo de cambio | "Configura tu tipo de cambio en Ajustes para usar otra moneda." |
 | Editar, eliminar o pagar una compra que ya está pagada | "Esta compra ya está pagada." |
 | Archivar una tarjeta de crédito con pagos pendientes | "Esta tarjeta tiene pagos pendientes. Págalos o elimínalos antes de archivarla." |
+| Cambiar la categoría o la descripción del egreso de un pago con tarjeta | "Este egreso es el pago de una compra con tarjeta: solo puedes cambiar la cuenta, el monto y la fecha." |
 | Confirmación al eliminar el egreso de un pago con tarjeta | "Este egreso es el pago de una compra con tarjeta. Al eliminarlo, la compra volverá a estar pendiente." |
 | Enlace de recuperación de contraseña usado o vencido | "El enlace ya no es válido. Pide uno nuevo." |
 | Demasiados intentos seguidos | "Demasiados intentos. Espera un momento." |
@@ -315,6 +316,7 @@ Botón al pie: "Guardar cuenta" / "Guardar cambios". En Editar hay además **"Ar
 - Texto del botón: "Guardar egreso" / "Guardar ingreso" / "Guardar compra pendiente" / "Guardar cambios" (Editar).
 - La papelera pide confirmación: "¿Eliminar este movimiento?" — "Dejará de contar en tus saldos y reportes."
 - **Si el egreso es el pago de una compra con tarjeta** (decidido el 7 oct 2026), el texto de la confirmación es: "Este egreso es el pago de una compra con tarjeta. Al eliminarlo, la compra volverá a estar pendiente." Al confirmar, el egreso se elimina y **la compra reaparece en la deuda de su tarjeta**, como si no se hubiera pagado. Desde aquí **nunca se elimina la compra**: eso solo se hace en Crédito, y solo mientras está pendiente, para no alterar la información.
+- **Editar el egreso de un pago** (decidido el 7 oct 2026): solo se pueden cambiar la **cuenta**, el **monto** y la **fecha**, que son los datos del pago. No aparecen las pestañas Egreso | Ingreso; la **categoría** se muestra fija (como un chip) y la **descripción**, como texto, porque son las de la compra. Arriba del formulario va la nota "Este egreso es el pago de una compra con tarjeta: solo puedes cambiar la cuenta, el monto y la fecha." Para corregir la categoría o la descripción hay que eliminar el egreso (la compra vuelve a pendiente), editar la compra en Crédito y pagarla de nuevo.
 - Al guardar o eliminar se vuelve a la pantalla anterior y se actualizan saldos y listas.
 
 **Validaciones:** monto > 0 (el teclado ya garantiza 2 decimales); cuenta obligatoria (salvo crédito); categoría obligatoria; descripción ≤ 500; fecha límite ≥ fecha de compra.
@@ -669,6 +671,7 @@ Son la semilla del **modo demo**, de las vistas previas y de las pruebas. "Hoy" 
 | 7 oct 2026 | Registro: la **moneda principal se elige al registrarse** (propuesta según la región del teléfono) y la cuenta "Efectivo" nace en ella (7.1). |
 | 7 oct 2026 | Crédito: **eliminar el egreso de un pago devuelve la compra a pendiente**; una compra solo se elimina desde Crédito y mientras está pendiente (7.5). **No se puede archivar una tarjeta con pagos pendientes** (7.9). Se confirman: la `ñ` se conserva y las categorías archivadas dejan libre su nombre (7.11). |
 | 7 oct 2026 | **Reglas del 7 oct aplicadas en el código (modo demo):** `FxPair.rate` opcional, con "Configura tu tipo de cambio ›" en Inicio y Cuentas, moneda fija en Nueva cuenta y Nueva/Editar tarjeta, y campo vacío en Ajustes y Transferir al cambiar de par; nombre de categoría único sin mayúsculas ni tildes, con el mensaje bajo el campo; editar y eliminar una compra pendiente tocándola en Crédito; eliminar el egreso de un pago devuelve la compra a pendiente, con su aviso; una tarjeta con pagos pendientes no se archiva. Pendiente de implementar, porque necesita el API: recuperar contraseña, eliminar cuenta y moneda al registrarse. |
+| 7 oct 2026 | Editar movimiento: el **egreso de un pago con tarjeta solo deja cambiar cuenta, monto y fecha**; su categoría y su descripción quedan fijas y no puede pasar a ingreso (7.5). |
 | 7 oct 2026 | **Supabase retirado del repositorio:** se eliminaron la migración SQL, las dependencias, las claves de configuración y el repositorio de sesión. La app queda entera en modo demo, también la sesión, hasta conectar el API. |
 | 7 oct 2026 | Crédito: una compra **pendiente se puede editar y eliminar**, sin efecto en saldos ni reportes (7.9). |
 | 7 oct 2026 | **Requisitos para publicar:** recuperar contraseña con enlace de un solo uso de 30 minutos (7.1) y eliminar cuenta con borrado real desde Ajustes (7.12). Mensajes nuevos en 4.1. |

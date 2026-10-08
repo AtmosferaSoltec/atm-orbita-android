@@ -81,6 +81,7 @@
     <string name="error_fx_not_configured">Configura tu tipo de cambio en Ajustes para usar otra moneda.</string>
     <string name="error_purchase_paid">Esta compra ya está pagada.</string>
     <string name="error_card_has_pending">Esta tarjeta tiene pagos pendientes. Págalos o elimínalos antes de archivarla.</string>
+    <string name="error_payment_locked">Este egreso es el pago de una compra con tarjeta: solo puedes cambiar la cuenta, el monto y la fecha.</string>
     <string name="fx_configure">Configura tu tipo de cambio</string>
     <string name="fx_configure_link">Configura tu tipo de cambio ›</string>
     <string name="fx_currency_locked_hint">Configura tu tipo de cambio en Ajustes para usar otras monedas.</string>

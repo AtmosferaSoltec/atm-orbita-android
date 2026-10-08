@@ -46,6 +46,12 @@ enum class DataError {
 
     /** A credit card is not archived while it has pending purchases. */
     CARD_HAS_PENDING_PURCHASES,
+
+    /**
+     * The expense of a credit purchase payment only lets its account, amount and date change:
+     * its category and description are those of the purchase.
+     */
+    PAYMENT_LOCKED,
     UNKNOWN,
 }
 

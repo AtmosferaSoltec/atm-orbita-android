@@ -49,7 +49,9 @@ import com.atmosferast.orbita.ui.components.AmountKeypad
 import com.atmosferast.orbita.ui.components.CircleIconButton
 import com.atmosferast.orbita.ui.components.ConfirmDialog
 import com.atmosferast.orbita.ui.components.DropdownField
+import com.atmosferast.orbita.ui.components.ChipGroup
 import com.atmosferast.orbita.ui.components.FieldLabel
+import com.atmosferast.orbita.ui.components.OrbitaChip
 import com.atmosferast.orbita.ui.components.FormIntro
 import com.atmosferast.orbita.ui.components.HintText
 import com.atmosferast.orbita.ui.components.ModalTopBar
@@ -107,6 +109,9 @@ fun MovementFormScreen(
     fun categoriesOf(kind: MovementKind) = categories.filter { it.kind == kind }
     // Nothing exists yet: neither a movement nor a pending purchase is being edited.
     val isNew = editing == null && editingPurchase == null
+    // The expense of a credit purchase payment: only what the payment says (account, amount and
+    // date) can change. Its category and description are those of the purchase.
+    val isPayment = editing?.creditPurchaseId != null
 
     var kind by remember { mutableStateOf(editing?.kind ?: MovementKind.EXPENSE) }
     var amountCents by remember {
@@ -220,8 +225,12 @@ fun MovementFormScreen(
             // An existing movement cannot become a transfer.
             if (editing == null) add(FormTab.TRANSFER to stringResource(R.string.kind_transfer))
         }
-        // A purchase with a credit card is always an expense: there is nothing to switch to.
-        if (editingPurchase == null) {
+        if (isPayment) {
+            HintText(stringResource(R.string.error_payment_locked))
+        }
+        // A purchase with a credit card, and its payment, are always an expense: there is
+        // nothing to switch to.
+        if (editingPurchase == null && !isPayment) {
             SegmentedControl(
                 options = tabs,
                 selected = if (isExpense) FormTab.EXPENSE else FormTab.INCOME,
@@ -311,6 +320,11 @@ fun MovementFormScreen(
         val selectedCategory = category
         if (selectedCategory == null) {
             HintText(stringResource(R.string.error_no_categories))
+        } else if (isPayment) {
+            // Fixed: it is the category of the purchase that was paid.
+            ChipGroup {
+                OrbitaChip(selectedCategory.name, selected = true, onClick = {})
+            }
         } else {
             DropdownField(
                 options = categoriesOf(kind),
@@ -329,13 +343,23 @@ fun MovementFormScreen(
         }
 
         FieldLabel(stringResource(R.string.field_description))
-        OrbitaTextArea(
-            value = description,
-            onValueChange = { description = it },
-            placeholder = stringResource(R.string.movement_description_placeholder),
-            maxLength = 500,
-            modifier = Modifier.onFocusChanged { if (it.hasFocus) keypadOpen = false },
-        )
+        if (isPayment) {
+            // Fixed too: the description of the purchase, shown as plain text.
+            Text(
+                description.ifBlank { "—" },
+                style = MaterialTheme.typography.bodyLarge,
+                color = Ink,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
+        } else {
+            OrbitaTextArea(
+                value = description,
+                onValueChange = { description = it },
+                placeholder = stringResource(R.string.movement_description_placeholder),
+                maxLength = 500,
+                modifier = Modifier.onFocusChanged { if (it.hasFocus) keypadOpen = false },
+            )
+        }
 
         // A new movement takes the date and time of the moment it is saved; the date can only
         // be changed later, when editing.

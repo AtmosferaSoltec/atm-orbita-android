@@ -141,6 +141,52 @@ class DemoRepositoriesTest {
     }
 
     @Test
+    fun `the expense of a payment only lets its account, amount and date change`() = runTest {
+        // Pasajes (Transporte), S/ 240.00, paid from Débito principal.
+        credit.pay(CreditPayment("p1", "debit", BigDecimal("240.00"), dates.today()))
+        val expense = entries.observeRecentEntries(1).first().single() as Movement
+        val asPaid = MovementDraft(
+            MovementKind.EXPENSE, BigDecimal("240.00"), "debit", "transport", "Pasajes", dates.today(),
+        )
+
+        // The bank charged another amount, from another account, the day before.
+        entries.updateMovement(
+            expense.id,
+            asPaid.copy(amount = BigDecimal("238.50"), accountId = "cash", date = dates.today().minusDays(1)),
+        )
+        assertEquals(BigDecimal("1245.80"), balanceOf("debit"))
+        assertEquals(BigDecimal("82.00"), balanceOf("cash"))
+        // It is still the payment of that purchase, which stays paid.
+        val edited = entries.observeRecentEntries(10).first().first { it.id == expense.id } as Movement
+        assertEquals("p1", edited.creditPurchaseId)
+        assertTrue(credit.observePendingPurchases().first().none { it.id == "p1" })
+
+        // Its category and its description are those of the purchase.
+        assertEquals(
+            DataError.PAYMENT_LOCKED,
+            failure { entries.updateMovement(expense.id, asPaid.copy(categoryId = "food")) },
+        )
+        assertEquals(
+            DataError.PAYMENT_LOCKED,
+            failure { entries.updateMovement(expense.id, asPaid.copy(description = "Otra cosa")) },
+        )
+        // Not even into an income: that would be another category.
+        assertEquals(
+            DataError.PAYMENT_LOCKED,
+            failure {
+                entries.updateMovement(
+                    expense.id, asPaid.copy(kind = MovementKind.INCOME, categoryId = "salary"),
+                )
+            },
+        )
+        // An ordinary movement can still change everything.
+        entries.updateMovement(
+            "m-lunch",
+            MovementDraft(MovementKind.EXPENSE, BigDecimal("20.00"), "cash", "leisure", "Antojo", dates.today()),
+        )
+    }
+
+    @Test
     fun `a purchase cannot be paid twice`() = runTest {
         credit.pay(CreditPayment("p1", "debit", BigDecimal("240.00"), dates.today()))
 

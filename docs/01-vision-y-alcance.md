@@ -28,7 +28,7 @@ Una app Android nativa para uso personal, **multiusuario y segura**: cada person
    - **No afecta** saldos, ahorros ni reportes mientras esté pendiente.
    - Al marcarla pagada, el usuario elige la **cuenta de pago**, la **fecha de pago** (hoy por defecto, editable) y el **monto real descontado** (puede diferir si la compra fue en otra moneda). Recién entonces se crea un **egreso** en esa cuenta con la categoría original.
    - Una compra **pendiente** se puede editar y eliminar. No afecta saldos ni reportes: solo cambia la deuda de su tarjeta.
-   - Una compra **pagada** no se edita ni se elimina. Si se elimina el egreso de su pago, la compra **vuelve a pendiente**; desde Movimientos nunca se elimina una compra.
+   - Una compra **pagada** no se edita ni se elimina. Si se elimina el egreso de su pago, la compra **vuelve a pendiente**; desde Movimientos nunca se elimina una compra. Ese egreso solo deja **editar la cuenta, el monto y la fecha**.
    - Una tarjeta **no se puede archivar mientras tenga compras pendientes**.
    - Sin fecha de corte ni cuotas por ahora.
 8. **Reportes**: por mes y por rango de fechas; gasto por categoría (ranking), fuentes de ingreso principales y balance del periodo. Los totales se muestran **por moneda** (sin mezclar) en el MVP.
