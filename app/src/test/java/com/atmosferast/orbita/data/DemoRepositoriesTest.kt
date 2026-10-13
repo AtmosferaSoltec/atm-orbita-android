@@ -2,7 +2,14 @@ package com.atmosferast.orbita.data
 
 import com.atmosferast.orbita.core.PEN
 import com.atmosferast.orbita.core.USD
+import com.atmosferast.orbita.core.defaultCurrencyFor
 import com.atmosferast.orbita.data.demo.DemoAccountsRepository
+import com.atmosferast.orbita.data.demo.DemoAuthRepository
+import com.atmosferast.orbita.domain.model.Credentials
+import com.atmosferast.orbita.domain.model.SessionState
+import com.atmosferast.orbita.domain.model.validateEmail
+import com.atmosferast.orbita.domain.model.validateNewPassword
+import java.util.Locale
 import com.atmosferast.orbita.data.demo.DemoCategoriesRepository
 import com.atmosferast.orbita.data.demo.DemoCreditRepository
 import com.atmosferast.orbita.data.demo.DemoSettingsRepository
@@ -315,6 +322,51 @@ class DemoRepositoriesTest {
         settings.setFx(pair)
         accounts.create(dollars)
         settings.setDisplayCurrency(USD)
+    }
+
+    @Test
+    fun `deleting the account ends the session and leaves none of what was done`() = runTest {
+        val auth = DemoAuthRepository(store)
+        auth.signUp(Credentials("ana@correo.com", "12345678"), mainCurrency = "MXN")
+        assertEquals(SessionState.SignedIn("ana@correo.com"), auth.session.first())
+        entries.deleteMovement("m-lunch")
+        accounts.create(AccountDraft("Yape", AccountType.OTHER, PEN, BigDecimal("50"), true))
+
+        auth.deleteAccount("12345678")
+
+        assertEquals(SessionState.SignedOut, auth.session.first())
+        // Back to the sample data: the next account starts from scratch.
+        assertEquals(BigDecimal("320.50"), balanceOf("cash"))
+        assertTrue(accounts.observeAccounts().first().none { it.name == "Yape" })
+    }
+
+    @Test
+    fun `recovering the password asks for a valid email and a long enough password`() = runTest {
+        assertNull(validateEmail(" ana@correo.com "))
+        assertEquals(ValidationError.EMAIL_INVALID, validateEmail("ana@correo"))
+        assertEquals(ValidationError.EMAIL_INVALID, validateEmail(""))
+        assertNull(validateNewPassword("12345678"))
+        assertEquals(ValidationError.PASSWORD_TOO_SHORT, validateNewPassword("1234567"))
+        // Signing up checks both, the email first.
+        assertEquals(ValidationError.EMAIL_INVALID, Credentials("x", "1").validate())
+        assertEquals(ValidationError.PASSWORD_TOO_SHORT, Credentials("a@b.co", "1").validate())
+
+        // In demo mode nothing is sent and nothing is checked, but every step can be walked.
+        val auth = DemoAuthRepository(store)
+        auth.requestPasswordReset("nadie@correo.com")
+        auth.resetPassword("demo", "12345678")
+        assertEquals(SessionState.SignedOut, auth.session.first())
+    }
+
+    @Test
+    fun `the currency offered on sign-up is the one of the region, or soles`() {
+        assertEquals("MXN", defaultCurrencyFor(Locale.forLanguageTag("es-MX")))
+        assertEquals("USD", defaultCurrencyFor(Locale.US))
+        assertEquals("EUR", defaultCurrencyFor(Locale.forLanguageTag("es-ES")))
+        assertEquals(PEN, defaultCurrencyFor(Locale.forLanguageTag("es-PE")))
+        // A region whose currency the app does not support, and a locale without a region.
+        assertEquals(PEN, defaultCurrencyFor(Locale.JAPAN))
+        assertEquals(PEN, defaultCurrencyFor(Locale.forLanguageTag("es")))
     }
 
     /** The reason [action] failed for; fails the test if it did not. */

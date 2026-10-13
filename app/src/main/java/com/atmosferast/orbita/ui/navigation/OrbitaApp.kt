@@ -30,6 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atmosferast.orbita.R
 import com.atmosferast.orbita.core.PEN
 import com.atmosferast.orbita.core.USD
+import com.atmosferast.orbita.core.defaultCurrencyFor
 import com.atmosferast.orbita.domain.model.Account
 import com.atmosferast.orbita.domain.model.Category
 import com.atmosferast.orbita.domain.model.CreditCard
@@ -53,6 +54,9 @@ import com.atmosferast.orbita.ui.feature.accounts.AccountFormScreen
 import com.atmosferast.orbita.ui.feature.accounts.AccountsScreen
 import com.atmosferast.orbita.ui.feature.accounts.AccountsViewModel
 import com.atmosferast.orbita.ui.feature.auth.AuthScreen
+import com.atmosferast.orbita.ui.feature.auth.ForgotPasswordScreen
+import com.atmosferast.orbita.ui.feature.auth.NewPasswordScreen
+import com.atmosferast.orbita.ui.feature.auth.PasswordLinkSentScreen
 import com.atmosferast.orbita.ui.feature.categories.CategoriesScreen
 import com.atmosferast.orbita.ui.feature.categories.CategoriesViewModel
 import com.atmosferast.orbita.ui.feature.categories.CategoryFormScreen
@@ -75,6 +79,7 @@ import com.atmosferast.orbita.ui.feature.transfer.TransferScreen
 import com.atmosferast.orbita.ui.feature.transfer.TransferViewModel
 import com.atmosferast.orbita.ui.theme.Background
 import java.math.BigDecimal
+import java.util.Locale
 import kotlinx.coroutines.flow.collectLatest
 
 private sealed interface Screen {
@@ -124,7 +129,11 @@ fun OrbitaApp(app: AppViewModel = hiltViewModel()) {
                 // The stored session is being restored: nothing to show yet.
                 SessionState.Loading -> Unit
                 SessionState.SignedOut -> AuthFlow(app)
-                is SessionState.SignedIn -> MainFlow(email = current.email, onLogout = app::signOut)
+                is SessionState.SignedIn -> MainFlow(
+                    email = current.email,
+                    onLogout = app::signOut,
+                    onDeleteAccount = app::deleteAccount,
+                )
             }
             // Above the button pinned to the foot of the forms.
             SnackbarHost(
@@ -137,33 +146,86 @@ fun OrbitaApp(app: AppViewModel = hiltViewModel()) {
     }
 }
 
+/** The screens without a session. Recovering the password goes FORGOT → LINK_SENT → NEW_PASSWORD. */
+private enum class AuthStep { LOGIN, REGISTER, FORGOT, LINK_SENT, NEW_PASSWORD }
+
+// In demo mode there is no email, so there is no token either: any text stands for it.
+private const val DEMO_RESET_TOKEN = "demo"
+
 @Composable
 private fun AuthFlow(app: AppViewModel) {
-    var register by rememberSaveable { mutableStateOf(false) }
+    var step by rememberSaveable { mutableStateOf(AuthStep.LOGIN) }
+    // The email the link was asked for, to say where it went.
+    var recoveryEmail by rememberSaveable { mutableStateOf("") }
+    // Set once a new password is saved; told on the login form.
+    var passwordChanged by rememberSaveable { mutableStateOf(false) }
     val error by app.authError.collectAsStateWithLifecycle()
+    val errorText = error?.let { stringResource(it.textRes) }
+    val defaultCurrency = remember { defaultCurrencyFor(Locale.getDefault()) }
 
-    fun switchTo(newRegister: Boolean) {
+    fun go(next: AuthStep) {
         app.clearAuthError()
-        register = newRegister
+        step = next
     }
 
-    BackHandler(enabled = register) { switchTo(false) }
+    // Back always leads to the login form, the root of these screens.
+    BackHandler(enabled = step != AuthStep.LOGIN) { go(AuthStep.LOGIN) }
 
-    AuthScreen(
-        register = register,
-        onSubmit = { email, password ->
-            if (register) app.signUp(email, password) else app.signIn(email, password)
-        },
-        onSwitch = { switchTo(!register) },
-        error = error?.let { stringResource(it.textRes) },
-    )
+    when (step) {
+        AuthStep.LOGIN, AuthStep.REGISTER -> {
+            val register = step == AuthStep.REGISTER
+            AuthScreen(
+                register = register,
+                onSubmit = { email, password, currency ->
+                    passwordChanged = false
+                    if (register) app.signUp(email, password, currency)
+                    else app.signIn(email, password)
+                },
+                onSwitch = { go(if (register) AuthStep.LOGIN else AuthStep.REGISTER) },
+                error = errorText,
+                notice = if (passwordChanged) stringResource(R.string.auth_reset_done) else null,
+                defaultCurrency = defaultCurrency,
+                onForgotPassword = { go(AuthStep.FORGOT) },
+            )
+        }
+
+        AuthStep.FORGOT -> ForgotPasswordScreen(
+            onSubmit = { email ->
+                app.requestPasswordReset(email) {
+                    recoveryEmail = email.trim()
+                    go(AuthStep.LINK_SENT)
+                }
+            },
+            onBack = { go(AuthStep.LOGIN) },
+            error = errorText,
+        )
+
+        AuthStep.LINK_SENT -> PasswordLinkSentScreen(
+            email = recoveryEmail,
+            onBack = { go(AuthStep.LOGIN) },
+            onResend = { go(AuthStep.FORGOT) },
+            // With the API this screen is reached from the link of the email (a deep link).
+            onOpenLink = if (app.isDemo) ({ go(AuthStep.NEW_PASSWORD) }) else null,
+        )
+
+        AuthStep.NEW_PASSWORD -> NewPasswordScreen(
+            onSubmit = { password ->
+                app.resetPassword(DEMO_RESET_TOKEN, password) {
+                    passwordChanged = true
+                    go(AuthStep.LOGIN)
+                }
+            },
+            onBack = { go(AuthStep.LOGIN) },
+            error = errorText,
+        )
+    }
 }
 
 // Never shown: Inicio draws its skeleton or its error instead of the totals while it has no data.
 private val PlaceholderFx = FxPair(PEN, USD, rate = null)
 
 @Composable
-private fun MainFlow(email: String, onLogout: () -> Unit) {
+private fun MainFlow(email: String, onLogout: () -> Unit, onDeleteAccount: (String) -> Unit) {
     val backStack = remember { mutableStateListOf<Screen>(Screen.Main) }
     var tab by remember { mutableStateOf(BottomTab.HOME) }
     // Set when Reportes is opened from a month card of Inicio; the bottom bar clears it.
@@ -407,6 +469,7 @@ private fun MainFlow(email: String, onLogout: () -> Unit) {
                     onManageCategories = { push(Screen.Categories) },
                     onLogout = onLogout,
                     email = email,
+                    onDeleteAccount = onDeleteAccount,
                 )
             }
         }

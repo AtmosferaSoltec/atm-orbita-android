@@ -5,6 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.atmosferast.orbita.di.AppConfig
 import com.atmosferast.orbita.domain.model.Credentials
 import com.atmosferast.orbita.domain.model.SessionState
+import com.atmosferast.orbita.domain.model.ValidationError
+import com.atmosferast.orbita.domain.model.validateEmail
+import com.atmosferast.orbita.domain.model.validateNewPassword
 import com.atmosferast.orbita.domain.repository.AuthRepository
 import com.atmosferast.orbita.domain.repository.DataException
 import com.atmosferast.orbita.domain.repository.DateProvider
@@ -27,7 +30,7 @@ class AppViewModel @Inject constructor(
     private val auth: AuthRepository,
     private val config: AppConfig,
     dates: DateProvider,
-    messageBus: MessageBus,
+    private val messageBus: MessageBus,
 ) : ViewModel() {
 
     val today: LocalDate = dates.today()
@@ -44,15 +47,41 @@ class AppViewModel @Inject constructor(
     private val _authBusy = MutableStateFlow(false)
     val authBusy: StateFlow<Boolean> = _authBusy.asStateFlow()
 
-    fun signIn(email: String, password: String) = authenticate(email, password, register = false)
+    /** In demo mode no email can arrive, so the app offers the way to the link's screen itself. */
+    val isDemo: Boolean get() = !config.usesApi
 
-    fun signUp(email: String, password: String) = authenticate(email, password, register = true)
-
-    private fun authenticate(email: String, password: String, register: Boolean) {
-        if (_authBusy.value) return
+    fun signIn(email: String, password: String) {
         val credentials = Credentials(email, password)
         // The demo has no server to check anything against: it lets anyone in.
-        val invalid = if (config.usesApi) credentials.validate() else null
+        authAction(if (isDemo) null else credentials.validate()) { auth.signIn(credentials) }
+    }
+
+    /** [mainCurrency]: the currency the user picked for their accounts. */
+    fun signUp(email: String, password: String, mainCurrency: String) {
+        val credentials = Credentials(email, password)
+        authAction(if (isDemo) null else credentials.validate()) {
+            auth.signUp(credentials, mainCurrency)
+        }
+    }
+
+    /** Asks for the email with the link to choose a new password; [onSent] once it is asked. */
+    fun requestPasswordReset(email: String, onSent: () -> Unit) =
+        authAction(validateEmail(email), onSent) { auth.requestPasswordReset(email.trim()) }
+
+    /** [token] is the one of the link in the email. */
+    fun resetPassword(token: String, password: String, onDone: () -> Unit) =
+        authAction(validateNewPassword(password), onDone) { auth.resetPassword(token, password) }
+
+    /**
+     * One step of signing in, signing up or recovering the password. An [invalid] form is told
+     * in the form itself and nothing is sent; so is a failure. [onDone] runs only on success.
+     */
+    private fun authAction(
+        invalid: ValidationError?,
+        onDone: () -> Unit = {},
+        action: suspend () -> Unit,
+    ) {
+        if (_authBusy.value) return
         if (invalid != null) {
             _authError.value = UiMessage.Invalid(invalid)
             return
@@ -61,11 +90,30 @@ class AppViewModel @Inject constructor(
         _authError.value = null
         viewModelScope.launch {
             try {
-                if (register) auth.signUp(credentials) else auth.signIn(credentials)
+                action()
+                onDone()
             } catch (e: DataException) {
                 _authError.value = UiMessage.Failed(e.error)
             } finally {
                 _authBusy.value = false
+            }
+        }
+    }
+
+    /**
+     * Deletes the account and all its data for good. The session ends by itself; a failure
+     * (e.g. a wrong password) is told like any other failed operation.
+     */
+    fun deleteAccount(password: String) {
+        if (password.isEmpty()) {
+            messageBus.post(UiMessage.Invalid(ValidationError.PASSWORD_REQUIRED))
+            return
+        }
+        viewModelScope.launch {
+            try {
+                auth.deleteAccount(password)
+            } catch (e: DataException) {
+                messageBus.post(UiMessage.Failed(e.error))
             }
         }
     }

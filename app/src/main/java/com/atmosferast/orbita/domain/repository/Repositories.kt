@@ -66,8 +66,28 @@ fun interface DateProvider {
 interface AuthRepository {
     val session: Flow<SessionState>
     suspend fun signIn(credentials: Credentials)
-    suspend fun signUp(credentials: Credentials)
+
+    /**
+     * [mainCurrency] is the one the user picked on sign-up: their profile and their first
+     * account ("Efectivo") start on it.
+     */
+    suspend fun signUp(credentials: Credentials, mainCurrency: String)
     suspend fun signOut()
+
+    /**
+     * Asks for the email with the link to choose a new password. It succeeds whether the email
+     * has an account or not, so that nobody can find out which emails are registered.
+     */
+    suspend fun requestPasswordReset(email: String)
+
+    /** [token] comes in the link of that email: single use, and it expires in 30 minutes. */
+    suspend fun resetPassword(token: String, newPassword: String)
+
+    /**
+     * Deletes the user and every piece of their data for good, and ends the session. It asks
+     * for the password again: an unlocked phone is not enough to delete an account.
+     */
+    suspend fun deleteAccount(password: String)
 }
 
 interface AccountsRepository {

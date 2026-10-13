@@ -36,6 +36,7 @@ import com.atmosferast.orbita.ui.components.IconBadge
 import com.atmosferast.orbita.ui.components.LabelValueRow
 import com.atmosferast.orbita.ui.components.ModalTopBar
 import com.atmosferast.orbita.ui.components.OrbitaCard
+import com.atmosferast.orbita.ui.components.DeleteAccountDialog
 import com.atmosferast.orbita.ui.components.OrbitaIcons
 import com.atmosferast.orbita.ui.components.OrbitaTextField
 import com.atmosferast.orbita.ui.components.PillButton
@@ -69,7 +70,10 @@ fun SettingsScreen(
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
     email: String = SampleData.userEmail,
+    /** Receives the password typed to confirm: the account and all its data are deleted. */
+    onDeleteAccount: (password: String) -> Unit = {},
 ) {
+    var confirmDeleteAccount by remember { mutableStateOf(false) }
     // The pair on screen. A pair of currencies is only saved together with its rate, so a new
     // pair stays here, unsaved, until the user types one; leaving the screen discards it.
     var pair by remember(fx) { mutableStateOf(fx) }
@@ -248,6 +252,17 @@ fun SettingsScreen(
                 container = ExpenseSoft,
                 content = Expense,
             )
+            // The one action that cannot be undone: it sits apart, under its own divider.
+            CardDivider()
+            PillButton(
+                stringResource(R.string.account_delete),
+                onClick = { confirmDeleteAccount = true },
+                icon = OrbitaIcons.Trash,
+                container = ExpenseSoft,
+                content = Expense,
+            )
+            Spacer(Modifier.height(8.dp))
+            HintText(stringResource(R.string.account_delete_hint))
         }
 
         SectionTitle(stringResource(R.string.settings_soon))
@@ -281,6 +296,16 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    if (confirmDeleteAccount) {
+        DeleteAccountDialog(
+            onConfirm = { password ->
+                confirmDeleteAccount = false
+                onDeleteAccount(password)
+            },
+            onDismiss = { confirmDeleteAccount = false },
+        )
     }
 }
 

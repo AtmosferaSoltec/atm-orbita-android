@@ -49,7 +49,7 @@ Reglas: una fase a la vez · al cerrar cada fase, correr las pruebas, resumir y 
 
 ### Fase 6 — Tarjeta de crédito (v1.1)
 - Registrar compra pendiente, lista por vencimiento, pagar (`POST /credit-purchases/{id}/pay`), aviso en Inicio.
-- **Editar y eliminar una compra pendiente** (pantalla nueva, aún sin diseño).
+- **Editar y eliminar una compra pendiente** (hecho, reutilizando el formulario de movimiento; diseño pendiente de confirmación).
 - **Listo cuando**: una compra pendiente **no** cambia saldos ni reportes, tampoco al editarla o eliminarla; al pagarla se crea el egreso en la cuenta elegida con la fecha de pago y la categoría original, y recién ahí cuenta en reportes.
 
 ### Fase 7 — Pulido y lanzamiento

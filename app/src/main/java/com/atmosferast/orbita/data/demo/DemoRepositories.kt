@@ -59,6 +59,11 @@ class DemoStore @Inject constructor() {
 
     internal fun write(change: (DemoState) -> DemoState) = state.update(change)
 
+    /** Back to the sample data, as when the app starts. */
+    internal fun reset() {
+        state.value = SampleData.seed
+    }
+
     internal val current: DemoState get() = state.value
 }
 
@@ -86,9 +91,13 @@ private fun DemoState.requireFreeName(name: String, kind: MovementKind, exceptId
     if (taken) throw DataException(DataError.NAME_TAKEN)
 }
 
-/** Accepts any credentials: there is no server to check them against. */
+/**
+ * Accepts any credentials: there is no server to check them against. Recovering the password
+ * and deleting the account go through the same steps as with the API, but nothing is sent and
+ * no password is checked.
+ */
 @Singleton
-class DemoAuthRepository @Inject constructor() : AuthRepository {
+class DemoAuthRepository @Inject constructor(private val store: DemoStore) : AuthRepository {
     private val state = MutableStateFlow<SessionState>(SessionState.SignedOut)
 
     override val session: Flow<SessionState> = state
@@ -97,9 +106,22 @@ class DemoAuthRepository @Inject constructor() : AuthRepository {
         state.value = SessionState.SignedIn(credentials.email.trim().ifBlank { SampleData.userEmail })
     }
 
-    override suspend fun signUp(credentials: Credentials) = signIn(credentials)
+    // The sample data is the same for everyone, so the currency picked on sign-up changes
+    // nothing here; with the API it is the currency the user starts with.
+    override suspend fun signUp(credentials: Credentials, mainCurrency: String) = signIn(credentials)
 
     override suspend fun signOut() {
+        state.value = SessionState.SignedOut
+    }
+
+    // No email is sent: the app itself offers the way to the next screen (see AuthFlow).
+    override suspend fun requestPasswordReset(email: String) = Unit
+
+    override suspend fun resetPassword(token: String, newPassword: String) = Unit
+
+    /** The account "is gone": the data goes back to the sample and the session ends. */
+    override suspend fun deleteAccount(password: String) {
+        store.reset()
         state.value = SessionState.SignedOut
     }
 }

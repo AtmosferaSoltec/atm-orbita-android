@@ -44,6 +44,16 @@ fun currencyInfo(code: String): CurrencyInfo =
 
 fun currencySymbol(currency: String): String = currencyInfo(currency).symbol
 
+/**
+ * The currency offered on sign-up: the one of the phone's region when the app supports it,
+ * soles otherwise. The user can pick another one before creating the account.
+ */
+fun defaultCurrencyFor(locale: Locale): String {
+    // A locale without a country, or an unknown one, has no currency.
+    val regional = runCatching { java.util.Currency.getInstance(locale)?.currencyCode }.getOrNull()
+    return supportedCurrencies.firstOrNull { it.code == regional }?.code ?: PEN
+}
+
 private fun decimalFormat(pattern: String) =
     DecimalFormat(pattern, DecimalFormatSymbols(Locale.US)).apply {
         roundingMode = RoundingMode.HALF_UP

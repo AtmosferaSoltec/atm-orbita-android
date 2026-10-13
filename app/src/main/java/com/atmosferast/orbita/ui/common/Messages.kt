@@ -23,6 +23,7 @@ val UiMessage.textRes: Int
             ValidationError.DUE_DATE_PAST -> R.string.error_due_date_past
             ValidationError.EMAIL_INVALID -> R.string.error_email_invalid
             ValidationError.PASSWORD_TOO_SHORT -> R.string.error_password_too_short
+            ValidationError.PASSWORD_REQUIRED -> R.string.error_password_required
         }
 
         is UiMessage.Failed -> when (error) {

@@ -49,6 +49,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.zIndex
 import com.atmosferast.orbita.R
+import com.atmosferast.orbita.core.PEN
+import com.atmosferast.orbita.core.currencyInfo
+import com.atmosferast.orbita.core.supportedCurrencies
+import com.atmosferast.orbita.ui.components.DropdownField
 import com.atmosferast.orbita.ui.components.FieldLabel
 import com.atmosferast.orbita.ui.components.HeroCard
 import com.atmosferast.orbita.ui.components.HeroTone
@@ -60,6 +64,8 @@ import com.atmosferast.orbita.ui.components.PrimaryButton
 import com.atmosferast.orbita.ui.components.ScreenScaffold
 import com.atmosferast.orbita.ui.theme.Expense
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
+import com.atmosferast.orbita.ui.theme.Income
+import com.atmosferast.orbita.ui.theme.IncomeSoft
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
 import com.atmosferast.orbita.ui.theme.OrbitaShapes
@@ -73,86 +79,66 @@ import kotlinx.coroutines.delay
 @Composable
 fun AuthScreen(
     register: Boolean,
-    onSubmit: (email: String, password: String) -> Unit,
+    onSubmit: (email: String, password: String, mainCurrency: String) -> Unit,
     onSwitch: () -> Unit,
     modifier: Modifier = Modifier,
     error: String? = null,
+    /** Good news shown on the login form, e.g. after choosing a new password. */
+    notice: String? = null,
+    /** The currency offered on sign-up: the one of the phone's region, or soles. */
+    defaultCurrency: String = PEN,
+    onForgotPassword: () -> Unit = {},
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
+    var currency by remember { mutableStateOf(defaultCurrency) }
 
     ScreenScaffold(modifier = modifier, verticalArrangement = Arrangement.Center) {
-        Spacer(Modifier.height(24.dp))
-        FloatingCards()
-        Spacer(Modifier.height(20.dp))
-        Text(
-            stringResource(
+        AuthHeading(
+            title = stringResource(
                 if (register) R.string.auth_register_title else R.string.auth_login_title,
             ),
-            style = MaterialTheme.typography.headlineMedium,
-            color = Ink,
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            stringResource(
+            subtitle = stringResource(
                 if (register) R.string.auth_register_subtitle else R.string.auth_login_subtitle,
             ),
-            style = MaterialTheme.typography.bodyMedium,
-            color = Muted,
         )
-        Spacer(Modifier.height(10.dp))
 
         FieldLabel(stringResource(R.string.field_email))
-        OrbitaTextField(
-            value = email,
-            onValueChange = { email = it },
-            placeholder = stringResource(R.string.auth_email_placeholder),
-            keyboardType = KeyboardType.Email,
-        )
+        EmailField(email, onValueChange = { email = it })
 
         FieldLabel(stringResource(R.string.field_password))
-        OrbitaTextField(
-            value = password,
-            onValueChange = { password = it },
-            placeholder = "••••••••",
-            keyboardType = KeyboardType.Password,
-            visualTransformation = if (passwordVisible) VisualTransformation.None
-            else PasswordVisualTransformation(),
-            trailing = {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .clickable(role = Role.Button) { passwordVisible = !passwordVisible },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        if (passwordVisible) OrbitaIcons.EyeOff else OrbitaIcons.Eye,
-                        contentDescription = stringResource(
-                            if (passwordVisible) R.string.auth_hide_password
-                            else R.string.auth_show_password,
-                        ),
-                        tint = Muted,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            },
-        )
+        PasswordField(password, onValueChange = { password = it })
         if (register) {
             HintText(stringResource(R.string.auth_password_hint), Modifier.padding(top = 8.dp))
+
+            // The user's main currency: their first account ("Efectivo") starts on it.
+            FieldLabel(stringResource(R.string.field_currency))
+            DropdownField(
+                options = supportedCurrencies,
+                selected = currencyInfo(currency),
+                onSelect = { currency = it.code },
+                label = { it.label },
+                detail = { it.code },
+            )
+            HintText(stringResource(R.string.auth_currency_hint), Modifier.padding(top = 8.dp))
+        } else {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Text(
+                    stringResource(R.string.auth_forgot_link),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Primary,
+                    modifier = Modifier
+                        .clip(OrbitaShapes.Pill)
+                        .clickable(role = Role.Button, onClick = onForgotPassword)
+                        .padding(horizontal = 8.dp, vertical = 12.dp),
+                )
+            }
         }
 
         if (error != null) {
-            Spacer(Modifier.height(14.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconBadge(OrbitaIcons.Alert, Expense, ExpenseSoft, size = 32.dp)
-                Spacer(Modifier.width(10.dp))
-                HintText(error, color = Expense)
-            }
+            AuthMessage(error, isError = true)
+        } else if (notice != null && !register) {
+            AuthMessage(notice, isError = false)
         }
 
         Spacer(Modifier.height(24.dp))
@@ -160,32 +146,114 @@ fun AuthScreen(
             stringResource(
                 if (register) R.string.auth_register_action else R.string.auth_login_action,
             ),
-            onClick = { onSubmit(email, password) },
+            onClick = { onSubmit(email, password, currency) },
         )
 
-        Spacer(Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                stringResource(
-                    if (register) R.string.auth_have_account else R.string.auth_no_account,
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = Muted,
-            )
-            Text(
-                stringResource(if (register) R.string.auth_go_login else R.string.auth_go_register),
-                style = MaterialTheme.typography.labelLarge,
-                color = Primary,
+        AuthLink(
+            prefix = stringResource(
+                if (register) R.string.auth_have_account else R.string.auth_no_account,
+            ),
+            link = stringResource(if (register) R.string.auth_go_login else R.string.auth_go_register),
+            onClick = onSwitch,
+        )
+    }
+}
+
+// ---------- Pieces shared by every screen without a session ----------
+
+/** The floating cards, the title and the subtitle every one of these screens starts with. */
+@Composable
+internal fun AuthHeading(title: String, subtitle: String) {
+    Spacer(Modifier.height(24.dp))
+    FloatingCards()
+    Spacer(Modifier.height(20.dp))
+    Text(title, style = MaterialTheme.typography.headlineMedium, color = Ink)
+    Spacer(Modifier.height(6.dp))
+    Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = Muted)
+    Spacer(Modifier.height(10.dp))
+}
+
+@Composable
+internal fun EmailField(value: String, onValueChange: (String) -> Unit) {
+    OrbitaTextField(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = stringResource(R.string.auth_email_placeholder),
+        keyboardType = KeyboardType.Email,
+    )
+}
+
+/** Password with the eye that shows or hides it. */
+@Composable
+internal fun PasswordField(value: String, onValueChange: (String) -> Unit) {
+    var visible by remember { mutableStateOf(false) }
+    OrbitaTextField(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = "••••••••",
+        keyboardType = KeyboardType.Password,
+        visualTransformation = if (visible) VisualTransformation.None
+        else PasswordVisualTransformation(),
+        trailing = {
+            Box(
                 modifier = Modifier
-                    .clip(OrbitaShapes.Pill)
-                    .clickable(role = Role.Button, onClick = onSwitch)
-                    .padding(horizontal = 8.dp, vertical = 14.dp),
-            )
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .clickable(role = Role.Button) { visible = !visible },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    if (visible) OrbitaIcons.EyeOff else OrbitaIcons.Eye,
+                    contentDescription = stringResource(
+                        if (visible) R.string.auth_hide_password else R.string.auth_show_password,
+                    ),
+                    tint = Muted,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        },
+    )
+}
+
+/** What the form has to say above its button: a problem in red, or good news in green. */
+@Composable
+internal fun AuthMessage(text: String, isError: Boolean) {
+    Spacer(Modifier.height(14.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (isError) {
+            IconBadge(OrbitaIcons.Alert, Expense, ExpenseSoft, size = 32.dp)
+        } else {
+            IconBadge(OrbitaIcons.Check, Income, IncomeSoft, size = 32.dp)
         }
+        Spacer(Modifier.width(10.dp))
+        HintText(text, color = if (isError) Expense else Ink)
+    }
+}
+
+/** The line under the button that leads to another of these screens. */
+@Composable
+internal fun AuthLink(link: String, onClick: () -> Unit, prefix: String? = null) {
+    Spacer(Modifier.height(8.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (prefix != null) {
+            Text(prefix, style = MaterialTheme.typography.bodyMedium, color = Muted)
+        }
+        Text(
+            link,
+            style = MaterialTheme.typography.labelLarge,
+            color = Primary,
+            modifier = Modifier
+                .clip(OrbitaShapes.Pill)
+                .clickable(role = Role.Button, onClick = onClick)
+                .padding(horizontal = 8.dp, vertical = 14.dp),
+        )
     }
 }
 
@@ -304,7 +372,7 @@ private val ChipLine = Color(0xFF0E1A2B).copy(alpha = 0.35f)
 @Preview(name = "Iniciar sesión", widthDp = 390, heightDp = 844)
 @Composable
 private fun LoginPreview() {
-    OrbitaPreview { AuthScreen(register = false, onSubmit = { _, _ -> }, onSwitch = {}) }
+    OrbitaPreview { AuthScreen(register = false, onSubmit = { _, _, _ -> }, onSwitch = {}) }
 }
 
 @Preview(name = "Iniciar sesión · error", widthDp = 390, heightDp = 844)
@@ -313,9 +381,22 @@ private fun LoginErrorPreview() {
     OrbitaPreview {
         AuthScreen(
             register = false,
-            onSubmit = { _, _ -> },
+            onSubmit = { _, _, _ -> },
             onSwitch = {},
             error = stringResource(R.string.auth_error_credentials),
+        )
+    }
+}
+
+@Preview(name = "Iniciar sesión · contraseña cambiada", widthDp = 390, heightDp = 844)
+@Composable
+private fun LoginNoticePreview() {
+    OrbitaPreview {
+        AuthScreen(
+            register = false,
+            onSubmit = { _, _, _ -> },
+            onSwitch = {},
+            notice = stringResource(R.string.auth_reset_done),
         )
     }
 }
@@ -323,5 +404,5 @@ private fun LoginErrorPreview() {
 @Preview(name = "Registro", widthDp = 390, heightDp = 844)
 @Composable
 private fun RegisterPreview() {
-    OrbitaPreview { AuthScreen(register = true, onSubmit = { _, _ -> }, onSwitch = {}) }
+    OrbitaPreview { AuthScreen(register = true, onSubmit = { _, _, _ -> }, onSwitch = {}) }
 }

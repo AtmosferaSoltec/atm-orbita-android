@@ -20,6 +20,9 @@ enum class ValidationError {
     DUE_DATE_PAST,
     EMAIL_INVALID,
     PASSWORD_TOO_SHORT,
+
+    /** Deleting the account asks for the password again; an empty one is not sent. */
+    PASSWORD_REQUIRED,
 }
 
 const val NAME_MAX_LENGTH = 60
@@ -149,14 +152,16 @@ data class CreditPayment(
     }
 }
 
-data class Credentials(val email: String, val password: String) {
-    fun validate(): ValidationError? = when {
-        !EMAIL_PATTERN.matches(email.trim()) -> ValidationError.EMAIL_INVALID
-        password.length < PASSWORD_MIN_LENGTH -> ValidationError.PASSWORD_TOO_SHORT
-        else -> null
-    }
+private val EMAIL_PATTERN = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
 
-    private companion object {
-        val EMAIL_PATTERN = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
-    }
+/** For the forms that only ask for the email, like recovering the password. */
+fun validateEmail(email: String): ValidationError? =
+    if (EMAIL_PATTERN.matches(email.trim())) null else ValidationError.EMAIL_INVALID
+
+/** For a password that is being chosen: on sign-up and when a new one replaces a forgotten one. */
+fun validateNewPassword(password: String): ValidationError? =
+    if (password.length < PASSWORD_MIN_LENGTH) ValidationError.PASSWORD_TOO_SHORT else null
+
+data class Credentials(val email: String, val password: String) {
+    fun validate(): ValidationError? = validateEmail(email) ?: validateNewPassword(password)
 }
