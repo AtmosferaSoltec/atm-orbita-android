@@ -1,5 +1,7 @@
 package com.atmosferast.orbita.di
 
+import android.os.Build
+import com.atmosferast.orbita.BuildConfig
 import com.atmosferast.orbita.data.remote.KeystoreTokenStore
 import com.atmosferast.orbita.data.remote.TokenStore
 import com.atmosferast.orbita.data.remote.createApiClient
@@ -19,7 +21,11 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideHttpClient(config: AppConfig): HttpClient = createApiClient(config.apiBaseUrl, OkHttp.create())
+    fun provideHttpClient(config: AppConfig): HttpClient = createApiClient(
+        baseUrl = config.apiBaseUrl,
+        engine = OkHttp.create(),
+        userAgent = "Orbita-Android/${BuildConfig.VERSION_NAME} (Android ${Build.VERSION.RELEASE}; ${Build.MODEL})",
+    )
 }
 
 @Module

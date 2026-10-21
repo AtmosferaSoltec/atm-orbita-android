@@ -61,7 +61,7 @@ private class Harness(
 ) {
     val tokens = store
     val engine = MockEngine(handler)
-    val session = ApiSession(createApiClient("http://api.test/api/v1", engine), tokens)
+    val session = ApiSession(createApiClient("http://api.test/api/v1", engine, "Orbita-Android/test"), tokens)
     val repository = RemoteAuthRepository(session)
 }
 

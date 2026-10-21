@@ -3,6 +3,7 @@ package com.atmosferast.orbita.data.remote
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.http.ContentType
@@ -24,10 +25,12 @@ val ApiJson = Json {
  * The HTTP client of the Orbita API. [baseUrl] is API_BASE_URL, e.g.
  * `http://192.168.1.10:3001/api/v1`; requests use paths relative to it (`auth/login`).
  * Errors are not thrown by Ktor: [ApiErrors] reads them from the response.
+ * [userAgent] names the app and the device: the API keeps it with each session.
  */
-fun createApiClient(baseUrl: String, engine: HttpClientEngine): HttpClient =
+fun createApiClient(baseUrl: String, engine: HttpClientEngine, userAgent: String): HttpClient =
     HttpClient(engine) {
         expectSuccess = false
+        install(UserAgent) { agent = userAgent }
         install(ContentNegotiation) { json(ApiJson) }
         install(HttpTimeout) {
             connectTimeoutMillis = 10_000
