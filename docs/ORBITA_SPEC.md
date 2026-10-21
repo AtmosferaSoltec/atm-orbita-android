@@ -5,8 +5,9 @@
 > **Regla de mantenimiento.** Este archivo se actualiza **en el mismo cambio** en que se agrega o modifica un módulo, pantalla, regla o flujo en Android. Al terminar, se añade una fila al [registro de cambios](#13-registro-de-cambios) y se ajusta la columna *Estado* de la [tabla de módulos](#2-estado-de-los-módulos). Si el código y este archivo no coinciden, es un error que hay que corregir.
 
 - App: **Orbita** · `applicationId` Android: `com.atmosferast.orbita`
-- Última actualización: **7 oct 2026**
-- Documentos relacionados: `01` visión y alcance · `02` arquitectura Android · `03` modelo de datos · `04` guía del API · `05` maquetas y tokens · `06` plan y pruebas · planes del backend en `atm-orbita-api/docs/plans/`
+- Última actualización: **21 oct 2026**
+- Documentos relacionados: [`docs/CLAUDE.md`](CLAUDE.md) (reglas y estado de la app) · planes del backend, que son el contrato, en `atm-orbita-api/docs/plans/` (el 13 es la integración con Android) · `atm-orbita-api/docs/openapi.yaml`
+- Regenerado el 21 oct 2026 a partir de la versión anterior (en el historial de git): el contenido funcional se conserva; cambian el backend (Go + Gin) y lo que estaba en los documentos `01` a `06`, que se retiraron. Los tokens de diseño están ahora en la sección 5, los casos de prueba en la 9 y los datos de ejemplo en la 11.
 
 ---
 
@@ -14,7 +15,7 @@
 
 App personal para registrar **ingresos y egresos** separados por **cuenta** (efectivo, débito, ahorro, billetera), en **soles (PEN)** y **dólares (USD)**, con **transferencias** entre cuentas propias, **compras con tarjeta de crédito pendientes de pago** y **reportes**. Es multiusuario: cada persona inicia sesión y solo ve sus datos.
 
-- Backend: **API propio** (`atm-orbita-api`: NestJS + PostgreSQL + Prisma), con autenticación propia. **No se usa Supabase ni ningún otro backend gestionado** (decisión del 7 oct 2026). Todas las plataformas hablan solo con ese API, por HTTPS y JSON, bajo `/api/v1`.
+- Backend: **API propio** (`atm-orbita-api`: Go + Gin + PostgreSQL, migraciones con goose), con autenticación propia. **No se usa Supabase ni ningún otro backend gestionado.** Todas las plataformas hablan solo con ese API, por HTTPS y JSON, bajo `/api/v1` (producción: `https://orbita-api.atmosferast.com/api/v1`).
 - Solo funciona **con internet** en el MVP.
 - Idioma de la interfaz: **español (es-PE)**. Solo tema claro.
 
@@ -24,7 +25,7 @@ Estados: **Maqueta** = pantalla navegable con datos de ejemplo fijos, sin lógic
 
 | Módulo | Pantallas | Versión | Estado Android |
 |---|---|---|---|
-| Autenticación | Iniciar sesión, Registro | MVP | Funcional (datos de ejemplo). Falta conectarla al API, y las pantallas de recuperar contraseña y eliminar cuenta |
+| Autenticación | Iniciar sesión, Registro, Recuperar contraseña, Eliminar cuenta | MVP | **Iniciar sesión, Registro y Cerrar sesión: implementado** contra el API (plan 01, 21 oct 2026). Recuperar contraseña (plan 11) y eliminar cuenta (plan 12): maqueta funcional en modo demo |
 | Inicio | Inicio | MVP | Funcional (datos de ejemplo) |
 | Cuentas | Cuentas, Nueva/Editar cuenta | MVP | Funcional (datos de ejemplo) |
 | Movimientos | Nuevo/Editar movimiento, Lista de movimientos | MVP | Funcional (datos de ejemplo) |
@@ -33,15 +34,15 @@ Estados: **Maqueta** = pantalla navegable con datos de ejemplo fijos, sin lógic
 | Categorías | Categorías, Nueva/Editar categoría | MVP | Funcional (datos de ejemplo) |
 | Ajustes | Ajustes | MVP | Funcional (datos de ejemplo) |
 | Tarjeta de crédito | Crédito, Nueva/Editar tarjeta, Marcar como pagada | v1.1 | Funcional (datos de ejemplo) |
-| Backend (API propio) | — | MVP | Pendiente: planificado en `atm-orbita-api/docs/plans/`, aún sin construir. El esquema vive solo en las migraciones de Prisma de ese repositorio |
+| Backend (API propio) | — | MVP | En construcción, plan por plan (`atm-orbita-api/docs/plans/README.md`). Hechos: 00 (fundaciones) y 01 (sesión). El esquema vive solo en las migraciones de goose de ese repositorio |
 
 **Qué funciona hoy (7 oct 2026).** La app ya no es una maqueta: **todo se guarda, se edita y se elimina de verdad**, y cada total se **calcula** a partir de los movimientos (saldos, ahorro total, totales del mes, reportes), con las mismas reglas que tendrá el backend. Lo único que falta es **dónde** viven los datos: hoy están en memoria, sembrados con los [datos de ejemplo](#11-datos-de-ejemplo), y se pierden al cerrar la app. Funciona: iniciar y cerrar sesión, crear/editar/archivar cuentas, categorías y tarjetas, registrar/editar/eliminar ingresos, egresos y transferencias, registrar compras con tarjeta y pagarlas, cambiar monedas y tipo de cambio, los reportes por mes, año y rango, todos los selectores de fecha y las validaciones con su mensaje. Desde el 7 oct 2026 el modo demo cumple además las reglas decididas ese día: tipo de cambio opcional, nombres de categoría sin repetir, editar y eliminar compras pendientes, deshacer un pago al eliminar su egreso y no archivar tarjetas con deuda. Desde el 13 oct 2026 **todas las pantallas de la app son visibles y navegables**: también recuperar la contraseña, eliminar la cuenta y la moneda en Registro, como maqueta funcional sobre el modo demo. **No** funciona todavía: la persistencia real (el API), la paginación de listas y la exportación a PDF. En esas tres pantallas nuevas el modo demo recorre los pasos pero no hace nada real: no se envía ningún correo, no se comprueba ninguna contraseña y la moneda elegida al registrarse no cambia los datos de ejemplo.
 
-**Cómo está armada para conectar los datos reales (Android).** Las pantallas no saben de dónde vienen los datos: hablan con **ViewModels**, y estos solo con los **repositorios** del dominio (`domain/repository`). Hoy cada repositorio tiene una implementación en memoria (`data/demo`). Conectar un módulo al API es escribir su implementación en `data/remote` y cambiar **una línea** en `di/AppModule.kt`; ni las pantallas ni las reglas se tocan. Con `API_BASE_URL` en `local.properties` la app usará el API; sin ella arranca en **modo demo** (cualquier correo y contraseña entran). Los datos siguen siendo los de ejemplo hasta que se migre cada módulo, fase por fase (`docs/06`). El código y las dependencias de Supabase se retiraron el 7 oct 2026: hasta que exista la implementación contra el API, **la sesión también está en modo demo**.
+**Cómo está armada para conectar los datos reales (Android).** Las pantallas no saben de dónde vienen los datos: hablan con **ViewModels**, y estos solo con los **repositorios** del dominio (`domain/repository`). Hoy cada repositorio tiene una implementación en memoria (`data/demo`). Conectar un módulo al API es escribir su implementación en `data/remote` y cambiar **una línea** en `di/AppModule.kt`; ni las pantallas ni las reglas se tocan. Con `API_BASE_URL` en `local.properties` la app usa el API para lo que ya está conectado; sin ella arranca en **modo demo** (cualquier correo y contraseña entran). Desde el 21 oct 2026 la **sesión** es real con el API (registro, inicio y cierre de sesión, y la sesión persistente); los demás módulos siguen con los datos de ejemplo hasta su plan (`atm-orbita-api/docs/plans/13-android-integration.md`). Mientras unos módulos sean reales y otros de ejemplo, los datos no cuadran entre pantallas: sirve para desarrollar, no se publica así.
 
 **Decisiones de esquema ya tomadas** (7 oct 2026; detalle en `atm-orbita-api/docs/plans/02-modelo-de-datos.md`): hay tabla de tarjetas de crédito y cada compra pertenece a una; el perfil guarda la moneda secundaria y la **zona horaria**; el movimiento guarda **solo la fecha**, sin hora editable; el nombre de categoría es único por usuario y tipo; el tipo de cambio puede no existir.
 
-Las pantallas de Autenticación, Lista de movimientos, Editar movimiento/transferencia, Nueva/Editar cuenta y Categorías **no estaban en la maqueta original** (`docs/05`, sección 9): su diseño es una propuesta pendiente de confirmación.
+Las pantallas de Autenticación, Lista de movimientos, Editar movimiento/transferencia, Nueva/Editar cuenta y Categorías **no estaban en la maqueta original**: su diseño es una propuesta pendiente de confirmación.
 
 ## 3. Conceptos y reglas de negocio
 
@@ -106,6 +107,7 @@ Al tocar el botón de guardar, el formulario se revisa **en este orden** y se mu
 | Fecha límite de pago anterior a hoy | "La fecha límite de pago no puede ser anterior a hoy." |
 | Correo sin formato válido | "Escribe un correo válido." |
 | Contraseña de menos de 8 caracteres | "La contraseña debe tener al menos 8 caracteres." |
+| Contraseña de más de 128 caracteres (límite del API) | "La contraseña puede tener hasta 128 caracteres." |
 | Correo o contraseña incorrectos | "Correo o contraseña incorrectos." |
 | Registro con un correo que ya existe | "Ese correo ya tiene una cuenta. Inicia sesión." |
 | Registro cuando se exige confirmar el correo | "Revisa tu correo y confirma tu cuenta para poder ingresar." |
@@ -130,7 +132,26 @@ Formularios que no se pueden llenar todavía muestran un aviso a pantalla comple
 
 ## 5. Diseño
 
-Los valores exactos (colores, tipografía Manrope, radios) están en `docs/05`, sección 1. Resumen de lo que debe sentirse igual en iOS:
+**Tokens de diseño** (en Android, `ui/theme`; las medidas de la maqueta original eran px de un lienzo de 390×844, en Android son dp):
+
+| Token | Valor | Uso |
+|---|---|---|
+| `background` | `#F3F5F7` | Fondo de pantallas |
+| `surface` | `#FFFFFF` | Tarjetas |
+| `onSurface` (tinta) | `#0E1A2B` | Texto principal |
+| `muted` | `#5B6778` | Texto secundario |
+| `outline` | `#E3E8EE` (divisor suave `#EEF1F5`) | Bordes y divisores |
+| `primary` / `primarySoft` | `#1D4ED8` / `#E8EEFD` | Acciones, selección / fondos suaves |
+| `income` / `incomeSoft` | `#2EAD5B` / `#E6F6EC` | Ingresos |
+| `expense` / `expenseSoft` | `#E53935` / `#FDECEA` | Egresos, errores, urgencias |
+| `neutral` / `neutralSoft` | `#3B4A60` / `#EEF1F5` | Transferencias, chips inactivos |
+| `chipBorder` · `switchOff` | `#CBD3DE` · `#8793A6` | Chip sin seleccionar · interruptor apagado |
+
+Colores de categoría: Vivienda `#1D4ED8`, Alimentación `#0E7490`, Transporte `#B45309`, Ocio `#BE185D`, Otros `#64748B`, Salud `#7C3AED`, Sueldo `#0B7A5A`, Freelance `#0E7490`.
+
+Tipografía **Manrope** (400 a 800): títulos de pantalla 26/800; monto destacado 38–42/800; montos de tarjeta 16–20/800; cuerpo 14–16; etiquetas 12–13/600. Formas: tarjetas 18–20; tarjeta destacada 28; píldoras 22; botón principal radio 18 y 56 de alto; campos radio 14 y 52 de alto. Sin tema oscuro en el MVP.
+
+Resumen de lo que debe sentirse igual en iOS:
 
 - Fondo gris muy claro `#F3F5F7` y tarjetas blancas con esquinas de 20.
 - **Tarjeta destacada** (Ahorro total en Inicio, Total en ahorros en Cuentas): esquinas de 28 y fondo en **degradado diagonal de tres colores**, de arriba-izquierda a abajo-derecha: violeta `#3B1D8F` → azul `#1D4ED8` → verde azulado `#0E7490`. Encima lleva un brillo celeste (`#67E8F9` al 30 %) que nace en la esquina superior derecha y una sombra violeta en la inferior izquierda. Texto blanco; etiquetas al 85–90 % de opacidad. Las superficies interiores (píldoras, franjas) son blanco al 14 %.
@@ -211,9 +232,11 @@ Cada pantalla indica: qué muestra, cómo se comporta, validaciones, estados y q
 
 **Validaciones:** correo con formato válido; contraseña de 8 caracteres o más. Mensajes: "Correo o contraseña incorrectos.", correo ya registrado, sin conexión.
 
-**Backend:** autenticación propia del API con correo y contraseña (`POST /auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout`). La app recibe un token de acceso de 15 minutos y un token de renovación que guarda cifrado; con él la sesión se renueva sola, y al abrir la app con sesión vigente se entra directo a Inicio. Al registrarse, el API crea en una sola operación el perfil (con la zona horaria que envía la app), las 9 categorías iniciales y la cuenta "Efectivo" **en la moneda principal elegida**. El usuario nace **sin tipo de cambio**.
+**Backend (implementado, plan 01):** autenticación propia del API con correo y contraseña (`POST /auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout`, `GET /me`). La app recibe un token de acceso de 15 minutos (solo en memoria) y un token de renovación que guarda cifrado con el Android Keystore; con él la sesión se renueva sola, de a una petición a la vez, y al abrir la app con sesión guardada se entra directo a Inicio, también sin conexión. El token de renovación cambia en cada uso; si alguien reutiliza uno viejo, el API cierra esa sesión. Cerrar sesión funciona siempre: el teléfono olvida la sesión y luego avisa al API, que corta también el token de acceso al instante. Tras 5 intentos fallidos seguidos con un correo, el API pide esperar (1, 5 y 15 minutos): "Demasiados intentos. Espera un momento." Al registrarse, el API crea en una sola operación el perfil (con la zona horaria que envía la app), las 9 categorías iniciales y la cuenta "Efectivo" **en la moneda principal elegida**. El usuario nace **sin tipo de cambio**.
 
 **Moneda al registrarse** (decidido el 7 oct 2026; en la app desde el 13 oct 2026). La pantalla de Registro incluye, bajo la contraseña, un desplegable **Moneda** con la ayuda "Es la moneda de tus cuentas. Podrás cambiarla después en Ajustes." Es el mismo desplegable con las 9 monedas admitidas (7.12). Arranca en la moneda de la región del teléfono si es una de ellas; si no, en soles. La app la envía al registrarse (`mainCurrency`). Con ella nacen la moneda principal del perfil y la cuenta "Efectivo". La moneda secundaria nace en dólares, o en soles si la principal es dólares. Antes todo usuario nacía con soles y dólares y "Efectivo" en soles.
+
+> **Decidido el 21 oct 2026 (plan 11 del API, pendiente de implementar):** la recuperación pasa a un **código de 6 dígitos** que llega por correo, en tres pasos: correo → código → contraseña nueva. Vence en 15 minutos, admite 5 intentos y hasta 3 envíos por día. La pantalla "Enlace enviado" pasará a pedir el código. Lo de abajo describe la maqueta actual, con enlace; se actualiza al implementar el plan 11.
 
 **Recuperar contraseña** (requisito para publicar; maqueta funcional desde el 13 oct 2026, diseño pendiente de confirmación). Son tres pantallas con el mismo aspecto que Iniciar sesión: tarjetas flotantes, título, subtítulo, botón principal y enlace centrado debajo.
 
@@ -555,11 +578,32 @@ El tipo de cambio vigente es el más reciente del usuario para el par de monedas
 
 Editar o eliminar una compra con tarjeta pendiente no entra en ninguna de estas fórmulas salvo en la deuda, que es la suma de las compras pendientes por moneda.
 
-Casos de prueba que ambas plataformas deben cumplir: `docs/06`, tabla "Pruebas unitarias obligatorias".
+**Casos de prueba que toda plataforma (y el API) debe cumplir:**
+
+| Caso | Esperado |
+|---|---|
+| `0.1 + 0.2` con decimales exactos | `0.3` |
+| Convertir US$ 20.00 a PEN con 3.20 | `64.00` |
+| Inversa: S/ 64.00 a US$ con 1 US$ = 3.20 | `20.00` |
+| Ahorro total en S/ con los datos de ejemplo | `7,166.30` |
+| Ahorro total en US$ con los datos de ejemplo | `2,239.47` (HALF_UP) |
+| Cuenta excluida (Billetera digital) | No suma al total |
+| Transferencia: sale 20.00, cambio 3.20 | entra `64.00` |
+| Transferencia: sale 20.00, entra 63.40 | cambio `3.17` |
+| Transferencia en la misma moneda | cambio nulo; entra lo mismo que sale |
+| Monto `"45,52"` y `"45.52"` en la app | `45.52` (el API solo acepta `"45.52"`) |
+| Monto `"45.523"` / `"0"` / `"-5"` | Inválido |
+| Formato de `1245.8` en PEN | `S/ 1,245.80` |
+| Porcentajes de gasto de septiembre | 37.2 / 28.5 / 10.0 / 8.8 / 8.5 / 6.9 |
+| Sin tipo de cambio: convertir entre monedas distintas | Sin resultado |
+| Sin tipo de cambio: ahorro total | Suma solo las cuentas en la moneda pedida |
+| Nombres "Alimentación", "alimentacion", "ALIMENTACIÓN" | Misma clave; "Año" ≠ "Ano" |
 
 ## 10. Backend compartido
 
-Android, iOS y la web usan **el mismo API** (`atm-orbita-api`: NestJS + PostgreSQL + Prisma), sin Supabase ni ningún otro backend gestionado. El contrato completo, el esquema, la seguridad y las pruebas están en `atm-orbita-api/docs/plans/`. Cómo conectar la app: `docs/04`.
+Android, iOS y la web usan **el mismo API** (`atm-orbita-api`: Go + Gin + PostgreSQL), sin ningún backend gestionado. El contrato completo, el esquema, la seguridad y las pruebas están en `atm-orbita-api/docs/plans/` y `docs/openapi.yaml`. Cómo conectar la app: [`docs/CLAUDE.md`](CLAUDE.md), sección "Conectar la app al API".
+
+Forma de las respuestas: `{ "data": ... }`; listas paginadas con `{ "data": [...], "meta": { "page", "page_size", "total" } }`; errores `{ "error": { "code", "message", "details" } }`. Los campos van en `snake_case`.
 
 Todas las rutas van bajo `/api/v1` y, salvo las de autenticación, exigen el token de acceso.
 
@@ -608,7 +652,8 @@ Son la semilla del **modo demo**, de las vistas previas y de las pruebas. "Hoy" 
   - **Mastercard Oro**: Audífonos S/ 189.90 y Suscripción de software US$ 12.00 (ambas vencen 15 oct) → S/ 189.90 + US$ 12.00.
 - **Movimientos de septiembre** (suman exactamente el reporte de arriba): ingresos — Sueldo 3,500.00 (1 sep, Débito), Venta de libros 100.00 (12 sep, Efectivo, *Otros ingresos*), Diseño de logo 600.00 (27 sep, Débito, *Freelance*); gastos — Mercado 210.00 (6), Pasajes de bus 95.20 (8, Efectivo), Consulta médica 110.00 (9), Concierto 145.00 (12), Supermercado 180.00 (14), Regalo de cumpleaños 123.00 (15), Gasolina 120.00 (17), Restaurante 70.00 (19, Efectivo), Útiles 60.00 (20, Efectivo), Farmacia 38.00 (24, Efectivo), Cine 45.00 (26, Efectivo), Supermercado 152.40 (28), Alquiler 800.00 (30); los que no indican cuenta salen de Débito principal. Además, la transferencia "Ahorro del mes" Débito → Ahorros por S/ 500.00 (22 sep). El resto de meses no tiene datos.
 - Año 2026 completo (reporte por año): ingresos S/ 7,700.00, gastos S/ 2,179.10.
-- Detalle completo: `docs/03`, sección 7.
+- Pagar "Pasajes" desde Débito principal por S/ 240.00: su saldo pasa de 1,245.80 a **1,005.80**.
+- En Android viven en `data/demo/SampleData.kt`; los saldos iniciales se deducen para que cada cuenta termine en su saldo (a "Débito principal" le sale −4,065.80).
 
 ## 12. Notas para la versión iOS
 
@@ -685,3 +730,5 @@ Son la semilla del **modo demo**, de las vistas previas y de las pruebas. "Hoy" 
 | 7 oct 2026 | Crédito: una compra **pendiente se puede editar y eliminar**, sin efecto en saldos ni reportes (7.9). |
 | 7 oct 2026 | **Requisitos para publicar:** recuperar contraseña con enlace de un solo uso de 30 minutos (7.1) y eliminar cuenta con borrado real desde Ajustes (7.12). Mensajes nuevos en 4.1. |
 | 7 oct 2026 | Seguridad Android: `allowBackup="false"` y reglas de extracción que excluyen todo en Android 12+, para que la sesión no salga del dispositivo. |
+| 21 oct 2026 | **Backend en Go.** El API se construye en Go + Gin + PostgreSQL (goose), plan por plan, en `atm-orbita-api/docs/plans/`. Este documento se regenera: se retiran los documentos `01` a `06` y su contenido vigente pasa a las secciones 5 (tokens de diseño), 9 (casos de prueba) y 11 (datos de ejemplo). |
+| 21 oct 2026 | **Sesión real con el API (plan 01).** Registro (con moneda principal y zona horaria del teléfono), inicio y cierre de sesión, sesión persistente con renovación de una a la vez, y los mensajes nuevos "La contraseña puede tener hasta 128 caracteres.", "Tu sesión terminó…" y "Demasiados intentos…". En debug se permite HTTP sin cifrar hacia el API local; en release, solo HTTPS. |
