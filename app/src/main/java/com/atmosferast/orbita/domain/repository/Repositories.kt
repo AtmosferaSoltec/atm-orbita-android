@@ -18,6 +18,7 @@ import com.atmosferast.orbita.domain.model.MovementDraft
 import com.atmosferast.orbita.domain.model.SessionState
 import com.atmosferast.orbita.domain.model.TransferDraft
 import com.atmosferast.orbita.domain.model.UserSettings
+import com.atmosferast.orbita.domain.model.ValidationError
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 
@@ -52,11 +53,24 @@ enum class DataError {
      * its category and description are those of the purchase.
      */
     PAYMENT_LOCKED,
+
+    /** The session ended on the server (logged out elsewhere, or the refresh token expired). */
+    SESSION_EXPIRED,
+
+    /** Too many attempts in a short time; the API asks to wait. */
+    TOO_MANY_REQUESTS,
     UNKNOWN,
 }
 
-class DataException(val error: DataError, cause: Throwable? = null) :
-    Exception(cause?.message ?: error.name, cause)
+/**
+ * [invalid] is set when the data source rejected the form itself (the API validates everything
+ * again): the screen tells it like its own validation, field by field.
+ */
+class DataException(
+    val error: DataError,
+    cause: Throwable? = null,
+    val invalid: ValidationError? = null,
+) : Exception(cause?.message ?: invalid?.name ?: error.name, cause)
 
 /** "Today" for the app. The demo data pins it; the real one follows the device. */
 fun interface DateProvider {

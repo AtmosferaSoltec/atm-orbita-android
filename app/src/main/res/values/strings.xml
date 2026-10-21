@@ -61,6 +61,9 @@
     <string name="error_email_not_confirmed">Revisa tu correo y confirma tu cuenta para poder ingresar.</string>
     <string name="error_email_invalid">Escribe un correo válido.</string>
     <string name="error_password_too_short">La contraseña debe tener al menos 8 caracteres.</string>
+    <string name="error_password_too_long">La contraseña puede tener hasta 128 caracteres.</string>
+    <string name="error_session_expired">Tu sesión terminó. Inicia sesión de nuevo.</string>
+    <string name="error_too_many_requests">Demasiados intentos. Espera un momento.</string>
     <string name="error_name_required">Escribe un nombre.</string>
     <string name="error_name_too_long">El nombre puede tener hasta 60 caracteres.</string>
     <string name="error_amount_required">Escribe un monto mayor que cero.</string>

@@ -23,6 +23,7 @@ val UiMessage.textRes: Int
             ValidationError.DUE_DATE_PAST -> R.string.error_due_date_past
             ValidationError.EMAIL_INVALID -> R.string.error_email_invalid
             ValidationError.PASSWORD_TOO_SHORT -> R.string.error_password_too_short
+            ValidationError.PASSWORD_TOO_LONG -> R.string.error_password_too_long
             ValidationError.PASSWORD_REQUIRED -> R.string.error_password_required
         }
 
@@ -37,6 +38,8 @@ val UiMessage.textRes: Int
             DataError.PURCHASE_ALREADY_PAID -> R.string.error_purchase_paid
             DataError.CARD_HAS_PENDING_PURCHASES -> R.string.error_card_has_pending
             DataError.PAYMENT_LOCKED -> R.string.error_payment_locked
+            DataError.SESSION_EXPIRED -> R.string.error_session_expired
+            DataError.TOO_MANY_REQUESTS -> R.string.error_too_many_requests
             DataError.UNKNOWN -> R.string.error_unknown
         }
     }

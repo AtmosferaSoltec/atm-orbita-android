@@ -13,6 +13,7 @@ import com.atmosferast.orbita.domain.repository.DataException
 import com.atmosferast.orbita.domain.repository.DateProvider
 import com.atmosferast.orbita.ui.common.MessageBus
 import com.atmosferast.orbita.ui.common.UiMessage
+import com.atmosferast.orbita.ui.common.toUiMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import javax.inject.Inject
@@ -93,7 +94,7 @@ class AppViewModel @Inject constructor(
                 action()
                 onDone()
             } catch (e: DataException) {
-                _authError.value = UiMessage.Failed(e.error)
+                _authError.value = e.toUiMessage()
             } finally {
                 _authBusy.value = false
             }
@@ -113,7 +114,7 @@ class AppViewModel @Inject constructor(
             try {
                 auth.deleteAccount(password)
             } catch (e: DataException) {
-                messageBus.post(UiMessage.Failed(e.error))
+                messageBus.post(e.toUiMessage())
             }
         }
     }

@@ -22,6 +22,10 @@ sealed interface UiMessage {
     data class Failed(val error: DataError) : UiMessage
 }
 
+/** A form the data source rejected is told like the app's own validation. */
+fun DataException.toUiMessage(): UiMessage =
+    invalid?.let { UiMessage.Invalid(it) } ?: UiMessage.Failed(error)
+
 /** One queue of messages for the whole app; the root shows them one by one. */
 @Singleton
 class MessageBus @Inject constructor() {
@@ -73,7 +77,7 @@ abstract class ActionViewModel(private val messages: MessageBus) : ViewModel() {
                 action()
                 onDone()
             } catch (e: DataException) {
-                messages.post(UiMessage.Failed(e.error))
+                messages.post(e.toUiMessage())
             } finally {
                 running = false
             }

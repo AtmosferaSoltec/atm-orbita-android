@@ -20,6 +20,7 @@ enum class ValidationError {
     DUE_DATE_PAST,
     EMAIL_INVALID,
     PASSWORD_TOO_SHORT,
+    PASSWORD_TOO_LONG,
 
     /** Deleting the account asks for the password again; an empty one is not sent. */
     PASSWORD_REQUIRED,
@@ -28,6 +29,9 @@ enum class ValidationError {
 const val NAME_MAX_LENGTH = 60
 const val TEXT_MAX_LENGTH = 500
 const val PASSWORD_MIN_LENGTH = 8
+
+/** The API's limit: a huge password would only cost CPU to hash. */
+const val PASSWORD_MAX_LENGTH = 128
 
 private fun validateName(name: String): ValidationError? = when {
     name.isBlank() -> ValidationError.NAME_REQUIRED
@@ -159,8 +163,14 @@ fun validateEmail(email: String): ValidationError? =
     if (EMAIL_PATTERN.matches(email.trim())) null else ValidationError.EMAIL_INVALID
 
 /** For a password that is being chosen: on sign-up and when a new one replaces a forgotten one. */
-fun validateNewPassword(password: String): ValidationError? =
-    if (password.length < PASSWORD_MIN_LENGTH) ValidationError.PASSWORD_TOO_SHORT else null
+fun validateNewPassword(password: String): ValidationError? {
+    val length = password.codePointCount(0, password.length)
+    return when {
+        length < PASSWORD_MIN_LENGTH -> ValidationError.PASSWORD_TOO_SHORT
+        length > PASSWORD_MAX_LENGTH -> ValidationError.PASSWORD_TOO_LONG
+        else -> null
+    }
+}
 
 data class Credentials(val email: String, val password: String) {
     fun validate(): ValidationError? = validateEmail(email) ?: validateNewPassword(password)
