@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug only: the API on the development PC is plain HTTP, reached from the emulator
+     (10.0.2.2) or from a phone on the same network (the PC's LAN IP, which changes).
+     Release keeps src/main's version: HTTPS only. -->
+<network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <base-config cleartextTrafficPermitted="true" tools:ignore="InsecureBaseConfiguration" />
+</network-security-config>

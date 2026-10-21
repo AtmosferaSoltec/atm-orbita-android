@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Release: only HTTPS (https://orbita-api.atmosferast.com). The debug build overrides this
+     file to reach the API running on the development PC over plain HTTP. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>
