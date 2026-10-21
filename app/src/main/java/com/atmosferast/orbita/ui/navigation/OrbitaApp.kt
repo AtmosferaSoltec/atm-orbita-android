@@ -22,7 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -111,11 +111,11 @@ private sealed interface Screen {
 fun OrbitaApp(app: AppViewModel = hiltViewModel()) {
     val session by app.session.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
-    val context = LocalContext.current
+    val resources = LocalResources.current
 
     // A newer message replaces the one on screen instead of queueing behind it.
     LaunchedEffect(Unit) {
-        app.messages.collectLatest { snackbar.showSnackbar(context.getString(it.textRes)) }
+        app.messages.collectLatest { snackbar.showSnackbar(resources.getString(it.textRes)) }
     }
 
     CompositionLocalProvider(LocalToday provides app.today) {
