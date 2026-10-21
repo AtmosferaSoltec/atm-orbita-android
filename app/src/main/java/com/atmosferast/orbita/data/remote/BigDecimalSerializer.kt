@@ -10,9 +10,10 @@ import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * PostgREST returns `numeric` as a JSON number; reading it as Double loses exactness. This reads
- * the literal text of the number instead, and writes the amount as text (Postgres casts it).
- * Every amount and rate of a DTO must use it: `@Serializable(with = BigDecimalSerializer::class)`.
+ * The Orbita API sends amounts and rates as text ("1245.80"), never as a JSON number, so no
+ * platform reads them as a Double. This reads the literal text (also a number, to be safe) and
+ * always writes text. Every amount and rate of a DTO must use it:
+ * `@Serializable(with = BigDecimalSerializer::class)`.
  */
 object BigDecimalSerializer : KSerializer<BigDecimal> {
     override val descriptor = PrimitiveSerialDescriptor("BigDecimal", PrimitiveKind.STRING)
