@@ -22,8 +22,10 @@ Backend: **API propio** en `atm-orbita-api` (Go + Gin + PostgreSQL), con autenti
 ## Estado (21 oct 2026)
 
 - Toda la app funciona sobre datos de ejemplo en memoria (`data/demo`), con las mismas reglas que el API.
-- **Conectado al API:** la sesión (registro, inicio y cierre de sesión, sesión persistente), con el plan 01. Se activa con `API_BASE_URL`; sin ella, todo es modo demo.
-- Pendiente, plan por plan: perfil y tipo de cambio (02), categorías (03), cuentas (04), movimientos y transferencias (05, 06), reportes (07), Inicio (08), tarjetas y pagos (09, 10), recuperar contraseña con código de 6 dígitos (11) y eliminar cuenta (12).
+- **Conectado al API** (se activa con `API_BASE_URL`; sin ella, todo es modo demo):
+  - Plan 01: la sesión (registro, inicio y cierre de sesión, sesión persistente).
+  - Plan 02: Ajustes (monedas, tipo de cambio, moneda de visualización), `RemoteSettingsRepository`.
+- Pendiente, plan por plan: categorías (03), cuentas (04), movimientos y transferencias (05, 06), reportes (07), Inicio (08), tarjetas y pagos (09, 10), recuperar contraseña con código de 6 dígitos (11) y eliminar cuenta (12).
 - Navegación: pila propia en `ui/navigation/OrbitaApp.kt` (migrar a Navigation Compose está pendiente).
 
 ## Arquitectura
@@ -36,7 +38,8 @@ ui (Compose + ViewModel, StateFlow)  →  domain (modelos, borradores, reglas, r
 - Cada repositorio tiene dos implementaciones: `data/demo` (memoria) y `data/remote` (API). **`di/AppModule.kt` decide cuál** según `AppConfig.usesApi`. Conectar un módulo al API es escribir su implementación remota y cambiar su línea ahí.
 - `data/remote`:
   - `ApiClient.kt`: Ktor (OkHttp), JSON que ignora campos desconocidos, tiempos de espera, `X-Request-Id`.
-  - `ApiSession.kt`: tokens y peticiones autorizadas; renueva **una sola vez a la vez** (`Mutex`) y repite la petición; si la renovación se rechaza, cierra la sesión.
+  - `ApiSession.kt`: tokens y peticiones autorizadas; renueva **una sola vez a la vez** (`Mutex`) y repite la petición; si la renovación se rechaza, cierra la sesión. Avisa cada cambio de sesión (`onSessionChange`) para que los repositorios borren lo que guardan en memoria.
+  - Repositorios remotos: guardan la última lectura en un `MutableStateFlow` (REST no avisa de cambios), la reemplazan con la respuesta de cada escritura y la borran al cambiar de sesión.
   - `TokenStore.kt`: refresh token y correo cifrados con una clave del **Android Keystore**; el access token solo en memoria.
   - `ApiErrors.kt`: `{ "error": { "code", ... } }` → `DataException(DataError)`, o el primer `ValidationError` de `details`.
   - DTOs con `@SerialName` en `snake_case`; montos y tipos de cambio con `BigDecimalSerializer` (el API los manda como texto).

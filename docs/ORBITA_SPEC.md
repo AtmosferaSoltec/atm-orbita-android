@@ -32,9 +32,9 @@ Estados: **Maqueta** = pantalla navegable con datos de ejemplo fijos, sin lógic
 | Transferencias | Transferir, Editar transferencia | MVP | Funcional (datos de ejemplo) |
 | Reportes | Reportes | MVP | Funcional (datos de ejemplo) |
 | Categorías | Categorías, Nueva/Editar categoría | MVP | Funcional (datos de ejemplo) |
-| Ajustes | Ajustes | MVP | Funcional (datos de ejemplo) |
+| Ajustes | Ajustes | MVP | **Monedas, tipo de cambio y moneda de visualización: implementado** contra el API (plan 02, 21 oct 2026). Categorías: datos de ejemplo |
 | Tarjeta de crédito | Crédito, Nueva/Editar tarjeta, Marcar como pagada | v1.1 | Funcional (datos de ejemplo) |
-| Backend (API propio) | — | MVP | En construcción, plan por plan (`atm-orbita-api/docs/plans/README.md`). Hechos: 00 (fundaciones) y 01 (sesión). El esquema vive solo en las migraciones de goose de ese repositorio |
+| Backend (API propio) | — | MVP | En construcción, plan por plan (`atm-orbita-api/docs/plans/README.md`). Hechos: 00 (fundaciones), 01 (sesión) y 02 (perfil y tipo de cambio). El esquema vive solo en las migraciones de goose de ese repositorio |
 
 **Qué funciona hoy (7 oct 2026).** La app ya no es una maqueta: **todo se guarda, se edita y se elimina de verdad**, y cada total se **calcula** a partir de los movimientos (saldos, ahorro total, totales del mes, reportes), con las mismas reglas que tendrá el backend. Lo único que falta es **dónde** viven los datos: hoy están en memoria, sembrados con los [datos de ejemplo](#11-datos-de-ejemplo), y se pierden al cerrar la app. Funciona: iniciar y cerrar sesión, crear/editar/archivar cuentas, categorías y tarjetas, registrar/editar/eliminar ingresos, egresos y transferencias, registrar compras con tarjeta y pagarlas, cambiar monedas y tipo de cambio, los reportes por mes, año y rango, todos los selectores de fecha y las validaciones con su mensaje. Desde el 7 oct 2026 el modo demo cumple además las reglas decididas ese día: tipo de cambio opcional, nombres de categoría sin repetir, editar y eliminar compras pendientes, deshacer un pago al eliminar su egreso y no archivar tarjetas con deuda. Desde el 13 oct 2026 **todas las pantallas de la app son visibles y navegables**: también recuperar la contraseña, eliminar la cuenta y la moneda en Registro, como maqueta funcional sobre el modo demo. **No** funciona todavía: la persistencia real (el API), la paginación de listas y la exportación a PDF. En esas tres pantallas nuevas el modo demo recorre los pasos pero no hace nada real: no se envía ningún correo, no se comprueba ninguna contraseña y la moneda elegida al registrarse no cambia los datos de ejemplo.
 
@@ -521,7 +521,7 @@ Si el nombre ya existe, el mensaje va **bajo el campo Nombre**, en rojo y con el
 - **Seguridad:** "Inicias sesión con tu correo y contraseña. Cada persona solo ve sus propios datos.", el correo de la sesión, el botón rojo suave "Cerrar sesión" y, debajo, **"Eliminar cuenta"** (ver más abajo).
 - **Próximamente:** Exportar a PDF · Modo sin internet · Cambio automático diario · Acceso con Google.
 
-**Comportamiento:** el inverso se recalcula al escribir, con 4 decimales; si el valor no es válido muestra "—". Cerrar sesión limpia el estado en memoria y vuelve a Iniciar sesión.
+**Comportamiento:** el inverso se recalcula al escribir, con 4 decimales; si el valor no es válido muestra "—". El tipo de cambio se **guarda cuando la persona deja de escribir** (0.7 s) o al salir de la pantalla, no con cada tecla: cada valor guardado es una fila del historial en el API. Se envía con hasta 6 decimales. Cerrar sesión limpia el estado en memoria y vuelve a Iniciar sesión.
 
 **Validaciones:** tipo de cambio > 0.
 
@@ -731,4 +731,5 @@ Son la semilla del **modo demo**, de las vistas previas y de las pruebas. "Hoy" 
 | 7 oct 2026 | **Requisitos para publicar:** recuperar contraseña con enlace de un solo uso de 30 minutos (7.1) y eliminar cuenta con borrado real desde Ajustes (7.12). Mensajes nuevos en 4.1. |
 | 7 oct 2026 | Seguridad Android: `allowBackup="false"` y reglas de extracción que excluyen todo en Android 12+, para que la sesión no salga del dispositivo. |
 | 21 oct 2026 | **Backend en Go.** El API se construye en Go + Gin + PostgreSQL (goose), plan por plan, en `atm-orbita-api/docs/plans/`. Este documento se regenera: se retiran los documentos `01` a `06` y su contenido vigente pasa a las secciones 5 (tokens de diseño), 9 (casos de prueba) y 11 (datos de ejemplo). |
+| 21 oct 2026 | **Ajustes reales con el API (plan 02).** Monedas, tipo de cambio (puede no existir) y moneda de visualización vienen del API; el usuario nace con la moneda elegida al registrarse y sin tipo de cambio. El tipo de cambio se guarda al dejar de escribir, no con cada tecla. Al cambiar de sesión, la app olvida lo que tenía en memoria de la anterior. |
 | 21 oct 2026 | **Sesión real con el API (plan 01).** Registro (con moneda principal y zona horaria del teléfono), inicio y cierre de sesión, sesión persistente con renovación de una a la vez, y los mensajes nuevos "La contraseña puede tener hasta 128 caracteres.", "Tu sesión terminó…" y "Demasiados intentos…". En debug se permite HTTP sin cifrar hacia el API local; en release, solo HTTPS. |
