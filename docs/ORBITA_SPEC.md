@@ -26,15 +26,15 @@ Estados: **Maqueta** = pantalla navegable con datos de ejemplo fijos, sin lógic
 | Módulo | Pantallas | Versión | Estado Android |
 |---|---|---|---|
 | Autenticación | Iniciar sesión, Registro, Recuperar contraseña, Eliminar cuenta | MVP | **Iniciar sesión, Registro y Cerrar sesión: implementado** contra el API (plan 01, 21 oct 2026). Recuperar contraseña (plan 11) y eliminar cuenta (plan 12): maqueta funcional en modo demo |
-| Inicio | Inicio | MVP | Funcional (datos de ejemplo) |
+| Inicio | Inicio | MVP | Con datos del API: ahorro, últimos movimientos e "Ingresos / Gastos · mes" (planes 04 a 07). Las tarjetas siguen en datos de ejemplo (planes 09 y 10); `GET /home` llega con el plan 08 |
 | Cuentas | Cuentas, Nueva/Editar cuenta | MVP | **Implementado** contra el API (plan 04, 22 oct 2026). Los saldos solo traen el saldo inicial hasta que los movimientos pasen al API (plan 05) |
 | Movimientos | Nuevo/Editar movimiento, Lista de movimientos | MVP | **Implementado** contra el API (planes 05 y 06, 22 oct 2026): ingresos, egresos y transferencias |
 | Transferencias | Transferir, Editar transferencia | MVP | Funcional (datos de ejemplo) |
-| Reportes | Reportes | MVP | Funcional (datos de ejemplo) |
+| Reportes | Reportes | MVP | **Implementado** contra el API (plan 07, 22 oct 2026). El PDF sigue pendiente |
 | Categorías | Categorías, Nueva/Editar categoría | MVP | **Implementado** contra el API (plan 03, 22 oct 2026) |
 | Ajustes | Ajustes | MVP | **Monedas, tipo de cambio y moneda de visualización: implementado** contra el API (plan 02, 21 oct 2026). Categorías: implementado (plan 03) |
 | Tarjeta de crédito | Crédito, Nueva/Editar tarjeta, Marcar como pagada | v1.1 | Funcional (datos de ejemplo) |
-| Backend (API propio) | — | MVP | En construcción, plan por plan (`atm-orbita-api/docs/plans/README.md`). Hechos: 00 (fundaciones), 01 (sesión), 02 (perfil y tipo de cambio), 03 (categorías), 04 (cuentas), 05 (movimientos) y 06 (transferencias). El esquema vive solo en las migraciones de goose de ese repositorio |
+| Backend (API propio) | — | MVP | En construcción, plan por plan (`atm-orbita-api/docs/plans/README.md`). Hechos: 00 (fundaciones), 01 (sesión), 02 (perfil y tipo de cambio), 03 (categorías), 04 (cuentas), 05 (movimientos), 06 (transferencias) y 07 (reportes). El esquema vive solo en las migraciones de goose de ese repositorio |
 
 **Qué funciona hoy (7 oct 2026).** La app ya no es una maqueta: **todo se guarda, se edita y se elimina de verdad**, y cada total se **calcula** a partir de los movimientos (saldos, ahorro total, totales del mes, reportes), con las mismas reglas que tendrá el backend. Lo único que falta es **dónde** viven los datos: hoy están en memoria, sembrados con los [datos de ejemplo](#11-datos-de-ejemplo), y se pierden al cerrar la app. Funciona: iniciar y cerrar sesión, crear/editar/archivar cuentas, categorías y tarjetas, registrar/editar/eliminar ingresos, egresos y transferencias, registrar compras con tarjeta y pagarlas, cambiar monedas y tipo de cambio, los reportes por mes, año y rango, todos los selectores de fecha y las validaciones con su mensaje. Desde el 7 oct 2026 el modo demo cumple además las reglas decididas ese día: tipo de cambio opcional, nombres de categoría sin repetir, editar y eliminar compras pendientes, deshacer un pago al eliminar su egreso y no archivar tarjetas con deuda. Desde el 13 oct 2026 **todas las pantallas de la app son visibles y navegables**: también recuperar la contraseña, eliminar la cuenta y la moneda en Registro, como maqueta funcional sobre el modo demo. **No** funciona todavía: la persistencia real (el API), la paginación de listas y la exportación a PDF. En esas tres pantallas nuevas el modo demo recorre los pasos pero no hace nada real: no se envía ningún correo, no se comprueba ninguna contraseña y la moneda elegida al registrarse no cambia los datos de ejemplo.
 
@@ -425,7 +425,7 @@ Es un **vistazo a lo reciente**, un mes a la vez; el historial más antiguo se c
 
 **Estados:** sin datos → "No hay movimientos en este periodo" · cargando → dos bloques grises en lugar del resumen y el ranking · error → "No se pudo cargar — Revisa tu conexión e inténtalo de nuevo." con "Reintentar".
 
-**Backend:** `GET /reports/summary?from&to`. Devuelve, por moneda, los totales, el balance y el ranking de egresos e ingresos por categoría, **con el porcentaje ya calculado**, para que todas las plataformas muestren lo mismo. El PDF saldrá de `GET /reports/summary.pdf` con las mismas cifras.
+**Backend (implementado, plan 07):** `GET /reports/summary?from&to`. Devuelve, por moneda, los totales, el balance y el ranking de egresos e ingresos por categoría, **con el porcentaje ya calculado**, para que todas las plataformas muestren lo mismo. El PDF saldrá de `GET /reports/summary.pdf` con las mismas cifras.
 
 ### 7.9 Tarjeta de crédito (v1.1)
 

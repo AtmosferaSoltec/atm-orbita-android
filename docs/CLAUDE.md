@@ -28,7 +28,8 @@ Backend: **API propio** en `atm-orbita-api` (Go + Gin + PostgreSQL), con autenti
   - Plan 03: Categorías, `RemoteCategoriesRepository`. Mientras las compras con tarjeta sigan en demo, `DemoCategoryMirror` copia las categorías del API al `DemoStore` (se quita con los planes 09 y 10).
   - Plan 04: Cuentas, `RemoteAccountsRepository`. Igual que con las categorías, `DemoAccountMirror` copia las cuentas del API al `DemoStore` (con el saldo del API como inicial) mientras los pagos de tarjeta sigan en demo (plan 10).
   - Planes 05 y 06: Movimientos, transferencias y su lista, `RemoteEntriesRepository`. Mientras los pagos de tarjeta sigan en demo (plan 10), `DemoEntriesMix` mezcla en las listas el gasto de un pago hecho desde una cuenta del API. Con el API, "hoy" es la fecha del teléfono (`AppModule.provideDateProvider`).
-- Pendiente, plan por plan: reportes (07), Inicio (08), tarjetas y pagos (09, 10), recuperar contraseña con código de 6 dígitos (11) y eliminar cuenta (12).
+  - Plan 07: Reportes e "Ingresos / Gastos · mes" de Inicio, `RemoteReportsRepository` (vuelve a leer cuando cambia un movimiento). Los porcentajes los sigue calculando la app con `percentOf`; dan lo mismo que los del API.
+- Pendiente, plan por plan: Inicio (08), tarjetas y pagos (09, 10), recuperar contraseña con código de 6 dígitos (11) y eliminar cuenta (12).
 - Navegación: pila propia en `ui/navigation/OrbitaApp.kt` (migrar a Navigation Compose está pendiente).
 
 ## Arquitectura

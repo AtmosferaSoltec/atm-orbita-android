@@ -20,6 +20,8 @@ import javax.inject.Singleton
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
@@ -39,6 +41,9 @@ class RemoteEntriesRepository @Inject constructor(
 
     /** Bumped after every write, so open lists read again. */
     private val version = MutableStateFlow(0)
+
+    /** Changes after every write and session change: what reads sums of movements watches. */
+    internal val changes: StateFlow<Int> = version.asStateFlow()
 
     init {
         api.onSessionChange { version.update { it + 1 } }

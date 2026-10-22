@@ -17,6 +17,7 @@ import com.atmosferast.orbita.data.remote.RemoteAccountsRepository
 import com.atmosferast.orbita.data.remote.RemoteAuthRepository
 import com.atmosferast.orbita.data.remote.RemoteCategoriesRepository
 import com.atmosferast.orbita.data.remote.RemoteEntriesRepository
+import com.atmosferast.orbita.data.remote.RemoteReportsRepository
 import com.atmosferast.orbita.data.remote.RemoteSettingsRepository
 import com.atmosferast.orbita.domain.repository.AccountsRepository
 import com.atmosferast.orbita.domain.repository.AuthRepository
@@ -106,8 +107,14 @@ object AppModule {
     ): EntriesRepository =
         if (config.usesApi) DemoEntriesMix(remote.get(), demo.get(), accounts, store) else demo.get()
 
+    /** Plan 07 of the API: the report of a period, per currency. */
     @Provides
-    fun provideReportsRepository(demo: DemoReportsRepository): ReportsRepository = demo
+    @Singleton
+    fun provideReportsRepository(
+        config: AppConfig,
+        demo: Lazy<DemoReportsRepository>,
+        remote: Lazy<RemoteReportsRepository>,
+    ): ReportsRepository = if (config.usesApi) remote.get() else demo.get()
 
     @Provides
     fun provideCreditRepository(demo: DemoCreditRepository): CreditRepository = demo
