@@ -10,6 +10,7 @@ import com.atmosferast.orbita.data.demo.DemoEntriesRepository
 import com.atmosferast.orbita.data.demo.DemoReportsRepository
 import com.atmosferast.orbita.data.demo.DemoSettingsRepository
 import com.atmosferast.orbita.data.remote.RemoteAuthRepository
+import com.atmosferast.orbita.data.remote.RemoteSettingsRepository
 import com.atmosferast.orbita.domain.repository.AccountsRepository
 import com.atmosferast.orbita.domain.repository.AuthRepository
 import com.atmosferast.orbita.domain.repository.CategoriesRepository
@@ -76,6 +77,12 @@ object AppModule {
     @Provides
     fun provideCreditRepository(demo: DemoCreditRepository): CreditRepository = demo
 
+    /** Plan 02 of the API: currencies and exchange rate. */
     @Provides
-    fun provideSettingsRepository(demo: DemoSettingsRepository): SettingsRepository = demo
+    @Singleton
+    fun provideSettingsRepository(
+        config: AppConfig,
+        demo: Lazy<DemoSettingsRepository>,
+        remote: Lazy<RemoteSettingsRepository>,
+    ): SettingsRepository = if (config.usesApi) remote.get() else demo.get()
 }
