@@ -22,6 +22,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
@@ -29,20 +30,24 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * Credit cards and their pending purchases (atm-orbita-api, plan 09). The lists are read again
- * after every change made here and when the session changes. A pending purchase moves no
- * balance, so nothing else has to be read again.
- *
- * Paying a purchase is plan 10: until then it fails with [DataError.UNKNOWN].
+ * Credit cards and their pending purchases (atm-orbita-api, plans 09 and 10). A pending purchase
+ * moves no balance; paying it creates its expense in the same request.
  */
 @Singleton
 class RemoteCreditRepository @Inject constructor(
     private val api: ApiSession,
     private val changes: RemoteChanges = RemoteChanges(),
+    private val accounts: RemoteAccountsRepository = RemoteAccountsRepository(api, changes),
 ) : CreditRepository {
 
-    /** Bumped after every write, so open lists read again. */
+    /** Bumped when the session changes. */
     private val version = MutableStateFlow(0)
+
+    /**
+     * The lists read again after the session changes and after any write through the remote
+     * repositories: deleting the expense of a payment in Movimientos brings its purchase back.
+     */
+    private val reads = combine(version, changes.changes, ::Pair)
 
     init {
         api.onSessionChange { version.update { it + 1 } }
@@ -50,7 +55,7 @@ class RemoteCreditRepository @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeCards(): Flow<List<CreditCard>> =
-        version.flatMapLatest {
+        reads.flatMapLatest {
             flow {
                 val cards = api.authorized { url("credit-cards") }.requireSuccess()
                     .body<DataEnvelope<List<CardDto>>>().data
@@ -60,7 +65,7 @@ class RemoteCreditRepository @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observePendingPurchases(): Flow<List<CreditPurchase>> =
-        version.flatMapLatest {
+        reads.flatMapLatest {
             flow {
                 val purchases = api.authorized {
                     url("credit-purchases")
@@ -83,7 +88,6 @@ class RemoteCreditRepository @Inject constructor(
             method = HttpMethod.Post
             url("credit-cards/$id/archive")
         }.requireSuccess()
-        version.update { it + 1 }
         changes.bump()
     }
 
@@ -100,11 +104,29 @@ class RemoteCreditRepository @Inject constructor(
             method = HttpMethod.Delete
             url("credit-purchases/$id")
         }.requireSuccess()
-        version.update { it + 1 }
         changes.bump()
     }
 
-    override suspend fun pay(payment: CreditPayment) = throw DataException(DataError.UNKNOWN)
+    /**
+     * Creates the expense in the paying account and takes the purchase out of the pending ones,
+     * in one step on the API. The balances change, so the accounts are read again.
+     */
+    override suspend fun pay(payment: CreditPayment) {
+        api.authorized {
+            method = HttpMethod.Post
+            url("credit-purchases/${payment.purchaseId}/pay")
+            setBody(
+                PayRequest(
+                    accountId = payment.accountId ?: throw DataException(DataError.NOT_FOUND),
+                    paidAmount = (payment.paidAmount ?: throw DataException(DataError.UNKNOWN))
+                        .setScale(2, RoundingMode.HALF_UP),
+                    paidOn = payment.paidOn.toString(),
+                ),
+            )
+        }.requireSuccess()
+        accounts.reload()
+        changes.bump()
+    }
 
     private suspend inline fun <reified T : Any> send(method: HttpMethod, path: String, payload: T) {
         api.authorized {
@@ -112,7 +134,6 @@ class RemoteCreditRepository @Inject constructor(
             url(path)
             setBody(payload)
         }.requireSuccess()
-        version.update { it + 1 }
         changes.bump()
     }
 
@@ -173,4 +194,11 @@ internal data class PurchaseRequest(
     @Serializable(with = BigDecimalSerializer::class) val amount: BigDecimal,
     val description: String,
     @SerialName("due_date") val dueDate: String,
+)
+
+@Serializable
+internal data class PayRequest(
+    @SerialName("account_id") val accountId: String,
+    @SerialName("paid_amount") @Serializable(with = BigDecimalSerializer::class) val paidAmount: BigDecimal,
+    @SerialName("paid_on") val paidOn: String,
 )

@@ -43,7 +43,9 @@ private class CreditTokens : TokenStore {
 
 private class CreditHarness(handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData) {
     val session = ApiSession(createApiClient("http://api.test/api/v1", MockEngine(handler), "test"), CreditTokens())
-    val repository = RemoteCreditRepository(session)
+    val changes = RemoteChanges()
+    val accounts = RemoteAccountsRepository(session, changes)
+    val repository = RemoteCreditRepository(session, changes, accounts)
 }
 
 private val json = headersOf(HttpHeaders.ContentType, "application/json")
@@ -133,18 +135,49 @@ class RemoteCreditRepositoryTest {
     }
 
     @Test
-    fun `paying waits for plan 10`() = runTest {
-        var calls = 0
+    fun `paying sends the real amount and reads purchases and balances again`() = runTest {
+        var sent = ""
+        var path = ""
+        var purchaseReads = 0
+        var accountReads = 0
+        val h = CreditHarness { request ->
+            when {
+                request.method == HttpMethod.Post -> {
+                    sent = String(request.body.toByteArray())
+                    path = request.url.encodedPath
+                    respond("{}", HttpStatusCode.OK, json)
+                }
+                request.url.encodedPath.endsWith("accounts") -> {
+                    accountReads++
+                    respond("""{"data":{"accounts":[],"savings":{}}}""", HttpStatusCode.OK, json)
+                }
+                else -> {
+                    purchaseReads++
+                    respond("""{"data":[]}""", HttpStatusCode.OK, json)
+                }
+            }
+        }
+        h.accounts.observeAccounts().first()
+        h.repository.observePendingPurchases().first()
+        h.repository.pay(CreditPayment("p1", "cash", BigDecimal("238.5"), LocalDate.of(2026, 10, 2)))
+        h.repository.observePendingPurchases().first()
+
+        assertEquals("/api/v1/credit-purchases/p1/pay", path)
+        assertEquals("""{"account_id":"cash","paid_amount":"238.50","paid_on":"2026-10-02"}""", sent)
+        assertEquals(2, purchaseReads)
+        assertEquals(2, accountReads)
+    }
+
+    @Test
+    fun `a purchase paid meanwhile is told as already paid`() = runTest {
         val h = CreditHarness {
-            calls++
-            respond("{}", HttpStatusCode.OK, json)
+            respond("""{"error":{"code":"PURCHASE_ALREADY_PAID","message":"x"}}""", HttpStatusCode.Conflict, json)
         }
         try {
             h.repository.pay(CreditPayment("p1", "cash", BigDecimal("240"), LocalDate.of(2026, 10, 2)))
             fail("expected a DataException")
         } catch (e: DataException) {
-            assertEquals(DataError.UNKNOWN, e.error)
+            assertEquals(DataError.PURCHASE_ALREADY_PAID, e.error)
         }
-        assertEquals(0, calls)
     }
 }

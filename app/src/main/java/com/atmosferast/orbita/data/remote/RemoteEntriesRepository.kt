@@ -20,8 +20,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
@@ -40,11 +39,14 @@ class RemoteEntriesRepository @Inject constructor(
     private val remoteChanges: RemoteChanges = RemoteChanges(),
 ) : EntriesRepository {
 
-    /** Bumped after every write, so open lists read again. */
+    /** Bumped when the session changes. */
     private val version = MutableStateFlow(0)
 
-    /** Changes after every write and session change: what reads sums of movements watches. */
-    internal val changes: StateFlow<Int> = version.asStateFlow()
+    /**
+     * Changes after the session changes and after any write through the remote repositories
+     * (paying a card purchase creates a movement too): open lists and sums read again.
+     */
+    internal val changes: Flow<Pair<Int, Int>> = combine(version, remoteChanges.changes, ::Pair)
 
     init {
         api.onSessionChange { version.update { it + 1 } }
@@ -52,12 +54,12 @@ class RemoteEntriesRepository @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeEntries(period: DatePeriod): Flow<List<Entry>> =
-        version.flatMapLatest { flow { emit(readAll(period.from, period.to)) } }
+        changes.flatMapLatest { flow { emit(readAll(period.from, period.to)) } }
 
     /** The newest ones of the last 10 years (the longest period the API lists at once). */
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeRecentEntries(limit: Int): Flow<List<Entry>> =
-        version.flatMapLatest {
+        changes.flatMapLatest {
             flow {
                 // Tomorrow, so a movement saved today in a zone ahead of the phone's still shows.
                 val to = LocalDate.now().plusDays(1)
@@ -127,9 +129,8 @@ class RemoteEntriesRepository @Inject constructor(
     }
 
     private suspend fun changed() {
-        version.update { it + 1 }
-        remoteChanges.bump()
         accounts.reload()
+        remoteChanges.bump()
     }
 
     private fun MovementDraft.toRequest(id: String?) = TransactionRequest(
