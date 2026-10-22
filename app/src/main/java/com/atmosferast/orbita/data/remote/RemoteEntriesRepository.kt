@@ -23,14 +23,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * Incomes and expenses (atm-orbita-api, plan 05). A list is read again, all its pages, after
- * every change made here and when the session changes; the account balances too, since every
- * movement moves one.
- *
- * Transfers are still demo data until plan 06: their methods fail here, and the app wires them
- * to the demo store (data/demo/DemoEntriesMix).
+ * Incomes, expenses and transfers (atm-orbita-api, plans 05 and 06). A list is read again, all
+ * its pages, after every change made here and when the session changes; the account balances
+ * too, since every movement and transfer moves them.
  */
 @Singleton
 class RemoteEntriesRepository @Inject constructor(
@@ -56,7 +55,7 @@ class RemoteEntriesRepository @Inject constructor(
             flow {
                 // Tomorrow, so a movement saved today in a zone ahead of the phone's still shows.
                 val to = LocalDate.now().plusDays(1)
-                emit(readPage(to.minusYears(10).plusDays(1), to, page = 1, pageSize = limit).data.map { it.toMovement() })
+                emit(readPage(to.minusYears(10).plusDays(1), to, page = 1, pageSize = limit).data.map { it.toEntry() })
             }
         }
 
@@ -76,18 +75,28 @@ class RemoteEntriesRepository @Inject constructor(
         changed()
     }
 
-    override suspend fun createTransfer(draft: TransferDraft) = notYet()
-    override suspend fun updateTransfer(id: String, draft: TransferDraft) = notYet()
-    override suspend fun deleteTransfer(id: String) = notYet()
+    override suspend fun createTransfer(draft: TransferDraft) {
+        send(HttpMethod.Post, "transfers", draft.toRequest(id = UUID.randomUUID().toString()))
+    }
 
-    private fun notYet(): Nothing = throw DataException(DataError.UNKNOWN)
+    override suspend fun updateTransfer(id: String, draft: TransferDraft) {
+        send(HttpMethod.Patch, "transfers/$id", draft.toRequest(id = null))
+    }
+
+    override suspend fun deleteTransfer(id: String) {
+        api.authorized {
+            method = HttpMethod.Delete
+            url("transfers/$id")
+        }.requireSuccess()
+        changed()
+    }
 
     private suspend fun readAll(from: LocalDate, to: LocalDate): List<Entry> {
         val out = mutableListOf<Entry>()
         var page = 1
         do {
             val result = readPage(from, to, page, PAGE_SIZE)
-            out += result.data.map { it.toMovement() }
+            out += result.data.map { it.toEntry() }
             page++
         } while (out.size < result.meta.total && result.data.isNotEmpty())
         return out
@@ -102,7 +111,7 @@ class RemoteEntriesRepository @Inject constructor(
             parameter("page_size", pageSize)
         }.requireSuccess().body()
 
-    private suspend fun send(method: HttpMethod, path: String, payload: TransactionRequest) {
+    private suspend inline fun <reified T : Any> send(method: HttpMethod, path: String, payload: T) {
         api.authorized {
             this.method = method
             url(path)
@@ -123,6 +132,20 @@ class RemoteEntriesRepository @Inject constructor(
         amount = (amount ?: throw DataException(DataError.UNKNOWN)).setScale(2, RoundingMode.HALF_UP),
         description = description,
         occurredOn = date?.toString(),
+    )
+
+    // The API keeps 2 decimals for amounts and 6 for the rate, which is informative: what moves
+    // the balances are the two amounts the form already worked out.
+    private fun TransferDraft.toRequest(id: String?) = TransferRequest(
+        id = id,
+        fromAccountId = fromAccountId,
+        toAccountId = toAccountId,
+        fromAmount = (fromAmount ?: throw DataException(DataError.UNKNOWN)).setScale(2, RoundingMode.HALF_UP),
+        toAmount = (toAmount ?: throw DataException(DataError.UNKNOWN)).setScale(2, RoundingMode.HALF_UP),
+        exchangeRate = exchangeRate?.let { JsonPrimitive(it.setScale(6, RoundingMode.HALF_UP).toPlainString()) }
+            ?: JsonNull,
+        occurredOn = date.toString(),
+        note = note,
     )
 
     private companion object {

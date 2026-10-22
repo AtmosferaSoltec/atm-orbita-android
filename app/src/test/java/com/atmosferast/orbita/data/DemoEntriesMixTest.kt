@@ -14,7 +14,6 @@ import com.atmosferast.orbita.domain.model.Entry
 import com.atmosferast.orbita.domain.model.Movement
 import com.atmosferast.orbita.domain.model.MovementDraft
 import com.atmosferast.orbita.domain.model.MovementKind
-import com.atmosferast.orbita.domain.model.Transfer
 import com.atmosferast.orbita.domain.model.TransferDraft
 import com.atmosferast.orbita.domain.repository.AccountsRepository
 import com.atmosferast.orbita.domain.repository.EntriesRepository
@@ -27,8 +26,8 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-// While movements come from the API and transfers are still demo data (plans 05 to 06 of
-// atm-orbita-api), both show in the same list.
+// While movements and transfers come from the API and card payments are still demo data (plans
+// 06 to 10 of atm-orbita-api), the expense of a payment shows next to the real entries.
 
 private class ApiAccounts(list: List<Account>) : AccountsRepository {
     val list = MutableStateFlow(list)
@@ -39,22 +38,25 @@ private class ApiAccounts(list: List<Account>) : AccountsRepository {
     override suspend fun archive(id: String) = Unit
 }
 
-/** Holds the movements "of the API". */
+/** Holds the entries "of the API". */
 private class ApiEntries(val entries: MutableStateFlow<List<Entry>>) : EntriesRepository {
-    val created = mutableListOf<MovementDraft>()
-    val deleted = mutableListOf<String>()
+    val calls = mutableListOf<String>()
     override fun observeEntries(period: DatePeriod): Flow<List<Entry>> = entries
     override fun observeRecentEntries(limit: Int): Flow<List<Entry>> = entries
     override suspend fun createMovement(draft: MovementDraft) {
-        created += draft
+        calls += "create ${draft.description}"
     }
-    override suspend fun updateMovement(id: String, draft: MovementDraft) = Unit
+    override suspend fun updateMovement(id: String, draft: MovementDraft) {
+        calls += "update $id"
+    }
     override suspend fun deleteMovement(id: String) {
-        deleted += id
+        calls += "delete $id"
     }
-    override suspend fun createTransfer(draft: TransferDraft) = error("not in the API")
-    override suspend fun updateTransfer(id: String, draft: TransferDraft) = error("not in the API")
-    override suspend fun deleteTransfer(id: String) = error("not in the API")
+    override suspend fun createTransfer(draft: TransferDraft) {
+        calls += "transfer ${draft.note}"
+    }
+    override suspend fun updateTransfer(id: String, draft: TransferDraft) = Unit
+    override suspend fun deleteTransfer(id: String) = Unit
 }
 
 class DemoEntriesMixTest {
@@ -65,7 +67,7 @@ class DemoEntriesMixTest {
     private val october = DatePeriod(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31))
 
     @Test
-    fun `movements of the API and transfers of the session share the list, without the sample`() = runTest {
+    fun `a demo expense from an account of the API shows next to the real entries, without the sample`() = runTest {
         val store = DemoStore()
         val accounts = DemoAccountMirror(ApiAccounts(listOf(cash, bank)), store)
         accounts.observeAccounts().first()
@@ -73,18 +75,18 @@ class DemoEntriesMixTest {
         val demo = DemoEntriesRepository(store, DemoDateProvider())
         val mix = DemoEntriesMix(api, demo, accounts, store)
 
-        mix.createTransfer(
-            TransferDraft("a-bank", "a-cash", BigDecimal("50.00"), BigDecimal("50.00"), null, LocalDate.of(2026, 10, 2), "Retiro"),
-        )
-        val list = mix.observeEntries(october).first()
+        // What paying a card purchase does today: an expense in the demo store.
+        demo.createMovement(MovementDraft(MovementKind.EXPENSE, BigDecimal("240.00"), "a-bank", "transport", "Pasajes"))
+        val list = mix.observeEntries(october).first().map { (it as Movement).description }
 
         // The sample has its own October movements and transfer; none of them shows.
-        assertEquals(listOf("Retiro", "Almuerzo"), list.map { (it as? Transfer)?.note ?: (it as Movement).description })
-        assertEquals(BigDecimal("150.00"), accounts.observeAccounts().first().first { it.id == "a-cash" }.balance)
+        assertEquals(listOf("Pasajes", "Almuerzo"), list)
 
-        mix.createMovement(MovementDraft(MovementKind.EXPENSE, BigDecimal("5.00"), "a-cash", "c-food", "Café"))
+        val payment = store.current.movements.first { it.description == "Pasajes" }.id
+        mix.deleteMovement(payment)
         mix.deleteMovement("m1")
-        assertEquals(listOf("Café"), api.created.map { it.description })
-        assertEquals(listOf("m1"), api.deleted)
+        mix.createTransfer(TransferDraft("a-bank", "a-cash", BigDecimal("50"), BigDecimal("50"), null, LocalDate.of(2026, 10, 2), "Retiro"))
+        assertEquals(listOf("delete m1", "transfer Retiro"), api.calls)
+        assertEquals(listOf("Almuerzo"), mix.observeEntries(october).first().map { (it as Movement).description })
     }
 }
