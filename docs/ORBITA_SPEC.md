@@ -31,10 +31,10 @@ Estados: **Maqueta** = pantalla navegable con datos de ejemplo fijos, sin lógic
 | Movimientos | Nuevo/Editar movimiento, Lista de movimientos | MVP | Funcional (datos de ejemplo) |
 | Transferencias | Transferir, Editar transferencia | MVP | Funcional (datos de ejemplo) |
 | Reportes | Reportes | MVP | Funcional (datos de ejemplo) |
-| Categorías | Categorías, Nueva/Editar categoría | MVP | Funcional (datos de ejemplo) |
-| Ajustes | Ajustes | MVP | **Monedas, tipo de cambio y moneda de visualización: implementado** contra el API (plan 02, 21 oct 2026). Categorías: datos de ejemplo |
+| Categorías | Categorías, Nueva/Editar categoría | MVP | **Implementado** contra el API (plan 03, 22 oct 2026) |
+| Ajustes | Ajustes | MVP | **Monedas, tipo de cambio y moneda de visualización: implementado** contra el API (plan 02, 21 oct 2026). Categorías: implementado (plan 03) |
 | Tarjeta de crédito | Crédito, Nueva/Editar tarjeta, Marcar como pagada | v1.1 | Funcional (datos de ejemplo) |
-| Backend (API propio) | — | MVP | En construcción, plan por plan (`atm-orbita-api/docs/plans/README.md`). Hechos: 00 (fundaciones), 01 (sesión) y 02 (perfil y tipo de cambio). El esquema vive solo en las migraciones de goose de ese repositorio |
+| Backend (API propio) | — | MVP | En construcción, plan por plan (`atm-orbita-api/docs/plans/README.md`). Hechos: 00 (fundaciones), 01 (sesión), 02 (perfil y tipo de cambio) y 03 (categorías). El esquema vive solo en las migraciones de goose de ese repositorio |
 
 **Qué funciona hoy (7 oct 2026).** La app ya no es una maqueta: **todo se guarda, se edita y se elimina de verdad**, y cada total se **calcula** a partir de los movimientos (saldos, ahorro total, totales del mes, reportes), con las mismas reglas que tendrá el backend. Lo único que falta es **dónde** viven los datos: hoy están en memoria, sembrados con los [datos de ejemplo](#11-datos-de-ejemplo), y se pierden al cerrar la app. Funciona: iniciar y cerrar sesión, crear/editar/archivar cuentas, categorías y tarjetas, registrar/editar/eliminar ingresos, egresos y transferencias, registrar compras con tarjeta y pagarlas, cambiar monedas y tipo de cambio, los reportes por mes, año y rango, todos los selectores de fecha y las validaciones con su mensaje. Desde el 7 oct 2026 el modo demo cumple además las reglas decididas ese día: tipo de cambio opcional, nombres de categoría sin repetir, editar y eliminar compras pendientes, deshacer un pago al eliminar su egreso y no archivar tarjetas con deuda. Desde el 13 oct 2026 **todas las pantallas de la app son visibles y navegables**: también recuperar la contraseña, eliminar la cuenta y la moneda en Registro, como maqueta funcional sobre el modo demo. **No** funciona todavía: la persistencia real (el API), la paginación de listas y la exportación a PDF. En esas tres pantallas nuevas el modo demo recorre los pasos pero no hace nada real: no se envía ningún correo, no se comprueba ninguna contraseña y la moneda elegida al registrarse no cambia los datos de ejemplo.
 
@@ -502,7 +502,7 @@ Funciona **igual que Cuentas, pero para deudas**: un total arriba y, debajo, la 
 
 Si el nombre ya existe, el mensaje va **bajo el campo Nombre**, en rojo y con el campo marcado en rojo: "Ya tienes una categoría de este tipo con ese nombre." Es el único error de la app que se muestra bajo su campo en lugar de en el aviso de validación. Desaparece cuando el usuario cambia el texto. La app puede avisar antes de enviar comparando con la lista que ya tiene; quien decide es el API.
 
-**Backend:** `GET` y `POST /categories`, `PATCH /categories/{id}`, `POST /categories/{id}/archive`. Un nombre repetido responde `409` con el código `CATEGORY_NAME_TAKEN`.
+**Backend (implementado, plan 03):** `GET` y `POST /categories`, `PATCH /categories/{id}`, `POST /categories/{id}/archive`. Un nombre repetido responde `409` con el código `CATEGORY_NAME_TAKEN`. La lista llega en el orden en que se crearon (las 9 iniciales primero). La app envía el `id` al crear, así un reintento no duplica la categoría. Mientras los movimientos sigan en datos de ejemplo (hasta el plan 05), las categorías del API se copian al modo demo para poder usarlas en movimientos.
 
 ### 7.12 Ajustes
 

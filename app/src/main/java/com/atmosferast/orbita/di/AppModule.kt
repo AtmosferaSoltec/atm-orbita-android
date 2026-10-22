@@ -4,12 +4,15 @@ import com.atmosferast.orbita.BuildConfig
 import com.atmosferast.orbita.data.demo.DemoAccountsRepository
 import com.atmosferast.orbita.data.demo.DemoAuthRepository
 import com.atmosferast.orbita.data.demo.DemoCategoriesRepository
+import com.atmosferast.orbita.data.demo.DemoCategoryMirror
 import com.atmosferast.orbita.data.demo.DemoCreditRepository
 import com.atmosferast.orbita.data.demo.DemoDateProvider
 import com.atmosferast.orbita.data.demo.DemoEntriesRepository
 import com.atmosferast.orbita.data.demo.DemoReportsRepository
 import com.atmosferast.orbita.data.demo.DemoSettingsRepository
+import com.atmosferast.orbita.data.demo.DemoStore
 import com.atmosferast.orbita.data.remote.RemoteAuthRepository
+import com.atmosferast.orbita.data.remote.RemoteCategoriesRepository
 import com.atmosferast.orbita.data.remote.RemoteSettingsRepository
 import com.atmosferast.orbita.domain.repository.AccountsRepository
 import com.atmosferast.orbita.domain.repository.AuthRepository
@@ -65,8 +68,15 @@ object AppModule {
     @Provides
     fun provideAccountsRepository(demo: DemoAccountsRepository): AccountsRepository = demo
 
+    /** Plan 03 of the API: categories, mirrored into the demo store while movements live there. */
     @Provides
-    fun provideCategoriesRepository(demo: DemoCategoriesRepository): CategoriesRepository = demo
+    @Singleton
+    fun provideCategoriesRepository(
+        config: AppConfig,
+        demo: Lazy<DemoCategoriesRepository>,
+        remote: Lazy<RemoteCategoriesRepository>,
+        store: DemoStore,
+    ): CategoriesRepository = if (config.usesApi) DemoCategoryMirror(remote.get(), store) else demo.get()
 
     @Provides
     fun provideEntriesRepository(demo: DemoEntriesRepository): EntriesRepository = demo
