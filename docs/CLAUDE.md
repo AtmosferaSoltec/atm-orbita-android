@@ -26,7 +26,8 @@ Backend: **API propio** en `atm-orbita-api` (Go + Gin + PostgreSQL), con autenti
   - Plan 01: la sesión (registro, inicio y cierre de sesión, sesión persistente).
   - Plan 02: Ajustes (monedas, tipo de cambio, moneda de visualización), `RemoteSettingsRepository`.
   - Plan 03: Categorías, `RemoteCategoriesRepository`. Mientras los movimientos sigan en demo, `DemoCategoryMirror` copia las categorías del API al `DemoStore` (se quita en el plan 05).
-- Pendiente, plan por plan: cuentas (04), movimientos y transferencias (05, 06), reportes (07), Inicio (08), tarjetas y pagos (09, 10), recuperar contraseña con código de 6 dígitos (11) y eliminar cuenta (12).
+  - Plan 04: Cuentas, `RemoteAccountsRepository`. Igual que con las categorías, `DemoAccountMirror` copia las cuentas del API al `DemoStore` (con el saldo del API como inicial) hasta el plan 05.
+- Pendiente, plan por plan: movimientos y transferencias (05, 06), reportes (07), Inicio (08), tarjetas y pagos (09, 10), recuperar contraseña con código de 6 dígitos (11) y eliminar cuenta (12).
 - Navegación: pila propia en `ui/navigation/OrbitaApp.kt` (migrar a Navigation Compose está pendiente).
 
 ## Arquitectura

@@ -1,6 +1,7 @@
 package com.atmosferast.orbita.di
 
 import com.atmosferast.orbita.BuildConfig
+import com.atmosferast.orbita.data.demo.DemoAccountMirror
 import com.atmosferast.orbita.data.demo.DemoAccountsRepository
 import com.atmosferast.orbita.data.demo.DemoAuthRepository
 import com.atmosferast.orbita.data.demo.DemoCategoriesRepository
@@ -11,6 +12,7 @@ import com.atmosferast.orbita.data.demo.DemoEntriesRepository
 import com.atmosferast.orbita.data.demo.DemoReportsRepository
 import com.atmosferast.orbita.data.demo.DemoSettingsRepository
 import com.atmosferast.orbita.data.demo.DemoStore
+import com.atmosferast.orbita.data.remote.RemoteAccountsRepository
 import com.atmosferast.orbita.data.remote.RemoteAuthRepository
 import com.atmosferast.orbita.data.remote.RemoteCategoriesRepository
 import com.atmosferast.orbita.data.remote.RemoteSettingsRepository
@@ -65,8 +67,15 @@ object AppModule {
     @Provides
     fun provideDateProvider(demo: DemoDateProvider): DateProvider = demo
 
+    /** Plan 04 of the API: accounts, mirrored into the demo store while movements live there. */
     @Provides
-    fun provideAccountsRepository(demo: DemoAccountsRepository): AccountsRepository = demo
+    @Singleton
+    fun provideAccountsRepository(
+        config: AppConfig,
+        demo: Lazy<DemoAccountsRepository>,
+        remote: Lazy<RemoteAccountsRepository>,
+        store: DemoStore,
+    ): AccountsRepository = if (config.usesApi) DemoAccountMirror(remote.get(), store) else demo.get()
 
     /** Plan 03 of the API: categories, mirrored into the demo store while movements live there. */
     @Provides
