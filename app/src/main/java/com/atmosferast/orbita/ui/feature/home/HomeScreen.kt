@@ -2,7 +2,9 @@ package com.atmosferast.orbita.ui.feature.home
 
 import com.atmosferast.orbita.ui.components.LocalToday
 import com.atmosferast.orbita.domain.model.DatePeriod
-import com.atmosferast.orbita.domain.model.CreditPurchase
+import com.atmosferast.orbita.domain.model.CreditReminder
+import com.atmosferast.orbita.domain.model.UserSettings
+import com.atmosferast.orbita.data.demo.DemoHomeRepository
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -60,7 +62,6 @@ import com.atmosferast.orbita.ui.components.SegmentedControl
 import com.atmosferast.orbita.ui.components.SkeletonBlock
 import com.atmosferast.orbita.ui.components.StateMessage
 import com.atmosferast.orbita.ui.feature.credit.pendingPaymentsLabel
-import com.atmosferast.orbita.domain.model.Account
 import com.atmosferast.orbita.domain.model.Entry
 import com.atmosferast.orbita.domain.model.FxPair
 import com.atmosferast.orbita.domain.model.MovementKind
@@ -81,13 +82,15 @@ enum class HomeState { CONTENT, LOADING, EMPTY, ERROR }
 
 @Composable
 fun HomeScreen(
-    accounts: List<Account>,
+    savings: Map<String, BigDecimal>,
+    includedAccounts: Int,
+    activeAccounts: Int,
     fx: FxPair,
     displayCurrency: String,
     monthIncome: BigDecimal,
     monthExpense: BigDecimal,
     recentEntries: List<Entry>,
-    pendingPurchases: List<CreditPurchase>,
+    credit: CreditReminder?,
     onDisplayCurrencyChange: (String) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAccounts: () -> Unit,
@@ -128,7 +131,7 @@ fun HomeScreen(
 
             else -> {
                 SavingsHeroCard(
-                    accounts, fx, displayCurrency, onDisplayCurrencyChange, onOpenAccounts,
+                    savings, includedAccounts, activeAccounts, fx, displayCurrency, onDisplayCurrencyChange, onOpenAccounts,
                     onConfigureFx = onOpenSettings,
                 )
                 Spacer(Modifier.height(12.dp))
@@ -144,9 +147,9 @@ fun HomeScreen(
                     Modifier.padding(top = 10.dp, start = 4.dp, end = 4.dp),
                 )
                 // Only in v1.1 and when there are pending purchases.
-                if (pendingPurchases.isNotEmpty()) {
+                if (credit != null) {
                     Spacer(Modifier.height(14.dp))
-                    CreditReminderCard(pendingPurchases, onOpenCredit)
+                    CreditReminderCard(credit, onOpenCredit)
                 }
                 SectionTitle(
                     stringResource(R.string.home_recent),
@@ -171,7 +174,9 @@ fun HomeScreen(
 
 @Composable
 private fun SavingsHeroCard(
-    accounts: List<Account>,
+    savings: Map<String, BigDecimal>,
+    includedAccounts: Int,
+    activeAccounts: Int,
     fx: FxPair,
     displayCurrency: String,
     onDisplayCurrencyChange: (String) -> Unit,
@@ -179,7 +184,7 @@ private fun SavingsHeroCard(
     onConfigureFx: () -> Unit,
 ) {
     val otherCurrency = fx.other(displayCurrency)
-    val total = fx.savingsTotal(accounts, displayCurrency)
+    val total = savings[displayCurrency] ?: BigDecimal.ZERO
     val rate = fx.rate
     HeroCard(scrim = true) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -215,7 +220,7 @@ private fun SavingsHeroCard(
             Text(
                 stringResource(
                     R.string.savings_equivalent_manual,
-                    formatMoney(fx.savingsTotal(accounts, otherCurrency), otherCurrency),
+                    formatMoney(savings[otherCurrency] ?: BigDecimal.ZERO, otherCurrency),
                     formatRate(rate),
                 ),
                 style = MaterialTheme.typography.bodyMedium,
@@ -244,8 +249,8 @@ private fun SavingsHeroCard(
             Text(
                 stringResource(
                     R.string.savings_accounts_included,
-                    accounts.count { it.includeInSavings },
-                    accounts.size,
+                    includedAccounts,
+                    activeAccounts,
                 ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White,
@@ -343,7 +348,7 @@ private fun MonthCard(
 }
 
 @Composable
-private fun CreditReminderCard(purchases: List<CreditPurchase>, onClick: () -> Unit) {
+private fun CreditReminderCard(credit: CreditReminder, onClick: () -> Unit) {
     OrbitaCard(onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconBadge(OrbitaIcons.CreditCard, Orange, OrangeSoft)
@@ -355,7 +360,7 @@ private fun CreditReminderCard(purchases: List<CreditPurchase>, onClick: () -> U
                     color = Ink,
                 )
                 Text(
-                    pendingPaymentsLabel(purchases),
+                    pendingPaymentsLabel(credit.pendingCount, credit.nextDueDate),
                     style = MaterialTheme.typography.bodySmall,
                     color = Muted,
                 )
@@ -402,16 +407,25 @@ private fun HomeSkeleton() {
 private fun HomePreviewContent(state: HomeState) {
     var currency by remember { mutableStateOf(PEN) }
     val empty = state == HomeState.EMPTY
-    val october = SampleData.reportFor(DatePeriod.ofMonth(SampleData.today)).first()
+    val home = DemoHomeRepository.homeOf(
+        accounts = SampleData.accounts,
+        settings = UserSettings(SampleData.fx, currency),
+        recent = if (empty) emptyList() else SampleData.recentEntries,
+        monthReports = if (empty) emptyList() else SampleData.reportFor(DatePeriod.ofMonth(SampleData.today)),
+        purchases = if (empty) emptyList() else SampleData.creditPurchases,
+        today = SampleData.today,
+    )
     OrbitaPreview {
         HomeScreen(
-            accounts = SampleData.accounts,
-            fx = SampleData.fx,
-            displayCurrency = currency,
-            monthIncome = if (empty) BigDecimal.ZERO else october.incomeTotal,
-            monthExpense = if (empty) BigDecimal.ZERO else october.expenseTotal,
-            recentEntries = if (empty) emptyList() else SampleData.recentEntries,
-            pendingPurchases = if (empty) emptyList() else SampleData.creditPurchases,
+            savings = home.savings,
+            includedAccounts = home.includedAccounts,
+            activeAccounts = home.activeAccounts,
+            fx = home.fx,
+            displayCurrency = home.displayCurrency,
+            monthIncome = home.monthIncome,
+            monthExpense = home.monthExpense,
+            recentEntries = home.recentEntries,
+            credit = home.credit,
             onDisplayCurrencyChange = { currency = it },
             onOpenSettings = {},
             onOpenAccounts = {},

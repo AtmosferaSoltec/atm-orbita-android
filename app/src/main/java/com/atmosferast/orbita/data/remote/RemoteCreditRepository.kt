@@ -38,6 +38,7 @@ import kotlinx.serialization.Serializable
 @Singleton
 class RemoteCreditRepository @Inject constructor(
     private val api: ApiSession,
+    private val changes: RemoteChanges = RemoteChanges(),
 ) : CreditRepository {
 
     /** Bumped after every write, so open lists read again. */
@@ -83,6 +84,7 @@ class RemoteCreditRepository @Inject constructor(
             url("credit-cards/$id/archive")
         }.requireSuccess()
         version.update { it + 1 }
+        changes.bump()
     }
 
     override suspend fun createPurchase(draft: CreditPurchaseDraft) {
@@ -99,6 +101,7 @@ class RemoteCreditRepository @Inject constructor(
             url("credit-purchases/$id")
         }.requireSuccess()
         version.update { it + 1 }
+        changes.bump()
     }
 
     override suspend fun pay(payment: CreditPayment) = throw DataException(DataError.UNKNOWN)
@@ -110,6 +113,7 @@ class RemoteCreditRepository @Inject constructor(
             setBody(payload)
         }.requireSuccess()
         version.update { it + 1 }
+        changes.bump()
     }
 
     private fun CreditPurchaseDraft.toRequest(id: String?) = PurchaseRequest(

@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.update
 @Singleton
 class RemoteCategoriesRepository @Inject constructor(
     private val api: ApiSession,
+    private val changes: RemoteChanges = RemoteChanges(),
 ) : CategoriesRepository {
 
     private val cache = MutableStateFlow<List<Category>?>(null)
@@ -43,11 +44,13 @@ class RemoteCategoriesRepository @Inject constructor(
         )
         val created = send(HttpMethod.Post, "categories", request)
         cache.update { list -> list?.let { it + created } }
+        changes.bump()
     }
 
     override suspend fun update(id: String, draft: CategoryDraft) {
         val updated = send(HttpMethod.Patch, "categories/$id", UpdateCategoryRequest(draft.name, draft.colorHex))
         cache.update { list -> list?.map { if (it.id == id) updated else it } }
+        changes.bump()
     }
 
     override suspend fun archive(id: String) {
@@ -56,6 +59,7 @@ class RemoteCategoriesRepository @Inject constructor(
             url("categories/$id/archive")
         }.requireSuccess()
         cache.update { list -> list?.filterNot { it.id == id } }
+        changes.bump()
     }
 
     private suspend fun load() {

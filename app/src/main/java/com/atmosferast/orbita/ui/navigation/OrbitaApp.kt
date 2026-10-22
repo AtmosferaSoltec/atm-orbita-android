@@ -66,7 +66,7 @@ import com.atmosferast.orbita.ui.feature.credit.CreditViewModel
 import com.atmosferast.orbita.ui.feature.credit.PayCreditScreen
 import com.atmosferast.orbita.ui.feature.home.HomeScreen
 import com.atmosferast.orbita.ui.feature.home.HomeState
-import com.atmosferast.orbita.ui.feature.home.HomeUiState
+import com.atmosferast.orbita.domain.model.HomeSummary
 import com.atmosferast.orbita.ui.feature.home.HomeViewModel
 import com.atmosferast.orbita.ui.feature.movement.MovementFormScreen
 import com.atmosferast.orbita.ui.feature.movement.MovementsScreen
@@ -532,7 +532,7 @@ private fun MainFlow(email: String, onLogout: () -> Unit, onDeleteAccount: (Stri
 
 @Composable
 private fun HomeTab(
-    load: Load<HomeUiState>,
+    load: Load<HomeSummary>,
     onDisplayCurrencyChange: (String) -> Unit,
     onRetry: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -544,13 +544,15 @@ private fun HomeTab(
 ) {
     val ready = (load as? Load.Ready)?.value
     HomeScreen(
-        accounts = ready?.accounts.orEmpty(),
+        savings = ready?.savings.orEmpty(),
+        includedAccounts = ready?.includedAccounts ?: 0,
+        activeAccounts = ready?.activeAccounts ?: 0,
         fx = ready?.fx ?: PlaceholderFx,
         displayCurrency = ready?.displayCurrency ?: PEN,
         monthIncome = ready?.monthIncome ?: BigDecimal.ZERO,
         monthExpense = ready?.monthExpense ?: BigDecimal.ZERO,
         recentEntries = ready?.recentEntries.orEmpty(),
-        pendingPurchases = ready?.pendingPurchases.orEmpty(),
+        credit = ready?.credit,
         onDisplayCurrencyChange = onDisplayCurrencyChange,
         onOpenSettings = onOpenSettings,
         onOpenAccounts = onOpenAccounts,

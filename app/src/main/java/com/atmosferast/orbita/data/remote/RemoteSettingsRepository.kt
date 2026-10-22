@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.onStart
 @Singleton
 class RemoteSettingsRepository @Inject constructor(
     private val api: ApiSession,
+    private val changes: RemoteChanges = RemoteChanges(),
 ) : SettingsRepository {
 
     private val cache = MutableStateFlow<UserSettings?>(null)
@@ -60,5 +61,6 @@ class RemoteSettingsRepository @Inject constructor(
             setBody(payload)
         }.requireSuccess()
         cache.value = response.body<DataEnvelope<SettingsDto>>().data.toUserSettings()
+        changes.bump()
     }
 }

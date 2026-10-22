@@ -175,10 +175,15 @@ private fun TotalDebtCard(
 
 /** "2 pagos pendientes · vence 5 oct" for the closest due date of [purchases]. */
 @Composable
-fun pendingPaymentsLabel(purchases: List<CreditPurchase>): String = stringResource(
+fun pendingPaymentsLabel(purchases: List<CreditPurchase>): String =
+    pendingPaymentsLabel(purchases.size, purchases.minOf { it.dueDate })
+
+/** "4 pagos pendientes · vence 5 oct", from the count and the nearest due date. */
+@Composable
+fun pendingPaymentsLabel(count: Int, nextDueDate: LocalDate): String = stringResource(
     R.string.credit_pending_due,
-    pluralStringResource(R.plurals.credit_pending_payments, purchases.size, purchases.size),
-    formatDayMonth(purchases.minOf { it.dueDate }),
+    pluralStringResource(R.plurals.credit_pending_payments, count, count),
+    formatDayMonth(nextDueDate),
 )
 
 @Composable

@@ -14,6 +14,7 @@ import com.atmosferast.orbita.domain.model.CurrencyReport
 import com.atmosferast.orbita.domain.model.DatePeriod
 import com.atmosferast.orbita.domain.model.Entry
 import com.atmosferast.orbita.domain.model.FxPair
+import com.atmosferast.orbita.domain.model.HomeSummary
 import com.atmosferast.orbita.domain.model.MovementDraft
 import com.atmosferast.orbita.domain.model.SessionState
 import com.atmosferast.orbita.domain.model.TransferDraft
@@ -179,4 +180,9 @@ interface SettingsRepository {
     fun observeSettings(): Flow<UserSettings>
     suspend fun setFx(fx: FxPair)
     suspend fun setDisplayCurrency(currency: String)
+}
+
+interface HomeRepository {
+    /** Inicio, read again whenever something it shows changes. */
+    fun observeHome(): Flow<HomeSummary>
 }

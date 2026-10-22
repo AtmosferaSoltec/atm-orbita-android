@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.update
 @Singleton
 class RemoteAccountsRepository @Inject constructor(
     private val api: ApiSession,
+    private val changes: RemoteChanges = RemoteChanges(),
 ) : AccountsRepository {
 
     private val cache = MutableStateFlow<List<Account>?>(null)
@@ -47,6 +48,7 @@ class RemoteAccountsRepository @Inject constructor(
         )
         val created = send(HttpMethod.Post, "accounts", request)
         cache.update { list -> list?.let { it + created } }
+        changes.bump()
     }
 
     override suspend fun update(id: String, draft: AccountDraft) {
@@ -63,11 +65,13 @@ class RemoteAccountsRepository @Inject constructor(
             url("accounts/$id/archive")
         }.requireSuccess()
         cache.update { list -> list?.filterNot { it.id == id } }
+        changes.bump()
     }
 
     private suspend fun patch(id: String, request: UpdateAccountRequest) {
         val updated = send(HttpMethod.Patch, "accounts/$id", request)
         cache.update { list -> list?.map { if (it.id == id) updated else it } }
+        changes.bump()
     }
 
     /** Reads the balances again after a movement changed them, if the list was ever read. */

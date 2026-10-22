@@ -37,6 +37,7 @@ import kotlinx.serialization.json.JsonPrimitive
 class RemoteEntriesRepository @Inject constructor(
     private val api: ApiSession,
     private val accounts: RemoteAccountsRepository,
+    private val remoteChanges: RemoteChanges = RemoteChanges(),
 ) : EntriesRepository {
 
     /** Bumped after every write, so open lists read again. */
@@ -127,6 +128,7 @@ class RemoteEntriesRepository @Inject constructor(
 
     private suspend fun changed() {
         version.update { it + 1 }
+        remoteChanges.bump()
         accounts.reload()
     }
 

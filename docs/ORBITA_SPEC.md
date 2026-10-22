@@ -26,7 +26,7 @@ Estados: **Maqueta** = pantalla navegable con datos de ejemplo fijos, sin lógic
 | Módulo | Pantallas | Versión | Estado Android |
 |---|---|---|---|
 | Autenticación | Iniciar sesión, Registro, Recuperar contraseña, Eliminar cuenta | MVP | **Iniciar sesión, Registro y Cerrar sesión: implementado** contra el API (plan 01, 21 oct 2026). Recuperar contraseña (plan 11) y eliminar cuenta (plan 12): maqueta funcional en modo demo |
-| Inicio | Inicio | MVP | Con datos del API: ahorro, últimos movimientos e "Ingresos / Gastos · mes" (planes 04 a 07) y el aviso de tarjetas (plan 09); `GET /home` llega con el plan 08 |
+| Inicio | Inicio | MVP | **Implementado** contra el API en una sola petición, `GET /home` (plan 08, 22 oct 2026) |
 | Cuentas | Cuentas, Nueva/Editar cuenta | MVP | **Implementado** contra el API (plan 04, 22 oct 2026); los saldos incluyen movimientos y transferencias (planes 05 y 06) |
 | Movimientos | Nuevo/Editar movimiento, Lista de movimientos | MVP | **Implementado** contra el API (planes 05 y 06, 22 oct 2026): ingresos, egresos y transferencias |
 | Transferencias | Transferir, Editar transferencia | MVP | **Implementado** contra el API (plan 06, 22 oct 2026) |
@@ -34,7 +34,7 @@ Estados: **Maqueta** = pantalla navegable con datos de ejemplo fijos, sin lógic
 | Categorías | Categorías, Nueva/Editar categoría | MVP | **Implementado** contra el API (plan 03, 22 oct 2026) |
 | Ajustes | Ajustes | MVP | **Monedas, tipo de cambio y moneda de visualización: implementado** contra el API (plan 02, 21 oct 2026). Categorías: implementado (plan 03) |
 | Tarjeta de crédito | Crédito, Nueva/Editar tarjeta, Marcar como pagada | v1.1 | Tarjetas y compras pendientes: **implementado** contra el API (plan 09, 22 oct 2026). Marcar como pagada: pendiente (plan 10) |
-| Backend (API propio) | — | MVP | En construcción, plan por plan (`atm-orbita-api/docs/plans/README.md`). Hechos: 00 (fundaciones), 01 (sesión), 02 (perfil y tipo de cambio), 03 (categorías), 04 (cuentas), 05 (movimientos), 06 (transferencias), 07 (reportes) y 09 (tarjetas y compras pendientes). El esquema vive solo en las migraciones de goose de ese repositorio |
+| Backend (API propio) | — | MVP | En construcción, plan por plan (`atm-orbita-api/docs/plans/README.md`). Hechos: 00 (fundaciones), 01 (sesión), 02 (perfil y tipo de cambio), 03 (categorías), 04 (cuentas), 05 (movimientos), 06 (transferencias), 07 (reportes), 08 (Inicio) y 09 (tarjetas y compras pendientes). El esquema vive solo en las migraciones de goose de ese repositorio |
 
 **Qué funciona hoy (7 oct 2026).** La app ya no es una maqueta: **todo se guarda, se edita y se elimina de verdad**, y cada total se **calcula** a partir de los movimientos (saldos, ahorro total, totales del mes, reportes), con las mismas reglas que tendrá el backend. Lo único que falta es **dónde** viven los datos: hoy están en memoria, sembrados con los [datos de ejemplo](#11-datos-de-ejemplo), y se pierden al cerrar la app. Funciona: iniciar y cerrar sesión, crear/editar/archivar cuentas, categorías y tarjetas, registrar/editar/eliminar ingresos, egresos y transferencias, registrar compras con tarjeta y pagarlas, cambiar monedas y tipo de cambio, los reportes por mes, año y rango, todos los selectores de fecha y las validaciones con su mensaje. Desde el 7 oct 2026 el modo demo cumple además las reglas decididas ese día: tipo de cambio opcional, nombres de categoría sin repetir, editar y eliminar compras pendientes, deshacer un pago al eliminar su egreso y no archivar tarjetas con deuda. Desde el 13 oct 2026 **todas las pantallas de la app son visibles y navegables**: también recuperar la contraseña, eliminar la cuenta y la moneda en Registro, como maqueta funcional sobre el modo demo. **No** funciona todavía: la persistencia real (el API), la paginación de listas y la exportación a PDF. En esas tres pantallas nuevas el modo demo recorre los pasos pero no hace nada real: no se envía ningún correo, no se comprueba ninguna contraseña y la moneda elegida al registrarse no cambia los datos de ejemplo.
 
@@ -279,7 +279,7 @@ A la primera se llega con el enlace **"¿Olvidaste tu contraseña?"**, alineado 
 
 **Sin tipo de cambio configurado** (usuario nuevo): la tarjeta "Ahorro total" muestra el total en la moneda principal, el selector de moneda aparece desactivado y, en lugar de la línea "o US$ … · cambio …", va el enlace **"Configura tu tipo de cambio ›"**, que abre Ajustes.
 
-**Backend:** `GET /home` devuelve en una sola petición el ahorro total en ambas monedas, el tipo de cambio vigente, los totales del mes actual, los últimos movimientos y transferencias, y el resumen de compras pendientes (v1.1).
+**Backend (implementado, plan 08):** `GET /home` devuelve en una sola petición el ahorro total en ambas monedas, el tipo de cambio vigente, los totales del mes actual, los últimos movimientos y transferencias, y el resumen de compras pendientes (v1.1).
 
 ### 7.3 Cuentas
 

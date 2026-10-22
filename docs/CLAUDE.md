@@ -30,7 +30,8 @@ Backend: **API propio** en `atm-orbita-api` (Go + Gin + PostgreSQL), con autenti
   - Planes 05 y 06: Movimientos, transferencias y su lista, `RemoteEntriesRepository`. Con el API, "hoy" es la fecha del teléfono (`AppModule.provideDateProvider`).
   - Plan 07: Reportes e "Ingresos / Gastos · mes" de Inicio, `RemoteReportsRepository` (vuelve a leer cuando cambia un movimiento). Los porcentajes los sigue calculando la app con `percentOf`; dan lo mismo que los del API.
   - Plan 09: Tarjetas de crédito y compras pendientes, `RemoteCreditRepository`. Pagar una compra (plan 10) todavía da un error genérico.
-- Pendiente, plan por plan: Inicio en una petición (08), pagar una compra (10), recuperar contraseña con código de 6 dígitos (11) y eliminar cuenta (12).
+  - Plan 08: Inicio en una sola petición, `HomeRepository` (`RemoteHomeRepository` lee `GET /home`; `DemoHomeRepository` arma lo mismo en modo demo). Cada repositorio remoto avisa a `RemoteChanges` después de escribir, y así Inicio se vuelve a pedir.
+- Pendiente, plan por plan: pagar una compra (10), recuperar contraseña con código de 6 dígitos (11) y eliminar cuenta (12).
 - Navegación: pila propia en `ui/navigation/OrbitaApp.kt` (migrar a Navigation Compose está pendiente).
 
 ## Arquitectura

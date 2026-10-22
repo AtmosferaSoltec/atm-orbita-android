@@ -147,3 +147,27 @@ fun List<CreditPurchase>.debtCurrencies(main: String): List<String> =
 /** Debt in [currency]; currencies are never mixed. */
 fun List<CreditPurchase>.debtIn(currency: String): BigDecimal =
     filter { it.currency == currency }.fold(BigDecimal.ZERO) { acc, purchase -> acc + purchase.amount }
+
+/** The reminder of Inicio about credit card purchases still to be paid. */
+data class CreditReminder(
+    val pendingCount: Int,
+    val nextDueDate: LocalDate,
+    /** Some purchase is due in 3 days or less, or already overdue. */
+    val hasUrgent: Boolean,
+)
+
+/** Everything Inicio shows, worked out by the data source (one request to the API). */
+data class HomeSummary(
+    val fx: FxPair,
+    val displayCurrency: String,
+    /** Savings total per currency: the main one, and the secondary once there is a rate. */
+    val savings: Map<String, BigDecimal>,
+    val includedAccounts: Int,
+    val activeAccounts: Int,
+    /** Totals of the current calendar month in the main currency; transfers do not count. */
+    val monthIncome: BigDecimal,
+    val monthExpense: BigDecimal,
+    val recentEntries: List<Entry>,
+    /** Null when there is nothing pending. */
+    val credit: CreditReminder?,
+)

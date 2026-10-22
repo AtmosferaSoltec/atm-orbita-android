@@ -7,6 +7,7 @@ import com.atmosferast.orbita.data.demo.DemoCategoriesRepository
 import com.atmosferast.orbita.data.demo.DemoCreditRepository
 import com.atmosferast.orbita.data.demo.DemoDateProvider
 import com.atmosferast.orbita.data.demo.DemoEntriesRepository
+import com.atmosferast.orbita.data.demo.DemoHomeRepository
 import com.atmosferast.orbita.data.demo.DemoReportsRepository
 import com.atmosferast.orbita.data.demo.DemoSettingsRepository
 import com.atmosferast.orbita.data.remote.RemoteAccountsRepository
@@ -14,6 +15,7 @@ import com.atmosferast.orbita.data.remote.RemoteAuthRepository
 import com.atmosferast.orbita.data.remote.RemoteCategoriesRepository
 import com.atmosferast.orbita.data.remote.RemoteCreditRepository
 import com.atmosferast.orbita.data.remote.RemoteEntriesRepository
+import com.atmosferast.orbita.data.remote.RemoteHomeRepository
 import com.atmosferast.orbita.data.remote.RemoteReportsRepository
 import com.atmosferast.orbita.data.remote.RemoteSettingsRepository
 import com.atmosferast.orbita.domain.repository.AccountsRepository
@@ -22,6 +24,7 @@ import com.atmosferast.orbita.domain.repository.CategoriesRepository
 import com.atmosferast.orbita.domain.repository.CreditRepository
 import com.atmosferast.orbita.domain.repository.DateProvider
 import com.atmosferast.orbita.domain.repository.EntriesRepository
+import com.atmosferast.orbita.domain.repository.HomeRepository
 import com.atmosferast.orbita.domain.repository.ReportsRepository
 import com.atmosferast.orbita.domain.repository.SettingsRepository
 import dagger.Lazy
@@ -116,6 +119,15 @@ object AppModule {
         demo: Lazy<DemoCreditRepository>,
         remote: Lazy<RemoteCreditRepository>,
     ): CreditRepository = if (config.usesApi) remote.get() else demo.get()
+
+    /** Plan 08 of the API: Inicio in a single request. */
+    @Provides
+    @Singleton
+    fun provideHomeRepository(
+        config: AppConfig,
+        demo: Lazy<DemoHomeRepository>,
+        remote: Lazy<RemoteHomeRepository>,
+    ): HomeRepository = if (config.usesApi) remote.get() else demo.get()
 
     /** Plan 02 of the API: currencies and exchange rate. */
     @Provides
