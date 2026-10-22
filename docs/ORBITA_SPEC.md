@@ -26,15 +26,15 @@ Estados: **Maqueta** = pantalla navegable con datos de ejemplo fijos, sin lógic
 | Módulo | Pantallas | Versión | Estado Android |
 |---|---|---|---|
 | Autenticación | Iniciar sesión, Registro, Recuperar contraseña, Eliminar cuenta | MVP | **Iniciar sesión, Registro y Cerrar sesión: implementado** contra el API (plan 01, 21 oct 2026). Recuperar contraseña (plan 11) y eliminar cuenta (plan 12): maqueta funcional en modo demo |
-| Inicio | Inicio | MVP | Con datos del API: ahorro, últimos movimientos e "Ingresos / Gastos · mes" (planes 04 a 07). Las tarjetas siguen en datos de ejemplo (planes 09 y 10); `GET /home` llega con el plan 08 |
-| Cuentas | Cuentas, Nueva/Editar cuenta | MVP | **Implementado** contra el API (plan 04, 22 oct 2026). Los saldos solo traen el saldo inicial hasta que los movimientos pasen al API (plan 05) |
+| Inicio | Inicio | MVP | Con datos del API: ahorro, últimos movimientos e "Ingresos / Gastos · mes" (planes 04 a 07) y el aviso de tarjetas (plan 09); `GET /home` llega con el plan 08 |
+| Cuentas | Cuentas, Nueva/Editar cuenta | MVP | **Implementado** contra el API (plan 04, 22 oct 2026); los saldos incluyen movimientos y transferencias (planes 05 y 06) |
 | Movimientos | Nuevo/Editar movimiento, Lista de movimientos | MVP | **Implementado** contra el API (planes 05 y 06, 22 oct 2026): ingresos, egresos y transferencias |
-| Transferencias | Transferir, Editar transferencia | MVP | Funcional (datos de ejemplo) |
+| Transferencias | Transferir, Editar transferencia | MVP | **Implementado** contra el API (plan 06, 22 oct 2026) |
 | Reportes | Reportes | MVP | **Implementado** contra el API (plan 07, 22 oct 2026). El PDF sigue pendiente |
 | Categorías | Categorías, Nueva/Editar categoría | MVP | **Implementado** contra el API (plan 03, 22 oct 2026) |
 | Ajustes | Ajustes | MVP | **Monedas, tipo de cambio y moneda de visualización: implementado** contra el API (plan 02, 21 oct 2026). Categorías: implementado (plan 03) |
-| Tarjeta de crédito | Crédito, Nueva/Editar tarjeta, Marcar como pagada | v1.1 | Funcional (datos de ejemplo) |
-| Backend (API propio) | — | MVP | En construcción, plan por plan (`atm-orbita-api/docs/plans/README.md`). Hechos: 00 (fundaciones), 01 (sesión), 02 (perfil y tipo de cambio), 03 (categorías), 04 (cuentas), 05 (movimientos), 06 (transferencias) y 07 (reportes). El esquema vive solo en las migraciones de goose de ese repositorio |
+| Tarjeta de crédito | Crédito, Nueva/Editar tarjeta, Marcar como pagada | v1.1 | Tarjetas y compras pendientes: **implementado** contra el API (plan 09, 22 oct 2026). Marcar como pagada: pendiente (plan 10) |
+| Backend (API propio) | — | MVP | En construcción, plan por plan (`atm-orbita-api/docs/plans/README.md`). Hechos: 00 (fundaciones), 01 (sesión), 02 (perfil y tipo de cambio), 03 (categorías), 04 (cuentas), 05 (movimientos), 06 (transferencias), 07 (reportes) y 09 (tarjetas y compras pendientes). El esquema vive solo en las migraciones de goose de ese repositorio |
 
 **Qué funciona hoy (7 oct 2026).** La app ya no es una maqueta: **todo se guarda, se edita y se elimina de verdad**, y cada total se **calcula** a partir de los movimientos (saldos, ahorro total, totales del mes, reportes), con las mismas reglas que tendrá el backend. Lo único que falta es **dónde** viven los datos: hoy están en memoria, sembrados con los [datos de ejemplo](#11-datos-de-ejemplo), y se pierden al cerrar la app. Funciona: iniciar y cerrar sesión, crear/editar/archivar cuentas, categorías y tarjetas, registrar/editar/eliminar ingresos, egresos y transferencias, registrar compras con tarjeta y pagarlas, cambiar monedas y tipo de cambio, los reportes por mes, año y rango, todos los selectores de fecha y las validaciones con su mensaje. Desde el 7 oct 2026 el modo demo cumple además las reglas decididas ese día: tipo de cambio opcional, nombres de categoría sin repetir, editar y eliminar compras pendientes, deshacer un pago al eliminar su egreso y no archivar tarjetas con deuda. Desde el 13 oct 2026 **todas las pantallas de la app son visibles y navegables**: también recuperar la contraseña, eliminar la cuenta y la moneda en Registro, como maqueta funcional sobre el modo demo. **No** funciona todavía: la persistencia real (el API), la paginación de listas y la exportación a PDF. En esas tres pantallas nuevas el modo demo recorre los pasos pero no hace nada real: no se envía ningún correo, no se comprueba ninguna contraseña y la moneda elegida al registrarse no cambia los datos de ejemplo.
 
@@ -471,7 +471,7 @@ Funciona **igual que Cuentas, pero para deudas**: un total arriba y, debajo, la 
 
 **Sin tipo de cambio configurado:** en Nueva/Editar tarjeta, el desplegable de Moneda queda fijo en la moneda principal.
 
-**Backend:** `GET /credit-cards` (tarjetas con su deuda por moneda), `POST` y `PATCH /credit-cards`, `POST /credit-cards/{id}/archive`; `GET /credit-purchases?status=pending`, `POST`, `PATCH` y `DELETE /credit-purchases/{id}`. El esquema ya tiene la tabla de tarjetas y cada compra apunta a la suya.
+**Backend (implementado, plan 09; pagar es el plan 10):** `GET /credit-cards` (tarjetas con su deuda por moneda), `POST` y `PATCH /credit-cards`, `POST /credit-cards/{id}/archive`; `GET /credit-purchases?status=pending`, `POST`, `PATCH` y `DELETE /credit-purchases/{id}`. Cada compra apunta a su tarjeta; la fecha de compra la pone el API (hoy, en la zona del perfil).
 
 ### 7.10 Marcar como pagada (v1.1)
 

@@ -1,21 +1,18 @@
 package com.atmosferast.orbita.di
 
 import com.atmosferast.orbita.BuildConfig
-import com.atmosferast.orbita.data.demo.DemoAccountMirror
 import com.atmosferast.orbita.data.demo.DemoAccountsRepository
 import com.atmosferast.orbita.data.demo.DemoAuthRepository
 import com.atmosferast.orbita.data.demo.DemoCategoriesRepository
-import com.atmosferast.orbita.data.demo.DemoCategoryMirror
 import com.atmosferast.orbita.data.demo.DemoCreditRepository
 import com.atmosferast.orbita.data.demo.DemoDateProvider
-import com.atmosferast.orbita.data.demo.DemoEntriesMix
 import com.atmosferast.orbita.data.demo.DemoEntriesRepository
 import com.atmosferast.orbita.data.demo.DemoReportsRepository
 import com.atmosferast.orbita.data.demo.DemoSettingsRepository
-import com.atmosferast.orbita.data.demo.DemoStore
 import com.atmosferast.orbita.data.remote.RemoteAccountsRepository
 import com.atmosferast.orbita.data.remote.RemoteAuthRepository
 import com.atmosferast.orbita.data.remote.RemoteCategoriesRepository
+import com.atmosferast.orbita.data.remote.RemoteCreditRepository
 import com.atmosferast.orbita.data.remote.RemoteEntriesRepository
 import com.atmosferast.orbita.data.remote.RemoteReportsRepository
 import com.atmosferast.orbita.data.remote.RemoteSettingsRepository
@@ -75,37 +72,32 @@ object AppModule {
     fun provideDateProvider(config: AppConfig, demo: DemoDateProvider): DateProvider =
         if (config.usesApi) DateProvider { LocalDate.now() } else demo
 
-    /** Plan 04 of the API: accounts, mirrored into the demo store while movements live there. */
+    /** Plan 04 of the API: accounts with the balances the API computes. */
     @Provides
     @Singleton
     fun provideAccountsRepository(
         config: AppConfig,
         demo: Lazy<DemoAccountsRepository>,
         remote: Lazy<RemoteAccountsRepository>,
-        store: DemoStore,
-    ): AccountsRepository = if (config.usesApi) DemoAccountMirror(remote.get(), store) else demo.get()
+    ): AccountsRepository = if (config.usesApi) remote.get() else demo.get()
 
-    /** Plan 03 of the API: categories, mirrored into the demo store while movements live there. */
+    /** Plan 03 of the API: categories. */
     @Provides
     @Singleton
     fun provideCategoriesRepository(
         config: AppConfig,
         demo: Lazy<DemoCategoriesRepository>,
         remote: Lazy<RemoteCategoriesRepository>,
-        store: DemoStore,
-    ): CategoriesRepository = if (config.usesApi) DemoCategoryMirror(remote.get(), store) else demo.get()
+    ): CategoriesRepository = if (config.usesApi) remote.get() else demo.get()
 
-    /** Plan 05 of the API: incomes and expenses; transfers stay demo until plan 06. */
+    /** Plans 05 and 06 of the API: incomes, expenses and transfers. */
     @Provides
     @Singleton
     fun provideEntriesRepository(
         config: AppConfig,
         demo: Lazy<DemoEntriesRepository>,
         remote: Lazy<RemoteEntriesRepository>,
-        accounts: AccountsRepository,
-        store: DemoStore,
-    ): EntriesRepository =
-        if (config.usesApi) DemoEntriesMix(remote.get(), demo.get(), accounts, store) else demo.get()
+    ): EntriesRepository = if (config.usesApi) remote.get() else demo.get()
 
     /** Plan 07 of the API: the report of a period, per currency. */
     @Provides
@@ -116,8 +108,14 @@ object AppModule {
         remote: Lazy<RemoteReportsRepository>,
     ): ReportsRepository = if (config.usesApi) remote.get() else demo.get()
 
+    /** Plan 09 of the API: cards and pending purchases (paying them is plan 10). */
     @Provides
-    fun provideCreditRepository(demo: DemoCreditRepository): CreditRepository = demo
+    @Singleton
+    fun provideCreditRepository(
+        config: AppConfig,
+        demo: Lazy<DemoCreditRepository>,
+        remote: Lazy<RemoteCreditRepository>,
+    ): CreditRepository = if (config.usesApi) remote.get() else demo.get()
 
     /** Plan 02 of the API: currencies and exchange rate. */
     @Provides

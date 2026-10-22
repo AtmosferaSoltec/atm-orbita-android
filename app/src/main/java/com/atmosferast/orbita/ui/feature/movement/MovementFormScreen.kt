@@ -133,7 +133,12 @@ fun MovementFormScreen(
     var date by remember { mutableStateOf(editing?.date) }
     var pickingDate by remember { mutableStateOf(false) }
     var credit by remember { mutableStateOf(initialCredit || editingPurchase != null) }
-    var creditCard by remember { mutableStateOf(editingPurchase?.card ?: creditCards.firstOrNull()) }
+    var chosenCard by remember { mutableStateOf(editingPurchase?.card ?: creditCards.firstOrNull()) }
+    // The list can arrive (or change) after the form opens: a card that is no longer in it, like
+    // one just archived, falls back to the first one. The card of an edited purchase always stays.
+    val creditCard = chosenCard?.takeIf { card ->
+        card.id == editingPurchase?.card?.id || creditCards.any { it.id == card.id }
+    } ?: creditCards.firstOrNull()
     var dueDate by remember {
         mutableStateOf(editingPurchase?.dueDate ?: today.plusDays(DEFAULT_DAYS_TO_PAY))
     }
@@ -405,7 +410,7 @@ fun MovementFormScreen(
                         DropdownField(
                             options = creditCards,
                             selected = selectedCard,
-                            onSelect = { creditCard = it },
+                            onSelect = { chosenCard = it },
                             label = { it.name },
                             detail = { currencySymbol(it.currency) },
                             leading = {
