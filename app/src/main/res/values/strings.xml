@@ -151,7 +151,7 @@
     <string name="account_new_title">Nueva cuenta</string>
     <string name="account_edit_title">Editar cuenta</string>
     <string name="account_name_placeholder">Ej. Débito principal</string>
-    <string name="account_currency_locked">La moneda no se puede cambiar porque la cuenta ya tiene movimientos.</string>
+    <string name="account_currency_locked">La moneda de una cuenta no se puede cambiar.</string>
     <string name="account_initial_balance">Saldo inicial (opcional)</string>
     <string name="account_save">Guardar cuenta</string>
     <string name="account_archive">Archivar cuenta</string>

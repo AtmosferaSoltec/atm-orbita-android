@@ -299,7 +299,7 @@ A la primera se llega con el enlace **"¿Olvidaste tu contraseña?"**, alineado 
 |---|---|---|
 | Nombre | obligatorio, 1–60 caracteres | editable |
 | Tipo | chips Efectivo / Débito / Ahorro / Otra (por defecto Débito) | editable |
-| Moneda | **desplegable** con las monedas admitidas (ver 7.12); por defecto, la **moneda predeterminada** del usuario | **bloqueada**, con el aviso "La moneda no se puede cambiar porque la cuenta ya tiene movimientos." |
+| Moneda | **desplegable** con las monedas admitidas (ver 7.12); por defecto, la **moneda predeterminada** del usuario | **bloqueada**, con el aviso "La moneda de una cuenta no se puede cambiar." |
 | Saldo inicial | opcional, ≥ 0, con el símbolo de la moneda elegida | no se muestra |
 | Contar en el total de ahorros | interruptor, activado | editable |
 
