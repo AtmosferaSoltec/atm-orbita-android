@@ -12,6 +12,7 @@ import io.ktor.client.request.request
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpStatusCode
+import java.util.concurrent.CopyOnWriteArrayList
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,18 +43,30 @@ class ApiSession @Inject constructor(
 
     private val refreshing = Mutex()
 
+    private val changeListeners = CopyOnWriteArrayList<() -> Unit>()
+
     internal val httpClient: HttpClient get() = client
+
+    /**
+     * Called whenever the session starts or ends. Repositories that keep data in memory clear
+     * it here, so the next person to sign in never sees the previous one's data.
+     */
+    internal fun onSessionChange(listener: () -> Unit) {
+        changeListeners += listener
+    }
 
     /** After signing in or up: the API's tokens for [email]. */
     internal fun start(email: String, received: TokensDto) {
         tokens.accessToken = received.accessToken
         tokens.save(StoredSession(email, received.refreshToken))
+        changeListeners.forEach { it() }
         state.value = SessionState.SignedIn(email)
     }
 
     /** Forgets the session on this phone. Always works, also offline. */
     internal fun end() {
         tokens.clear()
+        changeListeners.forEach { it() }
         state.value = SessionState.SignedOut
     }
 
