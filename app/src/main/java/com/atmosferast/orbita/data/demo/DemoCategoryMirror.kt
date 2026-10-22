@@ -6,10 +6,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onEach
 
 /**
- * Temporary, until movements move to the API (plan 05 of atm-orbita-api): the categories come
- * from the API but movements and purchases are still demo data, and the demo store must know
- * every category a movement points to. Each list read from [remote] is copied into [store]; the
- * demo's own categories stay there archived, so the sample movements keep theirs.
+ * Temporary, until credit card purchases and payments move to the API (plans 09 and 10 of
+ * atm-orbita-api): the categories come from the API but those are still demo data, and the demo
+ * store must know every category they point to. Each list read from [remote] is copied into
+ * [store]; the demo's own categories stay there archived, so the sample entries keep theirs.
  */
 class DemoCategoryMirror(
     private val remote: CategoriesRepository,

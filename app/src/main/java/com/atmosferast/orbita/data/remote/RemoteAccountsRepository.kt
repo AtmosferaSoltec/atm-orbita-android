@@ -70,6 +70,11 @@ class RemoteAccountsRepository @Inject constructor(
         cache.update { list -> list?.map { if (it.id == id) updated else it } }
     }
 
+    /** Reads the balances again after a movement changed them, if the list was ever read. */
+    internal suspend fun reload() {
+        if (cache.value != null) load()
+    }
+
     private suspend fun load() {
         val response = api.authorized { url("accounts") }.requireSuccess()
         cache.value = response.body<DataEnvelope<AccountListDto>>().data.accounts.map { it.toAccount() }

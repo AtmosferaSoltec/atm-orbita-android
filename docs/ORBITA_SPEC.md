@@ -28,13 +28,13 @@ Estados: **Maqueta** = pantalla navegable con datos de ejemplo fijos, sin lógic
 | Autenticación | Iniciar sesión, Registro, Recuperar contraseña, Eliminar cuenta | MVP | **Iniciar sesión, Registro y Cerrar sesión: implementado** contra el API (plan 01, 21 oct 2026). Recuperar contraseña (plan 11) y eliminar cuenta (plan 12): maqueta funcional en modo demo |
 | Inicio | Inicio | MVP | Funcional (datos de ejemplo) |
 | Cuentas | Cuentas, Nueva/Editar cuenta | MVP | **Implementado** contra el API (plan 04, 22 oct 2026). Los saldos solo traen el saldo inicial hasta que los movimientos pasen al API (plan 05) |
-| Movimientos | Nuevo/Editar movimiento, Lista de movimientos | MVP | Funcional (datos de ejemplo) |
+| Movimientos | Nuevo/Editar movimiento, Lista de movimientos | MVP | **Implementado** contra el API (plan 05, 22 oct 2026): ingresos y egresos. Las transferencias siguen en datos de ejemplo hasta el plan 06 |
 | Transferencias | Transferir, Editar transferencia | MVP | Funcional (datos de ejemplo) |
 | Reportes | Reportes | MVP | Funcional (datos de ejemplo) |
 | Categorías | Categorías, Nueva/Editar categoría | MVP | **Implementado** contra el API (plan 03, 22 oct 2026) |
 | Ajustes | Ajustes | MVP | **Monedas, tipo de cambio y moneda de visualización: implementado** contra el API (plan 02, 21 oct 2026). Categorías: implementado (plan 03) |
 | Tarjeta de crédito | Crédito, Nueva/Editar tarjeta, Marcar como pagada | v1.1 | Funcional (datos de ejemplo) |
-| Backend (API propio) | — | MVP | En construcción, plan por plan (`atm-orbita-api/docs/plans/README.md`). Hechos: 00 (fundaciones), 01 (sesión), 02 (perfil y tipo de cambio), 03 (categorías) y 04 (cuentas). El esquema vive solo en las migraciones de goose de ese repositorio |
+| Backend (API propio) | — | MVP | En construcción, plan por plan (`atm-orbita-api/docs/plans/README.md`). Hechos: 00 (fundaciones), 01 (sesión), 02 (perfil y tipo de cambio), 03 (categorías), 04 (cuentas) y 05 (movimientos). El esquema vive solo en las migraciones de goose de ese repositorio |
 
 **Qué funciona hoy (7 oct 2026).** La app ya no es una maqueta: **todo se guarda, se edita y se elimina de verdad**, y cada total se **calcula** a partir de los movimientos (saldos, ahorro total, totales del mes, reportes), con las mismas reglas que tendrá el backend. Lo único que falta es **dónde** viven los datos: hoy están en memoria, sembrados con los [datos de ejemplo](#11-datos-de-ejemplo), y se pierden al cerrar la app. Funciona: iniciar y cerrar sesión, crear/editar/archivar cuentas, categorías y tarjetas, registrar/editar/eliminar ingresos, egresos y transferencias, registrar compras con tarjeta y pagarlas, cambiar monedas y tipo de cambio, los reportes por mes, año y rango, todos los selectores de fecha y las validaciones con su mensaje. Desde el 7 oct 2026 el modo demo cumple además las reglas decididas ese día: tipo de cambio opcional, nombres de categoría sin repetir, editar y eliminar compras pendientes, deshacer un pago al eliminar su egreso y no archivar tarjetas con deuda. Desde el 13 oct 2026 **todas las pantallas de la app son visibles y navegables**: también recuperar la contraseña, eliminar la cuenta y la moneda en Registro, como maqueta funcional sobre el modo demo. **No** funciona todavía: la persistencia real (el API), la paginación de listas y la exportación a PDF. En esas tres pantallas nuevas el modo demo recorre los pasos pero no hace nada real: no se envía ningún correo, no se comprueba ninguna contraseña y la moneda elegida al registrarse no cambia los datos de ejemplo.
 
@@ -352,7 +352,7 @@ Botón al pie: "Guardar cuenta" / "Guardar cambios". En Editar hay además **"Ar
 
 **Validaciones:** monto > 0 (el teclado ya garantiza 2 decimales); cuenta obligatoria (salvo crédito); categoría obligatoria; descripción ≤ 500; fecha límite ≥ fecha de compra.
 
-**Backend:** `POST /transactions`, `PATCH /transactions/{id}` y `DELETE /transactions/{id}` (borrado lógico); con crédito, `POST /credit-purchases` (compra pendiente). El API rechaza una categoría de tipo distinto al del movimiento. Al crear, la app no envía fecha: **el API pone el día de hoy según la zona horaria del perfil** y lo guarda como fecha; aparte guarda el instante exacto de creación, que desempata el orden dentro del día. **Decidido (7 oct 2026):** el movimiento guarda solo la fecha; la hora no se edita.
+**Backend (implementado, plan 05):** `POST /transactions`, `PATCH /transactions/{id}` y `DELETE /transactions/{id}` (borrado lógico); con crédito, `POST /credit-purchases` (compra pendiente). El API rechaza una categoría de tipo distinto al del movimiento. Al crear, la app no envía fecha: **el API pone el día de hoy según la zona horaria del perfil** y lo guarda como fecha; aparte guarda el instante exacto de creación, que desempata el orden dentro del día. **Decidido (7 oct 2026):** el movimiento guarda solo la fecha; la hora no se edita.
 
 ### 7.6 Transferir / Editar transferencia
 
@@ -404,7 +404,7 @@ Es un **vistazo a lo reciente**, un mes a la vez; el historial más antiguo se c
 
 **Estados:** mes sin movimientos → "No hay movimientos en este mes" · sin resultados con búsqueda o cuenta activas → "No hay movimientos con estos filtros".
 
-**Backend:** `GET /entries?from&to` con el primer y el último día del mes visible. El API devuelve movimientos y transferencias ya mezclados y ordenados por fecha y creación descendentes, por páginas. Admite además filtrar por cuenta (`accountId`) y buscar por texto (`q`) en el servidor.
+**Backend (implementado, plan 05; las transferencias se suman en el plan 06):** `GET /entries?from&to`; la app pide el periodo que muestra (5 meses) y lee todas sus páginas. El API devuelve movimientos y transferencias ya mezclados y ordenados por fecha y creación descendentes, por páginas. Admite además filtrar por cuenta (`accountId`) y buscar por texto (`q`) en el servidor.
 
 ### 7.8 Reportes
 

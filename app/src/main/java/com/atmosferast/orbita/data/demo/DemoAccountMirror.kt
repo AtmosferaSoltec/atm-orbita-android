@@ -7,13 +7,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 
 /**
- * Temporary, until movements move to the API (plan 05 of atm-orbita-api), like
- * [DemoCategoryMirror]: the accounts come from the API but movements, transfers and purchase
- * payments are still demo data, and the demo store must know every account they point to.
+ * Temporary, until transfers and card payments move to the API (plans 06 and 10 of
+ * atm-orbita-api), like [DemoCategoryMirror]: the accounts come from the API but transfers and
+ * card payments are still demo data, and the demo store must know every account they point to.
  *
  * Each list read from [remote] is copied into [store] with the API balance as its starting
- * point, and the balances shown add the demo movements of this session on top. The demo's own
- * accounts stay there archived, so the sample movements keep theirs.
+ * point, and the balances shown add the demo entries of this session on top. The demo's own
+ * accounts stay there archived, so the sample entries keep theirs.
  */
 class DemoAccountMirror(
     private val remote: AccountsRepository,

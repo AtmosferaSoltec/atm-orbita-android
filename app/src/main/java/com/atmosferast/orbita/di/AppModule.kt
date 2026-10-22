@@ -8,6 +8,7 @@ import com.atmosferast.orbita.data.demo.DemoCategoriesRepository
 import com.atmosferast.orbita.data.demo.DemoCategoryMirror
 import com.atmosferast.orbita.data.demo.DemoCreditRepository
 import com.atmosferast.orbita.data.demo.DemoDateProvider
+import com.atmosferast.orbita.data.demo.DemoEntriesMix
 import com.atmosferast.orbita.data.demo.DemoEntriesRepository
 import com.atmosferast.orbita.data.demo.DemoReportsRepository
 import com.atmosferast.orbita.data.demo.DemoSettingsRepository
@@ -15,6 +16,7 @@ import com.atmosferast.orbita.data.demo.DemoStore
 import com.atmosferast.orbita.data.remote.RemoteAccountsRepository
 import com.atmosferast.orbita.data.remote.RemoteAuthRepository
 import com.atmosferast.orbita.data.remote.RemoteCategoriesRepository
+import com.atmosferast.orbita.data.remote.RemoteEntriesRepository
 import com.atmosferast.orbita.data.remote.RemoteSettingsRepository
 import com.atmosferast.orbita.domain.repository.AccountsRepository
 import com.atmosferast.orbita.domain.repository.AuthRepository
@@ -29,6 +31,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import java.time.LocalDate
 import javax.inject.Singleton
 
 /**
@@ -63,9 +66,13 @@ object AppModule {
         remote: Lazy<RemoteAuthRepository>,
     ): AuthRepository = if (config.usesApi) remote.get() else demo.get()
 
-    /** The demo data is dated: while it is in use, so is "today". */
+    /**
+     * The demo data is dated: while it is in use, so is "today". With the API (movements are real
+     * since plan 05) it is the phone's date, which is the zone the profile was created with.
+     */
     @Provides
-    fun provideDateProvider(demo: DemoDateProvider): DateProvider = demo
+    fun provideDateProvider(config: AppConfig, demo: DemoDateProvider): DateProvider =
+        if (config.usesApi) DateProvider { LocalDate.now() } else demo
 
     /** Plan 04 of the API: accounts, mirrored into the demo store while movements live there. */
     @Provides
@@ -87,8 +94,17 @@ object AppModule {
         store: DemoStore,
     ): CategoriesRepository = if (config.usesApi) DemoCategoryMirror(remote.get(), store) else demo.get()
 
+    /** Plan 05 of the API: incomes and expenses; transfers stay demo until plan 06. */
     @Provides
-    fun provideEntriesRepository(demo: DemoEntriesRepository): EntriesRepository = demo
+    @Singleton
+    fun provideEntriesRepository(
+        config: AppConfig,
+        demo: Lazy<DemoEntriesRepository>,
+        remote: Lazy<RemoteEntriesRepository>,
+        accounts: AccountsRepository,
+        store: DemoStore,
+    ): EntriesRepository =
+        if (config.usesApi) DemoEntriesMix(remote.get(), demo.get(), accounts, store) else demo.get()
 
     @Provides
     fun provideReportsRepository(demo: DemoReportsRepository): ReportsRepository = demo
