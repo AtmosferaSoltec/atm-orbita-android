@@ -13,7 +13,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,6 +63,14 @@ import java.math.RoundingMode
 
 private enum class FxMode { MANUAL, AUTO }
 
+/** How long after the last key a typed exchange rate is saved. */
+private const val RATE_SAVE_DELAY_MS = 700L
+
+/** Same currencies and the same rate, whatever its scale ("3.2" and "3.200000"). */
+private fun FxPair.sameAs(other: FxPair): Boolean =
+    main == other.main && secondary == other.secondary &&
+        rate != null && other.rate != null && rate.compareTo(other.rate) == 0
+
 @Composable
 fun SettingsScreen(
     fx: FxPair,
@@ -94,6 +106,22 @@ fun SettingsScreen(
     fun choosePair(next: FxPair) {
         pair = next
         if (next.rate != null) onFxChange(next)
+    }
+
+    // A typed rate is saved once the user stops typing, not on every key: each save is a new
+    // row of the rate's history, and "3.20" must not become "3", "3.2" and "3.20".
+    val pending = parsedRate?.let { pair.copy(rate = it) }?.takeIf { !it.sameAs(fx) }
+    val latestPending by rememberUpdatedState(pending)
+    val latestOnFxChange by rememberUpdatedState(onFxChange)
+    LaunchedEffect(pending) {
+        if (pending != null) {
+            delay(RATE_SAVE_DELAY_MS)
+            onFxChange(pending)
+        }
+    }
+    // Leaving the screen right after typing still saves it.
+    DisposableEffect(Unit) {
+        onDispose { latestPending?.let(latestOnFxChange) }
     }
 
     ScreenScaffold(
@@ -179,13 +207,8 @@ fun SettingsScreen(
                 Spacer(Modifier.width(12.dp))
                 OrbitaTextField(
                     value = rate,
-                    onValueChange = { text ->
-                        rate = text
-                        // Only a valid rate (> 0) is saved, together with the pair on screen.
-                        text.replace(',', '.').toBigDecimalOrNull()
-                            ?.takeIf { it.signum() > 0 }
-                            ?.let { onFxChange(pair.copy(rate = it)) }
-                    },
+                    // Only a valid rate (> 0) is saved, together with the pair on screen.
+                    onValueChange = { rate = it },
                     placeholder = "0.00",
                     keyboardType = KeyboardType.Decimal,
                     modifier = Modifier.width(120.dp),
