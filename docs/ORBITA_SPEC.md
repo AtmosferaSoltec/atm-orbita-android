@@ -108,6 +108,7 @@ Al tocar el botón de guardar, el formulario se revisa **en este orden** y se mu
 | Correo sin formato válido | "Escribe un correo válido." |
 | Contraseña de menos de 8 caracteres | "La contraseña debe tener al menos 8 caracteres." |
 | Contraseña de más de 128 caracteres (límite del API) | "La contraseña puede tener hasta 128 caracteres." |
+| Contraseña nueva y su repetición distintas (recuperar contraseña) | "Las contraseñas no coinciden." |
 | Correo o contraseña incorrectos | "Correo o contraseña incorrectos." |
 | Registro con un correo que ya existe | "Ese correo ya tiene una cuenta. Inicia sesión." |
 | Registro cuando se exige confirmar el correo | "Revisa tu correo y confirma tu cuenta para poder ingresar." |
@@ -243,7 +244,7 @@ Cada pantalla indica: qué muestra, cómo se comporta, validaciones, estados y q
 |---|---|---|---|
 | Pedir el código | "Recupera tu contraseña" / "Escribe tu correo y te enviaremos un código para crear una contraseña nueva." | Campo Correo | Botón "Enviar código"; enlace "Volver a iniciar sesión" |
 | Escribir el código | "Escribe el código" / "Si *correo* tiene una cuenta, te enviamos un código de 6 dígitos. Vence en 15 minutos." | Campo "Código" (solo dígitos, máximo 6) y la ayuda "¿No llega? Revisa el correo no deseado o pide otro código." En modo demo la ayuda dice "Modo demo: no llega ningún correo; sirve cualquier código de 6 dígitos." | Botón "Continuar"; enlaces "Pedir otro código" (vuelve al primer paso) y "Volver a iniciar sesión" |
-| Contraseña nueva | "Crea una contraseña nueva" / "Al guardarla se cerrará la sesión en todos tus dispositivos." | Campo "Contraseña nueva" con el ojo, y "Mínimo 8 caracteres." | Botón "Guardar contraseña"; enlace "Volver a iniciar sesión" |
+| Contraseña nueva | "Crea una contraseña nueva" / "Al guardarla se cerrará la sesión en todos tus dispositivos." | Campo "Contraseña nueva" con el ojo, y "Mínimo 8 caracteres."; debajo, "Repite la contraseña nueva" (también con el ojo). Si no coinciden: "Las contraseñas no coinciden." y no se envía nada | Botón "Guardar contraseña"; enlace "Volver a iniciar sesión" |
 
 A la primera se llega con el enlace **"¿Olvidaste tu contraseña?"**, alineado a la derecha bajo el campo Contraseña de Iniciar sesión. El segundo paso se muestra siempre, exista o no el correo: la app nunca dice qué correos tienen cuenta. "Continuar" comprueba el código sin gastarlo y lleva a la contraseña nueva; un código incorrecto, usado o vencido muestra "El código no es válido o ya venció. Pide uno nuevo." El código **vence a los 15 minutos**, admite **5 intentos** y se pueden pedir **hasta 3 por día**; pedir otro deja sin efecto el anterior. Al guardar la contraseña nueva se cierran todas las sesiones abiertas, llega un correo "Tu contraseña de Orbita se cambió", y se vuelve a Iniciar sesión, que muestra sobre el botón, con un icono de check verde, "Tu contraseña se cambió. Inicia sesión con la nueva." Los errores van en el formulario, como en Iniciar sesión. El botón atrás del sistema lleva siempre a Iniciar sesión. Endpoints: `POST /auth/forgot-password`, `POST /auth/verify-reset-code` y `POST /auth/reset-password`.
 

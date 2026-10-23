@@ -62,6 +62,7 @@
     <string name="error_email_invalid">Escribe un correo válido.</string>
     <string name="error_password_too_short">La contraseña debe tener al menos 8 caracteres.</string>
     <string name="error_password_too_long">La contraseña puede tener hasta 128 caracteres.</string>
+    <string name="error_passwords_dont_match">Las contraseñas no coinciden.</string>
     <string name="error_session_expired">Tu sesión terminó. Inicia sesión de nuevo.</string>
     <string name="error_too_many_requests">Demasiados intentos. Espera un momento.</string>
     <string name="error_reset_code_invalid">El código no es válido o ya venció. Pide uno nuevo.</string>
@@ -121,6 +122,7 @@
     <string name="auth_reset_title">Crea una contraseña nueva</string>
     <string name="auth_reset_subtitle">Al guardarla se cerrará la sesión en todos tus dispositivos.</string>
     <string name="auth_reset_field">Contraseña nueva</string>
+    <string name="auth_reset_confirm_field">Repite la contraseña nueva</string>
     <string name="auth_reset_action">Guardar contraseña</string>
     <string name="auth_reset_done">Tu contraseña se cambió. Inicia sesión con la nueva.</string>
     <string name="auth_back_to_login">Volver a iniciar sesión</string>

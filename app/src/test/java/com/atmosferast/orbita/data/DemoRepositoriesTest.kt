@@ -9,6 +9,7 @@ import com.atmosferast.orbita.domain.model.Credentials
 import com.atmosferast.orbita.domain.model.SessionState
 import com.atmosferast.orbita.domain.model.validateEmail
 import com.atmosferast.orbita.domain.model.validateNewPassword
+import com.atmosferast.orbita.domain.model.validatePasswordChange
 import java.util.Locale
 import com.atmosferast.orbita.data.demo.DemoCategoriesRepository
 import com.atmosferast.orbita.data.demo.DemoCreditRepository
@@ -347,6 +348,12 @@ class DemoRepositoriesTest {
         assertEquals(ValidationError.EMAIL_INVALID, validateEmail(""))
         assertNull(validateNewPassword("12345678"))
         assertEquals(ValidationError.PASSWORD_TOO_SHORT, validateNewPassword("1234567"))
+        assertNull(validatePasswordChange("12345678", "12345678"))
+        assertEquals(
+            ValidationError.PASSWORDS_DONT_MATCH,
+            validatePasswordChange("12345678", "12345679"),
+        )
+        assertEquals(ValidationError.PASSWORD_TOO_SHORT, validatePasswordChange("1234567", "1234567"))
         // Signing up checks both, the email first.
         assertEquals(ValidationError.EMAIL_INVALID, Credentials("x", "1").validate())
         assertEquals(ValidationError.PASSWORD_TOO_SHORT, Credentials("a@b.co", "1").validate())

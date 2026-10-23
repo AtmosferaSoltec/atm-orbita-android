@@ -213,8 +213,8 @@ private fun AuthFlow(app: AppViewModel) {
         )
 
         AuthStep.NEW_PASSWORD -> NewPasswordScreen(
-            onSubmit = { password ->
-                app.resetPassword(recoveryEmail, recoveryCode, password) {
+            onSubmit = { password, confirmation ->
+                app.resetPassword(recoveryEmail, recoveryCode, password, confirmation) {
                     recoveryCode = ""
                     passwordChanged = true
                     go(AuthStep.LOGIN)

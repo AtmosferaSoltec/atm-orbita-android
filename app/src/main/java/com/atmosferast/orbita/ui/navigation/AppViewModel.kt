@@ -7,7 +7,7 @@ import com.atmosferast.orbita.domain.model.Credentials
 import com.atmosferast.orbita.domain.model.SessionState
 import com.atmosferast.orbita.domain.model.ValidationError
 import com.atmosferast.orbita.domain.model.validateEmail
-import com.atmosferast.orbita.domain.model.validateNewPassword
+import com.atmosferast.orbita.domain.model.validatePasswordChange
 import com.atmosferast.orbita.domain.model.validateResetCode
 import com.atmosferast.orbita.domain.repository.AuthRepository
 import com.atmosferast.orbita.domain.repository.DataException
@@ -75,8 +75,14 @@ class AppViewModel @Inject constructor(
         authAction(validateResetCode(code), onValid) { auth.verifyResetCode(email, code.trim()) }
 
     /** Sets the new password with the code; the user signs in again afterwards. */
-    fun resetPassword(email: String, code: String, password: String, onDone: () -> Unit) =
-        authAction(validateNewPassword(password), onDone) {
+    fun resetPassword(
+        email: String,
+        code: String,
+        password: String,
+        confirmation: String,
+        onDone: () -> Unit,
+    ) =
+        authAction(validatePasswordChange(password, confirmation), onDone) {
             auth.resetPassword(email, code.trim(), password)
         }
 

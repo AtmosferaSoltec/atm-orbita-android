@@ -22,6 +22,9 @@ enum class ValidationError {
     PASSWORD_TOO_SHORT,
     PASSWORD_TOO_LONG,
 
+    /** The new password and its repetition differ. */
+    PASSWORDS_DONT_MATCH,
+
     /** The code to recover the password is not 6 digits. */
     CODE_INVALID,
 
@@ -174,6 +177,11 @@ fun validateNewPassword(password: String): ValidationError? {
         else -> null
     }
 }
+
+/** A new password typed twice, so a typo does not lock the user out. */
+fun validatePasswordChange(password: String, confirmation: String): ValidationError? =
+    validateNewPassword(password)
+        ?: if (password == confirmation) null else ValidationError.PASSWORDS_DONT_MATCH
 
 data class Credentials(val email: String, val password: String) {
     fun validate(): ValidationError? = validateEmail(email) ?: validateNewPassword(password)

@@ -24,6 +24,7 @@ val UiMessage.textRes: Int
             ValidationError.EMAIL_INVALID -> R.string.error_email_invalid
             ValidationError.PASSWORD_TOO_SHORT -> R.string.error_password_too_short
             ValidationError.PASSWORD_TOO_LONG -> R.string.error_password_too_long
+            ValidationError.PASSWORDS_DONT_MATCH -> R.string.error_passwords_dont_match
             ValidationError.PASSWORD_REQUIRED -> R.string.error_password_required
             ValidationError.CODE_INVALID -> R.string.error_code_invalid
         }

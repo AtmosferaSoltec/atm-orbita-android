@@ -102,12 +102,13 @@ private const val RESET_CODE_LENGTH = 6
 /** After a valid code: choosing the new password. */
 @Composable
 fun NewPasswordScreen(
-    onSubmit: (password: String) -> Unit,
+    onSubmit: (password: String, confirmation: String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     error: String? = null,
 ) {
     var password by remember { mutableStateOf("") }
+    var confirmation by remember { mutableStateOf("") }
 
     ScreenScaffold(modifier = modifier, verticalArrangement = Arrangement.Center) {
         AuthHeading(
@@ -119,10 +120,15 @@ fun NewPasswordScreen(
         PasswordField(password, onValueChange = { password = it })
         HintText(stringResource(R.string.auth_password_hint), Modifier.padding(top = 8.dp))
 
+        FieldLabel(stringResource(R.string.auth_reset_confirm_field), Modifier.padding(top = 16.dp))
+        PasswordField(confirmation, onValueChange = { confirmation = it })
+
         if (error != null) AuthMessage(error, isError = true)
 
         Spacer(Modifier.height(24.dp))
-        PrimaryButton(stringResource(R.string.auth_reset_action), onClick = { onSubmit(password) })
+        PrimaryButton(stringResource(R.string.auth_reset_action), onClick = {
+            onSubmit(password, confirmation)
+        })
         AuthLink(link = stringResource(R.string.auth_back_to_login), onClick = onBack)
     }
 }
@@ -146,9 +152,9 @@ private fun ResetCodePreview() {
 private fun NewPasswordPreview() {
     OrbitaPreview {
         NewPasswordScreen(
-            onSubmit = {},
+            onSubmit = { _, _ -> },
             onBack = {},
-            error = stringResource(R.string.error_password_too_short),
+            error = stringResource(R.string.error_passwords_dont_match),
         )
     }
 }
