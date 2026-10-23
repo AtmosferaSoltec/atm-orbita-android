@@ -22,6 +22,9 @@ enum class ValidationError {
     PASSWORD_TOO_SHORT,
     PASSWORD_TOO_LONG,
 
+    /** The code to recover the password is not 6 digits. */
+    CODE_INVALID,
+
     /** Deleting the account asks for the password again; an empty one is not sent. */
     PASSWORD_REQUIRED,
 }
@@ -175,3 +178,9 @@ fun validateNewPassword(password: String): ValidationError? {
 data class Credentials(val email: String, val password: String) {
     fun validate(): ValidationError? = validateEmail(email) ?: validateNewPassword(password)
 }
+
+private val RESET_CODE_PATTERN = Regex("^[0-9]{6}$")
+
+/** The code that arrives by email to recover the password: 6 digits. */
+fun validateResetCode(code: String): ValidationError? =
+    if (RESET_CODE_PATTERN.matches(code.trim())) null else ValidationError.CODE_INVALID

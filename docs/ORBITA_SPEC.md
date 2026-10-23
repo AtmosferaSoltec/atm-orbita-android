@@ -25,7 +25,7 @@ Estados: **Maqueta** = pantalla navegable con datos de ejemplo fijos, sin lógic
 
 | Módulo | Pantallas | Versión | Estado Android |
 |---|---|---|---|
-| Autenticación | Iniciar sesión, Registro, Recuperar contraseña, Eliminar cuenta | MVP | **Iniciar sesión, Registro y Cerrar sesión: implementado** contra el API (plan 01, 21 oct 2026). Recuperar contraseña (plan 11) y eliminar cuenta (plan 12): maqueta funcional en modo demo |
+| Autenticación | Iniciar sesión, Registro, Recuperar contraseña, Eliminar cuenta | MVP | **Iniciar sesión, Registro y Cerrar sesión: implementado** contra el API (plan 01, 21 oct 2026). **Recuperar contraseña con código: implementado** (plan 11, 23 oct 2026). Eliminar cuenta (plan 12): maqueta funcional en modo demo |
 | Inicio | Inicio | MVP | **Implementado** contra el API en una sola petición, `GET /home` (plan 08, 22 oct 2026) |
 | Cuentas | Cuentas, Nueva/Editar cuenta | MVP | **Implementado** contra el API (plan 04, 22 oct 2026); los saldos incluyen movimientos y transferencias (planes 05 y 06) |
 | Movimientos | Nuevo/Editar movimiento, Lista de movimientos | MVP | **Implementado** contra el API (planes 05 y 06, 22 oct 2026): ingresos, egresos y transferencias |
@@ -34,7 +34,7 @@ Estados: **Maqueta** = pantalla navegable con datos de ejemplo fijos, sin lógic
 | Categorías | Categorías, Nueva/Editar categoría | MVP | **Implementado** contra el API (plan 03, 22 oct 2026) |
 | Ajustes | Ajustes | MVP | **Monedas, tipo de cambio y moneda de visualización: implementado** contra el API (plan 02, 21 oct 2026). Categorías: implementado (plan 03) |
 | Tarjeta de crédito | Crédito, Nueva/Editar tarjeta, Marcar como pagada | v1.1 | **Implementado** contra el API: tarjetas y compras pendientes (plan 09) y marcar como pagada (plan 10), 22 oct 2026 |
-| Backend (API propio) | — | MVP | En construcción, plan por plan (`atm-orbita-api/docs/plans/README.md`). Hechos: 00 (fundaciones), 01 (sesión), 02 (perfil y tipo de cambio), 03 (categorías), 04 (cuentas), 05 (movimientos), 06 (transferencias), 07 (reportes), 08 (Inicio), 09 (tarjetas y compras pendientes) y 10 (pagar una compra). El esquema vive solo en las migraciones de goose de ese repositorio |
+| Backend (API propio) | — | MVP | En construcción, plan por plan (`atm-orbita-api/docs/plans/README.md`). Hechos: 00 (fundaciones), 01 (sesión), 02 (perfil y tipo de cambio), 03 (categorías), 04 (cuentas), 05 (movimientos), 06 (transferencias), 07 (reportes), 08 (Inicio), 09 (tarjetas y compras pendientes), 10 (pagar una compra) y 11 (recuperar contraseña). El esquema vive solo en las migraciones de goose de ese repositorio |
 
 **Qué funciona hoy (7 oct 2026).** La app ya no es una maqueta: **todo se guarda, se edita y se elimina de verdad**, y cada total se **calcula** a partir de los movimientos (saldos, ahorro total, totales del mes, reportes), con las mismas reglas que tendrá el backend. Lo único que falta es **dónde** viven los datos: hoy están en memoria, sembrados con los [datos de ejemplo](#11-datos-de-ejemplo), y se pierden al cerrar la app. Funciona: iniciar y cerrar sesión, crear/editar/archivar cuentas, categorías y tarjetas, registrar/editar/eliminar ingresos, egresos y transferencias, registrar compras con tarjeta y pagarlas, cambiar monedas y tipo de cambio, los reportes por mes, año y rango, todos los selectores de fecha y las validaciones con su mensaje. Desde el 7 oct 2026 el modo demo cumple además las reglas decididas ese día: tipo de cambio opcional, nombres de categoría sin repetir, editar y eliminar compras pendientes, deshacer un pago al eliminar su egreso y no archivar tarjetas con deuda. Desde el 13 oct 2026 **todas las pantallas de la app son visibles y navegables**: también recuperar la contraseña, eliminar la cuenta y la moneda en Registro, como maqueta funcional sobre el modo demo. **No** funciona todavía: la persistencia real (el API), la paginación de listas y la exportación a PDF. En esas tres pantallas nuevas el modo demo recorre los pasos pero no hace nada real: no se envía ningún correo, no se comprueba ninguna contraseña y la moneda elegida al registrarse no cambia los datos de ejemplo.
 
@@ -117,7 +117,8 @@ Al tocar el botón de guardar, el formulario se revisa **en este orden** y se mu
 | Archivar una tarjeta de crédito con pagos pendientes | "Esta tarjeta tiene pagos pendientes. Págalos o elimínalos antes de archivarla." |
 | Cambiar la categoría o la descripción del egreso de un pago con tarjeta | "Este egreso es el pago de una compra con tarjeta: solo puedes cambiar la cuenta, el monto y la fecha." |
 | Confirmación al eliminar el egreso de un pago con tarjeta | "Este egreso es el pago de una compra con tarjeta. Al eliminarlo, la compra volverá a estar pendiente." |
-| Enlace de recuperación de contraseña usado o vencido | "El enlace ya no es válido. Pide uno nuevo." |
+| Código de recuperación que no son 6 dígitos | "Escribe los 6 dígitos del código." |
+| Código de recuperación incorrecto, usado, vencido o sin intentos | "El código no es válido o ya venció. Pide uno nuevo." |
 | Demasiados intentos seguidos | "Demasiados intentos. Espera un momento." |
 | La sesión terminó en el servidor | "Tu sesión terminó. Inicia sesión de nuevo." |
 | Sin conexión | "Sin conexión. Revisa tu internet e inténtalo de nuevo." |
@@ -236,17 +237,15 @@ Cada pantalla indica: qué muestra, cómo se comporta, validaciones, estados y q
 
 **Moneda al registrarse** (decidido el 7 oct 2026; en la app desde el 13 oct 2026). La pantalla de Registro incluye, bajo la contraseña, un desplegable **Moneda** con la ayuda "Es la moneda de tus cuentas. Podrás cambiarla después en Ajustes." Es el mismo desplegable con las 9 monedas admitidas (7.12). Arranca en la moneda de la región del teléfono si es una de ellas; si no, en soles. La app la envía al registrarse (`mainCurrency`). Con ella nacen la moneda principal del perfil y la cuenta "Efectivo". La moneda secundaria nace en dólares, o en soles si la principal es dólares. Antes todo usuario nacía con soles y dólares y "Efectivo" en soles.
 
-> **Decidido el 21 oct 2026 (plan 11 del API, pendiente de implementar):** la recuperación pasa a un **código de 6 dígitos** que llega por correo, en tres pasos: correo → código → contraseña nueva. Vence en 15 minutos, admite 5 intentos y hasta 3 envíos por día. La pantalla "Enlace enviado" pasará a pedir el código. Lo de abajo describe la maqueta actual, con enlace; se actualiza al implementar el plan 11.
-
-**Recuperar contraseña** (requisito para publicar; maqueta funcional desde el 13 oct 2026, diseño pendiente de confirmación). Son tres pantallas con el mismo aspecto que Iniciar sesión: tarjetas flotantes, título, subtítulo, botón principal y enlace centrado debajo.
+**Recuperar contraseña** (requisito para publicar; **implementado** contra el API, plan 11, 23 oct 2026). Con un **código de 6 dígitos** que llega por correo, en tres pasos: correo → código → contraseña nueva (decidido el 21 oct 2026; sustituye al enlace). Son tres pantallas con el mismo aspecto que Iniciar sesión: tarjetas flotantes, título, subtítulo, botón principal y enlaces centrados debajo.
 
 | Pantalla | Título y subtítulo | Contenido | Acciones |
 |---|---|---|---|
-| Pedir el enlace | "Recupera tu contraseña" / "Escribe tu correo y te enviaremos un enlace para crear una contraseña nueva." | Campo Correo | Botón "Enviar enlace"; enlace "Volver a iniciar sesión" |
-| Enlace enviado | "Revisa tu correo" / "Si *correo* tiene una cuenta, te enviamos un enlace para crear una contraseña nueva. Vence en 30 minutos y solo sirve una vez." | Ayuda "¿No llega? Revisa el correo no deseado o pide otro enlace." | Botón "Volver a iniciar sesión"; enlace "Pedir otro enlace". Solo en modo demo, además, "Modo demo: abrir la pantalla del enlace", que hace las veces de tocar el enlace del correo |
+| Pedir el código | "Recupera tu contraseña" / "Escribe tu correo y te enviaremos un código para crear una contraseña nueva." | Campo Correo | Botón "Enviar código"; enlace "Volver a iniciar sesión" |
+| Escribir el código | "Escribe el código" / "Si *correo* tiene una cuenta, te enviamos un código de 6 dígitos. Vence en 15 minutos." | Campo "Código" (solo dígitos, máximo 6) y la ayuda "¿No llega? Revisa el correo no deseado o pide otro código." En modo demo la ayuda dice "Modo demo: no llega ningún correo; sirve cualquier código de 6 dígitos." | Botón "Continuar"; enlaces "Pedir otro código" (vuelve al primer paso) y "Volver a iniciar sesión" |
 | Contraseña nueva | "Crea una contraseña nueva" / "Al guardarla se cerrará la sesión en todos tus dispositivos." | Campo "Contraseña nueva" con el ojo, y "Mínimo 8 caracteres." | Botón "Guardar contraseña"; enlace "Volver a iniciar sesión" |
 
-A la primera se llega con el enlace **"¿Olvidaste tu contraseña?"**, alineado a la derecha bajo el campo Contraseña de Iniciar sesión. Tras guardar la contraseña nueva se vuelve a Iniciar sesión, que muestra sobre el botón, con un icono de check verde, "Tu contraseña se cambió. Inicia sesión con la nueva." Los errores van en el formulario, como en Iniciar sesión. El botón atrás del sistema lleva siempre a Iniciar sesión. En Iniciar sesión, el enlace "¿Olvidaste tu contraseña?" pide el correo y muestra siempre "Si ese correo tiene una cuenta, te enviamos un enlace", exista o no. El correo trae un enlace **de un solo uso que vence a los 30 minutos**; abre la app en una pantalla para escribir la contraseña nueva. Al guardarla se cierran todas las sesiones abiertas y se vuelve a Iniciar sesión. Un enlace usado o vencido muestra "El enlace ya no es válido. Pide uno nuevo." Endpoints: `POST /auth/forgot-password` y `POST /auth/reset-password`.
+A la primera se llega con el enlace **"¿Olvidaste tu contraseña?"**, alineado a la derecha bajo el campo Contraseña de Iniciar sesión. El segundo paso se muestra siempre, exista o no el correo: la app nunca dice qué correos tienen cuenta. "Continuar" comprueba el código sin gastarlo y lleva a la contraseña nueva; un código incorrecto, usado o vencido muestra "El código no es válido o ya venció. Pide uno nuevo." El código **vence a los 15 minutos**, admite **5 intentos** y se pueden pedir **hasta 3 por día**; pedir otro deja sin efecto el anterior. Al guardar la contraseña nueva se cierran todas las sesiones abiertas, llega un correo "Tu contraseña de Orbita se cambió", y se vuelve a Iniciar sesión, que muestra sobre el botón, con un icono de check verde, "Tu contraseña se cambió. Inicia sesión con la nueva." Los errores van en el formulario, como en Iniciar sesión. El botón atrás del sistema lleva siempre a Iniciar sesión. Endpoints: `POST /auth/forgot-password`, `POST /auth/verify-reset-code` y `POST /auth/reset-password`.
 
 **Fuera de alcance:** acceso con Google.
 
@@ -610,7 +609,7 @@ Todas las rutas van bajo `/api/v1` y, salvo las de autenticación, exigen el tok
 | Necesidad | Recurso |
 |---|---|
 | Sesión | `POST /auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout` |
-| Recuperar contraseña | `POST /auth/forgot-password`, `/auth/reset-password` |
+| Recuperar contraseña | `POST /auth/forgot-password`, `/auth/verify-reset-code`, `/auth/reset-password` |
 | Eliminar cuenta | `DELETE /me` |
 | Inicio | `GET /home` |
 | Saldos y ahorro total | `GET /accounts` |

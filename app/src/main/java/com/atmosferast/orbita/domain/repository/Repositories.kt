@@ -60,6 +60,9 @@ enum class DataError {
 
     /** Too many attempts in a short time; the API asks to wait. */
     TOO_MANY_REQUESTS,
+
+    /** The code to recover the password is wrong, used, expired or out of attempts. */
+    RESET_CODE_INVALID,
     UNKNOWN,
 }
 
@@ -90,13 +93,19 @@ interface AuthRepository {
     suspend fun signOut()
 
     /**
-     * Asks for the email with the link to choose a new password. It succeeds whether the email
-     * has an account or not, so that nobody can find out which emails are registered.
+     * Asks for the email with a 6-digit code to choose a new password. It succeeds whether the
+     * email has an account or not, so that nobody can find out which emails are registered.
      */
     suspend fun requestPasswordReset(email: String)
 
-    /** [token] comes in the link of that email: single use, and it expires in 30 minutes. */
-    suspend fun resetPassword(token: String, newPassword: String)
+    /**
+     * Checks the code of that email without using it up, to move on to the new password. It
+     * lasts 15 minutes and allows 5 attempts; fails with [DataError.RESET_CODE_INVALID].
+     */
+    suspend fun verifyResetCode(email: String, code: String)
+
+    /** Sets the new password with the code and ends every session; it does not sign in. */
+    suspend fun resetPassword(email: String, code: String, newPassword: String)
 
     /**
      * Deletes the user and every piece of their data for good, and ends the session. It asks

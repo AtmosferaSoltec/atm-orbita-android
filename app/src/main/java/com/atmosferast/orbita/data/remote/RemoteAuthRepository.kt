@@ -64,11 +64,27 @@ class RemoteAuthRepository @Inject constructor(
         }
     }
 
-    // Plan 11 (6-digit code) and plan 12 of the API. Until then, with the API these fail
-    // instead of pretending, so nobody believes an email was sent.
-    override suspend fun requestPasswordReset(email: String) = notYetAvailable()
+    // Recovering the password (plan 11 of the API): public calls, no session involved.
+    override suspend fun requestPasswordReset(email: String) {
+        networkCall { api.httpClient.post("auth/forgot-password") { setBody(ResetRequest(email.trim())) } }
+            .requireSuccess()
+    }
 
-    override suspend fun resetPassword(token: String, newPassword: String) = notYetAvailable()
+    override suspend fun verifyResetCode(email: String, code: String) {
+        networkCall {
+            api.httpClient.post("auth/verify-reset-code") { setBody(ResetRequest(email.trim(), code.trim())) }
+        }.requireSuccess()
+    }
+
+    override suspend fun resetPassword(email: String, code: String, newPassword: String) {
+        networkCall {
+            api.httpClient.post("auth/reset-password") {
+                setBody(ResetRequest(email.trim(), code.trim(), newPassword))
+            }
+        }.requireSuccess()
+    }
+
+    // Plan 12 of the API. Until then, with the API it fails instead of pretending.
 
     override suspend fun deleteAccount(password: String) = notYetAvailable()
 

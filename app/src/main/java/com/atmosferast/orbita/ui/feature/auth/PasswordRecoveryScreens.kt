@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atmosferast.orbita.R
@@ -18,13 +19,14 @@ import com.atmosferast.orbita.data.demo.SampleData
 import com.atmosferast.orbita.ui.components.FieldLabel
 import com.atmosferast.orbita.ui.components.HintText
 import com.atmosferast.orbita.ui.components.OrbitaPreview
+import com.atmosferast.orbita.ui.components.OrbitaTextField
 import com.atmosferast.orbita.ui.components.PrimaryButton
 import com.atmosferast.orbita.ui.components.ScreenScaffold
 
 // "¿Olvidaste tu contraseña?": the three screens of recovering a password. They follow the
 // login and sign-up ones (same heading, fields and links). Not in the original mockups.
 
-/** Asks for the email the link to choose a new password will be sent to. */
+/** Asks for the email the 6-digit code to choose a new password will be sent to. */
 @Composable
 fun ForgotPasswordScreen(
     onSubmit: (email: String) -> Unit,
@@ -52,35 +54,52 @@ fun ForgotPasswordScreen(
 }
 
 /**
- * Shown after asking for the link, whether [email] has an account or not: the app never tells
- * which emails are registered. [onOpenLink] is only set in demo mode, where no email can
- * arrive: it stands for tapping the link.
+ * The code that arrived by email, shown whether [email] has an account or not: the app never
+ * tells which emails are registered. In [demo] mode no email arrives and any 6 digits work.
  */
 @Composable
-fun PasswordLinkSentScreen(
+fun ResetCodeScreen(
     email: String,
-    onBack: () -> Unit,
+    onSubmit: (code: String) -> Unit,
     onResend: () -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    onOpenLink: (() -> Unit)? = null,
+    error: String? = null,
+    demo: Boolean = false,
 ) {
+    var code by remember { mutableStateOf("") }
+
     ScreenScaffold(modifier = modifier, verticalArrangement = Arrangement.Center) {
         AuthHeading(
-            title = stringResource(R.string.auth_forgot_sent_title),
-            subtitle = stringResource(R.string.auth_forgot_sent_text, email),
+            title = stringResource(R.string.auth_code_title),
+            subtitle = stringResource(R.string.auth_code_text, email),
         )
-        HintText(stringResource(R.string.auth_forgot_sent_hint), Modifier.padding(top = 4.dp))
+
+        FieldLabel(stringResource(R.string.auth_code_field))
+        OrbitaTextField(
+            value = code,
+            // Only digits, at most 6: what a code can be.
+            onValueChange = { typed -> code = typed.filter(Char::isDigit).take(RESET_CODE_LENGTH) },
+            placeholder = "000000",
+            keyboardType = KeyboardType.NumberPassword,
+        )
+        HintText(
+            stringResource(if (demo) R.string.auth_code_demo else R.string.auth_code_hint),
+            Modifier.padding(top = 8.dp),
+        )
+
+        if (error != null) AuthMessage(error, isError = true)
 
         Spacer(Modifier.height(24.dp))
-        PrimaryButton(stringResource(R.string.auth_back_to_login), onClick = onBack)
-        AuthLink(link = stringResource(R.string.auth_forgot_resend), onClick = onResend)
-        if (onOpenLink != null) {
-            AuthLink(link = stringResource(R.string.auth_forgot_demo_link), onClick = onOpenLink)
-        }
+        PrimaryButton(stringResource(R.string.auth_code_action), onClick = { onSubmit(code) })
+        AuthLink(link = stringResource(R.string.auth_code_resend), onClick = onResend)
+        AuthLink(link = stringResource(R.string.auth_back_to_login), onClick = onBack)
     }
 }
 
-/** Where the link of the email leads: choosing the new password. */
+private const val RESET_CODE_LENGTH = 6
+
+/** After a valid code: choosing the new password. */
 @Composable
 fun NewPasswordScreen(
     onSubmit: (password: String) -> Unit,
@@ -114,11 +133,11 @@ private fun ForgotPasswordPreview() {
     OrbitaPreview { ForgotPasswordScreen(onSubmit = {}, onBack = {}) }
 }
 
-@Preview(name = "Recuperar contraseña · enlace enviado", widthDp = 390, heightDp = 844)
+@Preview(name = "Recuperar contraseña · código", widthDp = 390, heightDp = 844)
 @Composable
-private fun PasswordLinkSentPreview() {
+private fun ResetCodePreview() {
     OrbitaPreview {
-        PasswordLinkSentScreen(SampleData.userEmail, onBack = {}, onResend = {}, onOpenLink = {})
+        ResetCodeScreen(SampleData.userEmail, onSubmit = {}, onResend = {}, onBack = {})
     }
 }
 

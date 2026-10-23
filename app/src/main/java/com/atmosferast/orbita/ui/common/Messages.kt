@@ -25,6 +25,7 @@ val UiMessage.textRes: Int
             ValidationError.PASSWORD_TOO_SHORT -> R.string.error_password_too_short
             ValidationError.PASSWORD_TOO_LONG -> R.string.error_password_too_long
             ValidationError.PASSWORD_REQUIRED -> R.string.error_password_required
+            ValidationError.CODE_INVALID -> R.string.error_code_invalid
         }
 
         is UiMessage.Failed -> when (error) {
@@ -40,6 +41,7 @@ val UiMessage.textRes: Int
             DataError.PAYMENT_LOCKED -> R.string.error_payment_locked
             DataError.SESSION_EXPIRED -> R.string.error_session_expired
             DataError.TOO_MANY_REQUESTS -> R.string.error_too_many_requests
+            DataError.RESET_CODE_INVALID -> R.string.error_reset_code_invalid
             DataError.UNKNOWN -> R.string.error_unknown
         }
     }

@@ -8,6 +8,7 @@ import com.atmosferast.orbita.domain.model.SessionState
 import com.atmosferast.orbita.domain.model.ValidationError
 import com.atmosferast.orbita.domain.model.validateEmail
 import com.atmosferast.orbita.domain.model.validateNewPassword
+import com.atmosferast.orbita.domain.model.validateResetCode
 import com.atmosferast.orbita.domain.repository.AuthRepository
 import com.atmosferast.orbita.domain.repository.DataException
 import com.atmosferast.orbita.domain.repository.DateProvider
@@ -48,7 +49,7 @@ class AppViewModel @Inject constructor(
     private val _authBusy = MutableStateFlow(false)
     val authBusy: StateFlow<Boolean> = _authBusy.asStateFlow()
 
-    /** In demo mode no email can arrive, so the app offers the way to the link's screen itself. */
+    /** In demo mode no email can arrive: the code screen says any 6 digits work. */
     val isDemo: Boolean get() = !config.usesApi
 
     fun signIn(email: String, password: String) {
@@ -65,13 +66,19 @@ class AppViewModel @Inject constructor(
         }
     }
 
-    /** Asks for the email with the link to choose a new password; [onSent] once it is asked. */
+    /** Asks for the email with the 6-digit code; [onSent] once it is asked. */
     fun requestPasswordReset(email: String, onSent: () -> Unit) =
         authAction(validateEmail(email), onSent) { auth.requestPasswordReset(email.trim()) }
 
-    /** [token] is the one of the link in the email. */
-    fun resetPassword(token: String, password: String, onDone: () -> Unit) =
-        authAction(validateNewPassword(password), onDone) { auth.resetPassword(token, password) }
+    /** Checks the code without using it up; [onValid] moves on to the new password. */
+    fun verifyResetCode(email: String, code: String, onValid: () -> Unit) =
+        authAction(validateResetCode(code), onValid) { auth.verifyResetCode(email, code.trim()) }
+
+    /** Sets the new password with the code; the user signs in again afterwards. */
+    fun resetPassword(email: String, code: String, password: String, onDone: () -> Unit) =
+        authAction(validateNewPassword(password), onDone) {
+            auth.resetPassword(email, code.trim(), password)
+        }
 
     /**
      * One step of signing in, signing up or recovering the password. An [invalid] form is told

@@ -39,3 +39,11 @@ internal data class AuthResponse(val user: UserDto, val tokens: TokensDto)
 
 @Serializable
 internal data class RefreshResponse(val tokens: TokensDto)
+
+/** Body of the three steps of recovering the password; each sends what it has so far. */
+@Serializable
+internal data class ResetRequest(
+    val email: String,
+    val code: String? = null,
+    @SerialName("new_password") val newPassword: String? = null,
+)

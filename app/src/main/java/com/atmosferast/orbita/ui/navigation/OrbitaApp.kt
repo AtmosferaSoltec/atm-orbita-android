@@ -56,7 +56,7 @@ import com.atmosferast.orbita.ui.feature.accounts.AccountsViewModel
 import com.atmosferast.orbita.ui.feature.auth.AuthScreen
 import com.atmosferast.orbita.ui.feature.auth.ForgotPasswordScreen
 import com.atmosferast.orbita.ui.feature.auth.NewPasswordScreen
-import com.atmosferast.orbita.ui.feature.auth.PasswordLinkSentScreen
+import com.atmosferast.orbita.ui.feature.auth.ResetCodeScreen
 import com.atmosferast.orbita.ui.feature.categories.CategoriesScreen
 import com.atmosferast.orbita.ui.feature.categories.CategoriesViewModel
 import com.atmosferast.orbita.ui.feature.categories.CategoryFormScreen
@@ -147,16 +147,14 @@ fun OrbitaApp(app: AppViewModel = hiltViewModel()) {
 }
 
 /** The screens without a session. Recovering the password goes FORGOT → LINK_SENT → NEW_PASSWORD. */
-private enum class AuthStep { LOGIN, REGISTER, FORGOT, LINK_SENT, NEW_PASSWORD }
-
-// In demo mode there is no email, so there is no token either: any text stands for it.
-private const val DEMO_RESET_TOKEN = "demo"
+private enum class AuthStep { LOGIN, REGISTER, FORGOT, CODE, NEW_PASSWORD }
 
 @Composable
 private fun AuthFlow(app: AppViewModel) {
     var step by rememberSaveable { mutableStateOf(AuthStep.LOGIN) }
-    // The email the link was asked for, to say where it went.
+    // The email the code was asked for, to say where it went, and the code once it is valid.
     var recoveryEmail by rememberSaveable { mutableStateOf("") }
+    var recoveryCode by rememberSaveable { mutableStateOf("") }
     // Set once a new password is saved; told on the login form.
     var passwordChanged by rememberSaveable { mutableStateOf(false) }
     val error by app.authError.collectAsStateWithLifecycle()
@@ -193,24 +191,31 @@ private fun AuthFlow(app: AppViewModel) {
             onSubmit = { email ->
                 app.requestPasswordReset(email) {
                     recoveryEmail = email.trim()
-                    go(AuthStep.LINK_SENT)
+                    go(AuthStep.CODE)
                 }
             },
             onBack = { go(AuthStep.LOGIN) },
             error = errorText,
         )
 
-        AuthStep.LINK_SENT -> PasswordLinkSentScreen(
+        AuthStep.CODE -> ResetCodeScreen(
             email = recoveryEmail,
-            onBack = { go(AuthStep.LOGIN) },
+            onSubmit = { code ->
+                app.verifyResetCode(recoveryEmail, code) {
+                    recoveryCode = code.trim()
+                    go(AuthStep.NEW_PASSWORD)
+                }
+            },
             onResend = { go(AuthStep.FORGOT) },
-            // With the API this screen is reached from the link of the email (a deep link).
-            onOpenLink = if (app.isDemo) ({ go(AuthStep.NEW_PASSWORD) }) else null,
+            onBack = { go(AuthStep.LOGIN) },
+            error = errorText,
+            demo = app.isDemo,
         )
 
         AuthStep.NEW_PASSWORD -> NewPasswordScreen(
             onSubmit = { password ->
-                app.resetPassword(DEMO_RESET_TOKEN, password) {
+                app.resetPassword(recoveryEmail, recoveryCode, password) {
+                    recoveryCode = ""
                     passwordChanged = true
                     go(AuthStep.LOGIN)
                 }

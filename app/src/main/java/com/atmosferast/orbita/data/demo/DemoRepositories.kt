@@ -117,7 +117,10 @@ class DemoAuthRepository @Inject constructor(private val store: DemoStore) : Aut
     // No email is sent: the app itself offers the way to the next screen (see AuthFlow).
     override suspend fun requestPasswordReset(email: String) = Unit
 
-    override suspend fun resetPassword(token: String, newPassword: String) = Unit
+    // There is no email in the demo: any 6-digit code works.
+    override suspend fun verifyResetCode(email: String, code: String) = Unit
+
+    override suspend fun resetPassword(email: String, code: String, newPassword: String) = Unit
 
     /** The account "is gone": the data goes back to the sample and the session ends. */
     override suspend fun deleteAccount(password: String) {

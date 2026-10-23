@@ -208,9 +208,30 @@ class RemoteAuthRepositoryTest {
     }
 
     @Test
-    fun `recovering the password is not available yet with the API`() = runTest {
-        val h = Harness { json("{}") }
-        val failure = expectFailure { h.repository.requestPasswordReset("ana@correo.com") }
-        assertEquals(DataError.UNKNOWN, failure.error)
+    fun `recovering the password walks the three steps against the API`() = runTest {
+        val calls = mutableListOf<Pair<String, String>>()
+        val h = Harness { request ->
+            calls += request.url.encodedPath to request.bodyText()
+            respond("", HttpStatusCode.NoContent)
+        }
+        h.repository.requestPasswordReset(" ana@correo.com ")
+        h.repository.verifyResetCode("ana@correo.com", "042317")
+        h.repository.resetPassword("ana@correo.com", "042317", "otraclave123")
+
+        assertEquals(
+            listOf("/api/v1/auth/forgot-password", "/api/v1/auth/verify-reset-code", "/api/v1/auth/reset-password"),
+            calls.map { it.first },
+        )
+        assertEquals("""{"email":"ana@correo.com"}""", calls[0].second)
+        assertEquals("""{"email":"ana@correo.com","code":"042317"}""", calls[1].second)
+        assertEquals("""{"email":"ana@correo.com","code":"042317","new_password":"otraclave123"}""", calls[2].second)
+        assertEquals(SessionState.SignedOut, h.session.session.value)
+    }
+
+    @Test
+    fun `a wrong or expired code is told as such`() = runTest {
+        val h = Harness { json(errorBody("RESET_CODE_INVALID"), HttpStatusCode.UnprocessableEntity) }
+        val failure = expectFailure { h.repository.verifyResetCode("ana@correo.com", "000000") }
+        assertEquals(DataError.RESET_CODE_INVALID, failure.error)
     }
 }

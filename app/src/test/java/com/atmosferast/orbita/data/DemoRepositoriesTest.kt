@@ -354,7 +354,8 @@ class DemoRepositoriesTest {
         // In demo mode nothing is sent and nothing is checked, but every step can be walked.
         val auth = DemoAuthRepository(store)
         auth.requestPasswordReset("nadie@correo.com")
-        auth.resetPassword("demo", "12345678")
+        auth.verifyResetCode("nadie@correo.com", "123456")
+        auth.resetPassword("nadie@correo.com", "123456", "12345678")
         assertEquals(SessionState.SignedOut, auth.session.first())
     }
 

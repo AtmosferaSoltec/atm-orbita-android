@@ -31,7 +31,8 @@ Backend: **API propio** en `atm-orbita-api` (Go + Gin + PostgreSQL), con autenti
   - Plan 07: Reportes e "Ingresos / Gastos · mes" de Inicio, `RemoteReportsRepository` (vuelve a leer cuando cambia un movimiento). Los porcentajes los sigue calculando la app con `percentOf`; dan lo mismo que los del API.
   - Planes 09 y 10: Tarjetas de crédito, compras pendientes y pagarlas, `RemoteCreditRepository`. Un pago crea un egreso y cambia saldos, así que las listas de movimientos y de crédito se vuelven a leer con cualquier escritura remota (`RemoteChanges`).
   - Plan 08: Inicio en una sola petición, `HomeRepository` (`RemoteHomeRepository` lee `GET /home`; `DemoHomeRepository` arma lo mismo en modo demo). Cada repositorio remoto avisa a `RemoteChanges` después de escribir, y así Inicio se vuelve a pedir.
-- Pendiente, plan por plan: recuperar contraseña con código de 6 dígitos (11) y eliminar cuenta (12).
+  - Plan 11: Recuperar la contraseña con un código de 6 dígitos (`ResetCodeScreen`; `AuthRepository.verifyResetCode` y `resetPassword(email, code, password)`). En modo demo sirve cualquier código de 6 dígitos.
+- Pendiente: eliminar cuenta (plan 12).
 - Navegación: pila propia en `ui/navigation/OrbitaApp.kt` (migrar a Navigation Compose está pendiente).
 
 ## Arquitectura

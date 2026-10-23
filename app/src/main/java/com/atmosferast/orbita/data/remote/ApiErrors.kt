@@ -38,6 +38,7 @@ internal fun dataErrorFor(code: String): DataError = when (code) {
     "PAYMENT_EXPENSE_LOCKED" -> DataError.PAYMENT_LOCKED
     "SESSION_EXPIRED", "UNAUTHORIZED" -> DataError.SESSION_EXPIRED
     "TOO_MANY_REQUESTS" -> DataError.TOO_MANY_REQUESTS
+    "RESET_CODE_INVALID" -> DataError.RESET_CODE_INVALID
     else -> DataError.UNKNOWN
 }
 
