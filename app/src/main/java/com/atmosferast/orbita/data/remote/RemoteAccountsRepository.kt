@@ -36,6 +36,7 @@ class RemoteAccountsRepository @Inject constructor(
 
     override fun observeAccounts(): Flow<List<Account>> =
         cache.onStart { if (cache.value == null) load() }.filterNotNull()
+            .reloadingOn(changes) { load() }
 
     override suspend fun create(draft: AccountDraft) {
         val request = CreateAccountRequest(

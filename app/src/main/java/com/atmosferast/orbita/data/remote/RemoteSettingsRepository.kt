@@ -36,6 +36,7 @@ class RemoteSettingsRepository @Inject constructor(
 
     override fun observeSettings(): Flow<UserSettings> =
         cache.onStart { if (cache.value == null) load() }.filterNotNull()
+            .reloadingOn(changes) { load() }
 
     /** A pair is only saved together with a rate above zero; the API checks it again. */
     override suspend fun setFx(fx: FxPair) {

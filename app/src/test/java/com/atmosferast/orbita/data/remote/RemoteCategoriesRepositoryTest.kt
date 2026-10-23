@@ -14,8 +14,16 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
+import java.io.IOException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -38,10 +46,11 @@ private class CategoryTokens : TokenStore {
 }
 
 private class CategoriesHarness(
+    val changes: RemoteChanges = RemoteChanges(),
     handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
 ) {
     val session = ApiSession(createApiClient("http://api.test/api/v1", MockEngine(handler), "test"), CategoryTokens())
-    val repository = RemoteCategoriesRepository(session)
+    val repository = RemoteCategoriesRepository(session, changes)
 }
 
 private val json = headersOf(HttpHeaders.ContentType, "application/json")
@@ -141,5 +150,36 @@ class RemoteCategoriesRepositoryTest {
         h.session.start("beto@correo.com", TokensDto("access-2", 900, "refresh-2"))
 
         assertEquals(listOf("Viajes"), h.repository.observeCategories().first().map { it.name })
+    }
+
+    @Test
+    fun `back from the background the list is read again, and offline it stays`() = runTest {
+        var answer = initial
+        var offline = false
+        var served = 0
+        val h = CategoriesHarness { _ ->
+            if (offline) throw IOException("offline")
+            served++
+            respond(answer, HttpStatusCode.OK, json)
+        }
+        val seen = async(Dispatchers.Default) { h.repository.observeCategories().take(2).toList() }
+        withContext(Dispatchers.Default) {
+            withTimeout(5_000) {
+                while (served == 0) delay(10)
+                // An offline refresh changes nothing; then one with the new data arrives.
+                offline = true
+                h.changes.refreshAll()
+                delay(50)
+                offline = false
+                answer = """{"data":[${category("c9", "Viajes", "expense")}]}"""
+                while (!seen.isCompleted) {
+                    h.changes.refreshAll()
+                    delay(20)
+                }
+            }
+        }
+
+        val lists = seen.await().map { list -> list.map { it.name } }
+        assertEquals(listOf(listOf("Alimentación", "Sueldo"), listOf("Viajes")), lists)
     }
 }

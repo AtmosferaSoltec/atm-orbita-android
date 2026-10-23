@@ -34,6 +34,7 @@ class RemoteCategoriesRepository @Inject constructor(
 
     override fun observeCategories(): Flow<List<Category>> =
         cache.onStart { if (cache.value == null) load() }.filterNotNull()
+            .reloadingOn(changes) { load() }
 
     override suspend fun create(draft: CategoryDraft) {
         val request = CreateCategoryRequest(
