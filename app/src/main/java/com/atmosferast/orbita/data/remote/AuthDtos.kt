@@ -47,3 +47,7 @@ internal data class ResetRequest(
     val code: String? = null,
     @SerialName("new_password") val newPassword: String? = null,
 )
+
+/** Deleting the account asks for the password again (plan 12 of the API). */
+@Serializable
+internal data class DeleteAccountRequest(val password: String)

@@ -5,6 +5,7 @@ import com.atmosferast.orbita.domain.repository.DataError
 import com.atmosferast.orbita.domain.repository.DataException
 import io.ktor.client.call.body
 import io.ktor.client.statement.HttpResponse
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.isSuccess
 import java.io.IOException
 import kotlinx.serialization.Serializable
@@ -57,6 +58,14 @@ internal suspend fun HttpResponse.toDataException(): DataException {
     }
     return DataException(dataErrorFor(code))
 }
+
+/**
+ * A 401 for a wrong password (deleting the account), not for the session: renewing would not
+ * help, and repeating the request would count the wrong password twice.
+ */
+internal suspend fun HttpResponse.isWrongPassword(): Boolean =
+    status == HttpStatusCode.Unauthorized &&
+        runCatching { body<ApiErrorEnvelope>().error?.code }.getOrNull() == "INVALID_CREDENTIALS"
 
 /** Throws the API's error unless the response succeeded. */
 internal suspend fun HttpResponse.requireSuccess(): HttpResponse {

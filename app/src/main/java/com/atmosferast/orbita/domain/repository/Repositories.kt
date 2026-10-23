@@ -63,6 +63,9 @@ enum class DataError {
 
     /** The code to recover the password is wrong, used, expired or out of attempts. */
     RESET_CODE_INVALID,
+
+    /** Deleting the account with a password that is not the current one. */
+    WRONG_PASSWORD,
     UNKNOWN,
 }
 

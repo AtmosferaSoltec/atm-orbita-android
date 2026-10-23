@@ -8,14 +8,16 @@ import com.atmosferast.orbita.domain.repository.DataException
 import io.ktor.client.call.body
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.request.url
+import io.ktor.http.HttpMethod
 import java.util.TimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Signing in, up and out against the API (atm-orbita-api, plan 01). Recovering the password
- * and deleting the account arrive with plans 11 and 12.
+ * Signing in, up and out against the API (atm-orbita-api, plan 01), recovering the password
+ * (plan 11) and deleting the account (plan 12).
  */
 @Singleton
 class RemoteAuthRepository @Inject constructor(
@@ -84,9 +86,19 @@ class RemoteAuthRepository @Inject constructor(
         }.requireSuccess()
     }
 
-    // Plan 12 of the API. Until then, with the API it fails instead of pretending.
-
-    override suspend fun deleteAccount(password: String) = notYetAvailable()
-
-    private fun notYetAvailable(): Nothing = throw DataException(DataError.UNKNOWN)
+    /**
+     * Deletes the account and all its data for good (plan 12 of the API). A wrong password
+     * keeps the session; once deleted, the phone forgets it and goes back to the login form.
+     */
+    override suspend fun deleteAccount(password: String) {
+        val response = api.authorized {
+            method = HttpMethod.Delete
+            url("me")
+            setBody(DeleteAccountRequest(password))
+        }
+        // Here the API's "wrong email or password" can only be the password.
+        if (response.isWrongPassword()) throw DataException(DataError.WRONG_PASSWORD)
+        response.requireSuccess()
+        api.end()
+    }
 }

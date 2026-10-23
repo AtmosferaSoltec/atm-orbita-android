@@ -234,4 +234,51 @@ class RemoteAuthRepositoryTest {
         val failure = expectFailure { h.repository.verifyResetCode("ana@correo.com", "000000") }
         assertEquals(DataError.RESET_CODE_INVALID, failure.error)
     }
+
+    @Test
+    fun `deleting the account sends the password and forgets the session`() = runTest {
+        val calls = mutableListOf<Pair<String, String>>()
+        val h = Harness { request ->
+            when (request.url.encodedPath) {
+                "/api/v1/auth/login" -> json(authBody("ana@correo.com"))
+                else -> {
+                    calls += "${request.method.value} ${request.url.encodedPath}" to request.bodyText()
+                    respond("", HttpStatusCode.NoContent)
+                }
+            }
+        }
+        h.repository.signIn(Credentials("ana@correo.com", "vidanueva123"))
+        h.repository.deleteAccount("vidanueva123")
+
+        assertEquals(listOf("DELETE /api/v1/me" to """{"password":"vidanueva123"}"""), calls)
+        assertEquals(SessionState.SignedOut, h.session.session.value)
+        assertNull(h.tokens.load())
+    }
+
+    @Test
+    fun `a wrong password when deleting keeps the session and is not repeated`() = runTest {
+        val renewals = AtomicInteger()
+        val deletes = AtomicInteger()
+        val h = Harness { request ->
+            when (request.url.encodedPath) {
+                "/api/v1/auth/login" -> json(authBody("ana@correo.com"))
+                "/api/v1/auth/refresh" -> {
+                    renewals.incrementAndGet()
+                    json("""{"data":{"tokens":{"access_token":"fresh","access_token_expires_in":900,"refresh_token":"refresh-2"}}}""")
+                }
+                else -> {
+                    deletes.incrementAndGet()
+                    json(errorBody("INVALID_CREDENTIALS"), HttpStatusCode.Unauthorized)
+                }
+            }
+        }
+        h.repository.signIn(Credentials("ana@correo.com", "vidanueva123"))
+        val failure = expectFailure { h.repository.deleteAccount("otraclave123") }
+
+        assertEquals(DataError.WRONG_PASSWORD, failure.error)
+        assertEquals(1, deletes.get())
+        assertEquals(0, renewals.get())
+        assertEquals(SessionState.SignedIn("ana@correo.com"), h.session.session.value)
+        assertEquals(StoredSession("ana@correo.com", "refresh-1"), h.tokens.load())
+    }
 }

@@ -30,6 +30,7 @@ import kotlinx.coroutines.sync.withLock
  *   the request repeated. Renewing is serialized: five requests that hit a 401 at the same time
  *   produce a single renewal (the API revokes a session whose refresh token is reused).
  * - If renewing is refused, the session is over: back to the login form.
+ * - A 401 for a wrong password (deleting the account) is not about the session: no renewal.
  */
 @Singleton
 class ApiSession @Inject constructor(
@@ -76,7 +77,7 @@ class ApiSession @Inject constructor(
     internal suspend fun authorized(block: HttpRequestBuilder.() -> Unit): HttpResponse {
         val token = tokens.accessToken ?: renew(stale = null)
         val first = send(token, block)
-        if (first.status != HttpStatusCode.Unauthorized) return first
+        if (first.status != HttpStatusCode.Unauthorized || first.isWrongPassword()) return first
         return send(renew(stale = token), block)
     }
 

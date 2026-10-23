@@ -43,6 +43,7 @@ val UiMessage.textRes: Int
             DataError.SESSION_EXPIRED -> R.string.error_session_expired
             DataError.TOO_MANY_REQUESTS -> R.string.error_too_many_requests
             DataError.RESET_CODE_INVALID -> R.string.error_reset_code_invalid
+            DataError.WRONG_PASSWORD -> R.string.error_wrong_password
             DataError.UNKNOWN -> R.string.error_unknown
         }
     }
