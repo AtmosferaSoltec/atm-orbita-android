@@ -1,16 +1,14 @@
 package com.atmosferast.orbita.ui.feature.categories
 
-import androidx.lifecycle.viewModelScope
 import com.atmosferast.orbita.domain.model.Category
 import com.atmosferast.orbita.domain.model.CategoryDraft
 import com.atmosferast.orbita.domain.repository.CategoriesRepository
 import com.atmosferast.orbita.ui.common.ActionViewModel
+import com.atmosferast.orbita.ui.common.Load
 import com.atmosferast.orbita.ui.common.MessageBus
-import com.atmosferast.orbita.ui.common.WhileScreenVisible
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
 
 @HiltViewModel
 class CategoriesViewModel @Inject constructor(
@@ -18,8 +16,7 @@ class CategoriesViewModel @Inject constructor(
     messages: MessageBus,
 ) : ActionViewModel(messages) {
 
-    val categories: StateFlow<List<Category>> =
-        repository.observeCategories().stateIn(viewModelScope, WhileScreenVisible, emptyList())
+    val categories: StateFlow<Load<List<Category>>> = load { repository.observeCategories() }
 
     /** Creates the category, or updates [editing] when it is set. */
     fun save(editing: Category?, draft: CategoryDraft, onDone: () -> Unit) =

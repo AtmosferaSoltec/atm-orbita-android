@@ -145,10 +145,21 @@ fun TransferScreen(
     val focusManager = LocalFocusManager.current
     val amountsCard = remember { BringIntoViewRequester() }
 
-    // in = round(out × rate, 2)
+    // The rate field shows up to 4 decimals. While it shows the manual rate of the pair, the
+    // exact one behind it is used: 1 ÷ 3.75 reads 0.2667, yet S/ 375 is US$ 100.00, not 100.01.
+    fun rateValue(text: String): BigDecimal? =
+        referenceRate(from, to, fx)?.takeIf { rateText(it) == text } ?: parseAmount(text)
+
+    // in = round(out × rate, 2), or the exact conversion of the pair when its rate is untouched.
     fun recalculateIncoming(newOutCents: Long, newRate: String) {
-        val r = parseAmount(newRate) ?: return
-        val converted = centsToAmount(newOutCents).multiply(r).setScale(2, RoundingMode.HALF_UP)
+        val out = centsToAmount(newOutCents)
+        val untouched = referenceRate(from, to, fx)?.let { rateText(it) == newRate } == true
+        val converted = if (untouched) {
+            fx.convert(out, from.currency, to.currency) ?: return
+        } else {
+            val r = parseAmount(newRate) ?: return
+            out.multiply(r).setScale(2, RoundingMode.HALF_UP)
+        }
         inCents = amountToCents(converted).coerceAtMost(MAX_AMOUNT_CENTS)
     }
 
@@ -253,7 +264,7 @@ fun TransferScreen(
                                 fromAmount = outAmount,
                                 // Same currency: no exchange, what goes out is what comes in.
                                 toAmount = inAmount,
-                                exchangeRate = if (sameCurrency) null else parseAmount(rate),
+                                exchangeRate = if (sameCurrency) null else rateValue(rate),
                                 date = date,
                                 note = note,
                             ),

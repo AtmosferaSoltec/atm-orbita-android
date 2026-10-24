@@ -297,7 +297,7 @@ private fun MainFlow(email: String, onLogout: () -> Unit, onDeleteAccount: (Stri
 
                     BottomTab.ACCOUNTS -> {
                         val state by accounts.state.collectAsStateWithLifecycle()
-                        state?.let {
+                        Loaded(state, accounts::retry) {
                             AccountsScreen(
                                 accounts = it.accounts,
                                 fx = it.fx,
@@ -328,7 +328,7 @@ private fun MainFlow(email: String, onLogout: () -> Unit, onDeleteAccount: (Stri
 
                     BottomTab.CREDIT -> {
                         val state by credit.state.collectAsStateWithLifecycle()
-                        state?.let {
+                        Loaded(state, credit::retry) {
                             CreditScreen(
                                 cards = it.cards,
                                 purchases = it.pendingPurchases,
@@ -357,7 +357,7 @@ private fun MainFlow(email: String, onLogout: () -> Unit, onDeleteAccount: (Stri
 
         is Screen.MovementForm -> {
             val state by movements.state.collectAsStateWithLifecycle()
-            state?.let {
+            Loaded(state, movements::retry, onClose = ::pop) {
                 // A purchase with a credit card needs no account until it is paid.
                 if (it.accounts.isEmpty() && screen.editing == null && screen.purchase == null) {
                     NoticeScreen(
@@ -398,10 +398,13 @@ private fun MainFlow(email: String, onLogout: () -> Unit, onDeleteAccount: (Stri
 
         is Screen.TransferForm -> {
             val state by transfers.state.collectAsStateWithLifecycle()
-            state?.let {
-                // A new transfer starts on the first two accounts; both can be changed.
-                val from = screen.editing?.from ?: it.accounts.getOrNull(0)
-                val to = screen.editing?.to ?: it.accounts.getOrNull(1)
+            Loaded(state, transfers::retry, onClose = ::pop) {
+                // A new transfer starts on the first two accounts; both can be changed. An
+                // edited one starts on its own, taken from the list: the transfer's copy has no
+                // balance, and the preview of the balances needs it.
+                fun current(account: Account) = it.accounts.find { a -> a.id == account.id } ?: account
+                val from = screen.editing?.from?.let(::current) ?: it.accounts.getOrNull(0)
+                val to = screen.editing?.to?.let(::current) ?: it.accounts.getOrNull(1)
                 if (from == null || to == null) {
                     NoticeScreen(
                         barTitle = stringResource(R.string.transfer_title),
@@ -433,7 +436,7 @@ private fun MainFlow(email: String, onLogout: () -> Unit, onDeleteAccount: (Stri
 
         is Screen.PayCredit -> {
             val state by credit.state.collectAsStateWithLifecycle()
-            state?.let {
+            Loaded(state, credit::retry, onClose = ::pop) {
                 PayCreditScreen(
                     purchase = screen.purchase,
                     accounts = it.accounts,
@@ -445,7 +448,7 @@ private fun MainFlow(email: String, onLogout: () -> Unit, onDeleteAccount: (Stri
 
         is Screen.CreditCardForm -> {
             val state by credit.state.collectAsStateWithLifecycle()
-            state?.let {
+            Loaded(state, credit::retry, onClose = ::pop) {
                 CreditCardFormScreen(
                     card = screen.card,
                     defaultCurrency = it.mainCurrency,
@@ -464,7 +467,7 @@ private fun MainFlow(email: String, onLogout: () -> Unit, onDeleteAccount: (Stri
 
         Screen.Settings -> {
             val state by settings.settings.collectAsStateWithLifecycle()
-            state?.let {
+            Loaded(state, settings::retry, onClose = ::pop) {
                 SettingsScreen(
                     fx = it.fx,
                     onFxChange = settings::setFx,
@@ -481,7 +484,7 @@ private fun MainFlow(email: String, onLogout: () -> Unit, onDeleteAccount: (Stri
 
         Screen.Movements -> {
             val state by movements.state.collectAsStateWithLifecycle()
-            state?.let {
+            Loaded(state, movements::retry, onClose = ::pop) {
                 MovementsScreen(
                     accounts = it.accounts,
                     entries = it.entries,
@@ -493,7 +496,7 @@ private fun MainFlow(email: String, onLogout: () -> Unit, onDeleteAccount: (Stri
 
         is Screen.AccountForm -> {
             val state by accounts.state.collectAsStateWithLifecycle()
-            state?.let {
+            Loaded(state, accounts::retry, onClose = ::pop) {
                 AccountFormScreen(
                     account = screen.account,
                     defaultCurrency = it.fx.main,
@@ -508,23 +511,26 @@ private fun MainFlow(email: String, onLogout: () -> Unit, onDeleteAccount: (Stri
         }
 
         Screen.Categories -> {
-            val list by categories.categories.collectAsStateWithLifecycle()
-            CategoriesScreen(
-                categories = list,
-                onBack = ::pop,
-                onCategoryClick = { category -> push(Screen.CategoryForm(category, category.kind)) },
-                onNewCategory = { kind -> push(Screen.CategoryForm(null, kind)) },
-            )
+            val load by categories.categories.collectAsStateWithLifecycle()
+            Loaded(load, categories::retry, onClose = ::pop) { list ->
+                CategoriesScreen(
+                    categories = list,
+                    onBack = ::pop,
+                    onCategoryClick = { category -> push(Screen.CategoryForm(category, category.kind)) },
+                    onNewCategory = { kind -> push(Screen.CategoryForm(null, kind)) },
+                )
+            }
         }
 
         is Screen.CategoryForm -> {
-            val list by categories.categories.collectAsStateWithLifecycle()
+            val load by categories.categories.collectAsStateWithLifecycle()
             CategoryFormScreen(
                 category = screen.category,
                 onClose = ::pop,
                 onSave = { draft -> categories.save(screen.category, draft) { close(screen) } },
                 initialKind = screen.kind,
-                existing = list,
+                // Only to warn about a repeated name early; the API checks it again.
+                existing = (load as? Load.Ready)?.value.orEmpty(),
                 onArchive = {
                     screen.category?.let { category ->
                         categories.archive(category) { close(screen) }
@@ -573,6 +579,43 @@ private fun HomeTab(
         },
         onRetry = onRetry,
     )
+}
+
+/**
+ * [content] once its data is there; nothing while it arrives. If reading failed, a message
+ * offers to try again, with a bar to leave ([onClose]) when the screen is not a tab.
+ */
+@Composable
+private fun <T> Loaded(
+    load: Load<T>,
+    onRetry: () -> Unit,
+    onClose: (() -> Unit)? = null,
+    content: @Composable (T) -> Unit,
+) {
+    when (load) {
+        is Load.Ready -> content(load.value)
+        Load.Loading -> Unit
+        Load.Failed -> ScreenScaffold(
+            header = {
+                if (onClose != null) {
+                    ModalTopBar(
+                        title = "",
+                        navigationIcon = OrbitaIcons.Close,
+                        navigationLabel = stringResource(R.string.action_close),
+                        onNavigate = onClose,
+                    )
+                }
+            },
+        ) {
+            StateMessage(
+                icon = OrbitaIcons.Alert,
+                title = stringResource(R.string.error_load_title),
+                message = stringResource(R.string.error_load_message),
+                actionLabel = stringResource(R.string.action_retry),
+                onAction = onRetry,
+            )
+        }
+    }
 }
 
 /** Shown instead of a form that cannot be filled yet (e.g. a movement without any account). */

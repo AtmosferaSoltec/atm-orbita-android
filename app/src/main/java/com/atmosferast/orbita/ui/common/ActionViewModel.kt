@@ -7,13 +7,19 @@ import com.atmosferast.orbita.domain.repository.DataError
 import com.atmosferast.orbita.domain.repository.DataException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Something the user must be told: a form that cannot be saved yet, or a failed operation. */
@@ -55,6 +61,28 @@ val WhileScreenVisible: SharingStarted = SharingStarted.WhileSubscribed(5_000)
 /** Base of the ViewModels that save things. */
 abstract class ActionViewModel(private val messages: MessageBus) : ViewModel() {
     private var running = false
+
+    private val attempt = MutableStateFlow(0)
+
+    /** Reads again the data that failed to load (the "Reintentar" of a [Load.Failed] screen). */
+    fun retry() = attempt.update { it + 1 }
+
+    /**
+     * The data a screen shows, like Inicio's: while it first arrives it is [Load.Loading], and
+     * a failure to read (no connection, the server down, the session over) is [Load.Failed]
+     * instead of crashing the app. Coming back to a screen does not blank it again; trying
+     * again after a failure shows it loading.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    protected fun <T> load(source: () -> Flow<T>): StateFlow<Load<T>> =
+        attempt
+            .flatMapLatest { tries ->
+                source()
+                    .map<T, Load<T>> { Load.Ready(it) }
+                    .onStart { if (tries > 0) emit(Load.Loading) }
+                    .catch { emit(Load.Failed) }
+            }
+            .stateIn(viewModelScope, WhileScreenVisible, Load.Loading)
 
     /**
      * Runs a write. With an [invalid] draft nothing is saved and the user is told why. [onDone]

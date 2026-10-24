@@ -1,6 +1,5 @@
 package com.atmosferast.orbita.ui.feature.credit
 
-import androidx.lifecycle.viewModelScope
 import com.atmosferast.orbita.domain.model.Account
 import com.atmosferast.orbita.domain.model.CreditCard
 import com.atmosferast.orbita.domain.model.CreditCardDraft
@@ -11,13 +10,12 @@ import com.atmosferast.orbita.domain.repository.CreditRepository
 import com.atmosferast.orbita.domain.repository.DateProvider
 import com.atmosferast.orbita.domain.repository.SettingsRepository
 import com.atmosferast.orbita.ui.common.ActionViewModel
+import com.atmosferast.orbita.ui.common.Load
 import com.atmosferast.orbita.ui.common.MessageBus
-import com.atmosferast.orbita.ui.common.WhileScreenVisible
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
 
 data class CreditUiState(
     val cards: List<CreditCard>,
@@ -39,17 +37,18 @@ class CreditViewModel @Inject constructor(
     messages: MessageBus,
 ) : ActionViewModel(messages) {
 
-    /** Null until the first data arrives. */
-    val state: StateFlow<CreditUiState?> = combine(
-        credit.observeCards(),
-        credit.observePendingPurchases(),
-        accounts.observeAccounts(),
-        settings.observeSettings(),
-    ) { cards, purchases, accountList, userSettings ->
-        CreditUiState(
-            cards, purchases, accountList, userSettings.fx.main, userSettings.fx.isConfigured,
-        )
-    }.stateIn(viewModelScope, WhileScreenVisible, null)
+    val state: StateFlow<Load<CreditUiState>> = load {
+        combine(
+            credit.observeCards(),
+            credit.observePendingPurchases(),
+            accounts.observeAccounts(),
+            settings.observeSettings(),
+        ) { cards, purchases, accountList, userSettings ->
+            CreditUiState(
+                cards, purchases, accountList, userSettings.fx.main, userSettings.fx.isConfigured,
+            )
+        }
+    }
 
     /** Creates the card, or updates [editing] when it is set. */
     fun saveCard(editing: CreditCard?, draft: CreditCardDraft, onDone: () -> Unit) =
