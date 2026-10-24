@@ -44,6 +44,11 @@ val UiMessage.textRes: Int
             DataError.TOO_MANY_REQUESTS -> R.string.error_too_many_requests
             DataError.RESET_CODE_INVALID -> R.string.error_reset_code_invalid
             DataError.WRONG_PASSWORD -> R.string.error_wrong_password
+            DataError.GOOGLE_UNAVAILABLE -> R.string.error_google_unavailable
+            DataError.GOOGLE_INVALID -> R.string.error_google_invalid
+            DataError.GOOGLE_CHALLENGE_EXPIRED -> R.string.error_google_expired
+            DataError.GOOGLE_LINK_REQUIRED -> R.string.error_google_link_required
+            DataError.GOOGLE_IDENTITY_CONFLICT -> R.string.error_google_conflict
             DataError.UNKNOWN -> R.string.error_unknown
         }
     }

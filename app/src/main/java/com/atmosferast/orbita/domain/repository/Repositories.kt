@@ -66,6 +66,17 @@ enum class DataError {
 
     /** Deleting the account with a password that is not the current one. */
     WRONG_PASSWORD,
+
+    // Signing in with Google.
+    GOOGLE_UNAVAILABLE,
+    GOOGLE_INVALID,
+    GOOGLE_CHALLENGE_EXPIRED,
+
+    /** That email already has an account: its password links Google to it, once. */
+    GOOGLE_LINK_REQUIRED,
+
+    /** The account already has another Google account linked. */
+    GOOGLE_IDENTITY_CONFLICT,
     UNKNOWN,
 }
 
@@ -89,10 +100,10 @@ interface AuthRepository {
     suspend fun signIn(credentials: Credentials)
 
     /**
-     * [mainCurrency] is the one the user picked on sign-up: their profile and their first
-     * account ("Efectivo") start on it.
+     * [name] is how the app calls the user (up to 60 characters). [mainCurrency] is the one
+     * they picked on sign-up: their profile and their first account ("Efectivo") start on it.
      */
-    suspend fun signUp(credentials: Credentials, mainCurrency: String)
+    suspend fun signUp(name: String, credentials: Credentials, mainCurrency: String)
     suspend fun signOut()
 
     /**
@@ -109,6 +120,19 @@ interface AuthRepository {
 
     /** Sets the new password with the code and ends every session; it does not sign in. */
     suspend fun resetPassword(email: String, code: String, newPassword: String)
+
+    /** The Google client the API accepts tokens for, or null when it offers no Google sign-in. */
+    suspend fun googleClientId(): String?
+
+    /** A single-use value Google must sign into its token, so a stolen token cannot be replayed. */
+    suspend fun googleNonce(): String
+
+    /**
+     * Signs in with a Google ID token, creating the account (on [mainCurrency]) the first time.
+     * An account that already has that email fails with [DataError.GOOGLE_LINK_REQUIRED] until
+     * its [password] is given once, to link Google to it.
+     */
+    suspend fun signInWithGoogle(idToken: String, nonce: String, mainCurrency: String, password: String? = null)
 
     /**
      * Deletes the user and every piece of their data for good, and ends the session. It asks

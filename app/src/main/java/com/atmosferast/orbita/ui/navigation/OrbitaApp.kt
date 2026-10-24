@@ -22,6 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -57,6 +58,7 @@ import com.atmosferast.orbita.ui.feature.auth.AuthScreen
 import com.atmosferast.orbita.ui.feature.auth.ForgotPasswordScreen
 import com.atmosferast.orbita.ui.feature.auth.NewPasswordScreen
 import com.atmosferast.orbita.ui.feature.auth.ResetCodeScreen
+import com.atmosferast.orbita.ui.feature.auth.requestGoogleIdToken
 import com.atmosferast.orbita.ui.feature.categories.CategoriesScreen
 import com.atmosferast.orbita.ui.feature.categories.CategoriesViewModel
 import com.atmosferast.orbita.ui.feature.categories.CategoryFormScreen
@@ -159,6 +161,10 @@ private fun AuthFlow(app: AppViewModel) {
     var passwordChanged by rememberSaveable { mutableStateOf(false) }
     val error by app.authError.collectAsStateWithLifecycle()
     val errorText = error?.let { stringResource(it.textRes) }
+    val busy by app.authBusy.collectAsStateWithLifecycle()
+    val googleClientId by app.googleClientId.collectAsStateWithLifecycle()
+    val googleLinking by app.googleLinking.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val defaultCurrency = remember { defaultCurrencyFor(Locale.getDefault()) }
 
     fun go(next: AuthStep) {
@@ -174,16 +180,30 @@ private fun AuthFlow(app: AppViewModel) {
             val register = step == AuthStep.REGISTER
             AuthScreen(
                 register = register,
-                onSubmit = { email, password, currency ->
+                onSubmit = { name, email, password, currency ->
                     passwordChanged = false
-                    if (register) app.signUp(email, password, currency)
+                    if (register) app.signUp(name, email, password, currency)
                     else app.signIn(email, password)
                 },
-                onSwitch = { go(if (register) AuthStep.LOGIN else AuthStep.REGISTER) },
+                onSwitch = {
+                    app.cancelGoogleLink()
+                    go(if (register) AuthStep.LOGIN else AuthStep.REGISTER)
+                },
                 error = errorText,
                 notice = if (passwordChanged) stringResource(R.string.auth_reset_done) else null,
                 defaultCurrency = defaultCurrency,
                 onForgotPassword = { go(AuthStep.FORGOT) },
+                // The account picker is shown over this Activity.
+                onGoogle = if (googleClientId == null) null else { currency ->
+                    passwordChanged = false
+                    app.continueWithGoogle(currency) { clientId, nonce ->
+                        requestGoogleIdToken(context, clientId, nonce)
+                    }
+                },
+                busy = busy,
+                googleLinking = googleLinking,
+                onLinkGoogle = app::linkGoogle,
+                onCancelGoogleLink = app::cancelGoogleLink,
             )
         }
 

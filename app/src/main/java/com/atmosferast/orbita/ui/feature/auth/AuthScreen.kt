@@ -52,6 +52,7 @@ import com.atmosferast.orbita.R
 import com.atmosferast.orbita.core.PEN
 import com.atmosferast.orbita.core.currencyInfo
 import com.atmosferast.orbita.core.supportedCurrencies
+import com.atmosferast.orbita.domain.model.NAME_MAX_LENGTH
 import com.atmosferast.orbita.ui.components.DropdownField
 import com.atmosferast.orbita.ui.components.FieldLabel
 import com.atmosferast.orbita.ui.components.HeroCard
@@ -79,7 +80,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun AuthScreen(
     register: Boolean,
-    onSubmit: (email: String, password: String, mainCurrency: String) -> Unit,
+    onSubmit: (name: String, email: String, password: String, mainCurrency: String) -> Unit,
     onSwitch: () -> Unit,
     modifier: Modifier = Modifier,
     error: String? = null,
@@ -88,7 +89,15 @@ fun AuthScreen(
     /** The currency offered on sign-up: the one of the phone's region, or soles. */
     defaultCurrency: String = PEN,
     onForgotPassword: () -> Unit = {},
+    /** Shows "Continuar con Google" (null hides it); a new account starts on the currency. */
+    onGoogle: ((mainCurrency: String) -> Unit)? = null,
+    busy: Boolean = false,
+    /** The Google email already has an account: its password is asked once to link it. */
+    googleLinking: Boolean = false,
+    onLinkGoogle: (password: String) -> Unit = {},
+    onCancelGoogleLink: () -> Unit = {},
 ) {
+    var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var currency by remember { mutableStateOf(defaultCurrency) }
@@ -102,6 +111,15 @@ fun AuthScreen(
                 if (register) R.string.auth_register_subtitle else R.string.auth_login_subtitle,
             ),
         )
+
+        if (register) {
+            FieldLabel(stringResource(R.string.field_name))
+            OrbitaTextField(
+                value = name,
+                onValueChange = { if (it.length <= NAME_MAX_LENGTH) name = it },
+                placeholder = stringResource(R.string.auth_name_placeholder),
+            )
+        }
 
         FieldLabel(stringResource(R.string.field_email))
         EmailField(email, onValueChange = { email = it })
@@ -146,8 +164,18 @@ fun AuthScreen(
             stringResource(
                 if (register) R.string.auth_register_action else R.string.auth_login_action,
             ),
-            onClick = { onSubmit(email, password, currency) },
+            onClick = { onSubmit(name, email, password, currency) },
         )
+
+        if (onGoogle != null) {
+            GoogleSection(
+                busy = busy,
+                linking = googleLinking,
+                onContinue = { onGoogle(currency) },
+                onLink = onLinkGoogle,
+                onCancelLink = onCancelGoogleLink,
+            )
+        }
 
         AuthLink(
             prefix = stringResource(
@@ -372,7 +400,7 @@ private val ChipLine = Color(0xFF0E1A2B).copy(alpha = 0.35f)
 @Preview(name = "Iniciar sesión", widthDp = 390, heightDp = 844)
 @Composable
 private fun LoginPreview() {
-    OrbitaPreview { AuthScreen(register = false, onSubmit = { _, _, _ -> }, onSwitch = {}) }
+    OrbitaPreview { AuthScreen(register = false, onSubmit = { _, _, _, _ -> }, onSwitch = {}) }
 }
 
 @Preview(name = "Iniciar sesión · error", widthDp = 390, heightDp = 844)
@@ -381,7 +409,7 @@ private fun LoginErrorPreview() {
     OrbitaPreview {
         AuthScreen(
             register = false,
-            onSubmit = { _, _, _ -> },
+            onSubmit = { _, _, _, _ -> },
             onSwitch = {},
             error = stringResource(R.string.auth_error_credentials),
         )
@@ -394,7 +422,7 @@ private fun LoginNoticePreview() {
     OrbitaPreview {
         AuthScreen(
             register = false,
-            onSubmit = { _, _, _ -> },
+            onSubmit = { _, _, _, _ -> },
             onSwitch = {},
             notice = stringResource(R.string.auth_reset_done),
         )
@@ -404,5 +432,5 @@ private fun LoginNoticePreview() {
 @Preview(name = "Registro", widthDp = 390, heightDp = 844)
 @Composable
 private fun RegisterPreview() {
-    OrbitaPreview { AuthScreen(register = true, onSubmit = { _, _, _ -> }, onSwitch = {}) }
+    OrbitaPreview { AuthScreen(register = true, onSubmit = { _, _, _, _ -> }, onSwitch = {}) }
 }

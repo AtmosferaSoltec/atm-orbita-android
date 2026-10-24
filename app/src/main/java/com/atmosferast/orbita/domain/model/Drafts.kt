@@ -39,7 +39,8 @@ const val PASSWORD_MIN_LENGTH = 8
 /** The API's limit: a huge password would only cost CPU to hash. */
 const val PASSWORD_MAX_LENGTH = 128
 
-private fun validateName(name: String): ValidationError? = when {
+/** A name: of an account, a category, a card, or the user's own on sign-up. */
+fun validateName(name: String): ValidationError? = when {
     name.isBlank() -> ValidationError.NAME_REQUIRED
     name.trim().length > NAME_MAX_LENGTH -> ValidationError.NAME_TOO_LONG
     else -> null

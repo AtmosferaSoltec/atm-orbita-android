@@ -106,9 +106,10 @@ class DemoAuthRepository @Inject constructor(private val store: DemoStore) : Aut
         state.value = SessionState.SignedIn(credentials.email.trim().ifBlank { SampleData.userEmail })
     }
 
-    // The sample data is the same for everyone, so the currency picked on sign-up changes
-    // nothing here; with the API it is the currency the user starts with.
-    override suspend fun signUp(credentials: Credentials, mainCurrency: String) = signIn(credentials)
+    // The sample data is the same for everyone, so the name and the currency picked on sign-up
+    // change nothing here; with the API the user starts with them.
+    override suspend fun signUp(name: String, credentials: Credentials, mainCurrency: String) =
+        signIn(credentials)
 
     override suspend fun signOut() {
         state.value = SessionState.SignedOut
@@ -121,6 +122,18 @@ class DemoAuthRepository @Inject constructor(private val store: DemoStore) : Aut
     override suspend fun verifyResetCode(email: String, code: String) = Unit
 
     override suspend fun resetPassword(email: String, code: String, newPassword: String) = Unit
+
+    // There is no Google in the demo: the button is not shown.
+    override suspend fun googleClientId(): String? = null
+
+    override suspend fun googleNonce(): String = throw DataException(DataError.GOOGLE_UNAVAILABLE)
+
+    override suspend fun signInWithGoogle(
+        idToken: String,
+        nonce: String,
+        mainCurrency: String,
+        password: String?,
+    ) = throw DataException(DataError.GOOGLE_UNAVAILABLE)
 
     /** The account "is gone": the data goes back to the sample and the session ends. */
     override suspend fun deleteAccount(password: String) {

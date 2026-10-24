@@ -91,14 +91,15 @@ class RemoteAuthRepositoryTest {
     }
 
     @Test
-    fun `signing up sends the currency and the time zone of the phone`() = runTest {
+    fun `signing up sends the name, the currency and the time zone of the phone`() = runTest {
         var sent = ""
         val h = Harness { request ->
             sent = request.bodyText()
             json(authBody("mx@correo.com"), HttpStatusCode.Created)
         }
-        h.repository.signUp(Credentials("mx@correo.com", "vidanueva123"), mainCurrency = "MXN")
+        h.repository.signUp(" Ana Torres ", Credentials("mx@correo.com", "vidanueva123"), mainCurrency = "MXN")
 
+        assertTrue(sent, sent.contains("\"name\":\"Ana Torres\""))
         assertTrue(sent, sent.contains("\"main_currency\":\"MXN\""))
         assertTrue(sent, sent.contains("\"timezone\":"))
         assertEquals(SessionState.SignedIn("mx@correo.com"), h.session.session.value)
@@ -128,7 +129,7 @@ class RemoteAuthRepositoryTest {
     fun `a rejected form tells its first field problem`() = runTest {
         val details = """[{"field":"email","code":"EMAIL_INVALID"},{"field":"password","code":"PASSWORD_TOO_SHORT"}]"""
         val h = Harness { json(errorBody("VALIDATION_FAILED", details), HttpStatusCode.BadRequest) }
-        val failure = expectFailure { h.repository.signUp(Credentials("x", "y"), "PEN") }
+        val failure = expectFailure { h.repository.signUp("Ana", Credentials("x", "y"), "PEN") }
         assertEquals(ValidationError.EMAIL_INVALID, failure.invalid)
     }
 
@@ -280,5 +281,51 @@ class RemoteAuthRepositoryTest {
         assertEquals(0, renewals.get())
         assertEquals(SessionState.SignedIn("ana@correo.com"), h.session.session.value)
         assertEquals(StoredSession("ana@correo.com", "refresh-1"), h.tokens.load())
+    }
+
+    @Test
+    fun `Google is off when the API has no client for it`() = runTest {
+        val h = Harness { json("""{"data":{"client_id":""}}""") }
+        assertNull(h.repository.googleClientId())
+        val on = Harness { json("""{"data":{"client_id":"web.apps.googleusercontent.com"}}""") }
+        assertEquals("web.apps.googleusercontent.com", on.repository.googleClientId())
+    }
+
+    @Test
+    fun `signing in with Google sends the nonce in the body and keeps the session`() = runTest {
+        val calls = mutableListOf<Pair<String, String>>()
+        val h = Harness { request ->
+            calls += request.url.encodedPath to request.bodyText()
+            assertNull("no browser cookie session", request.headers["X-Session-Transport"])
+            when (request.url.encodedPath) {
+                "/api/v1/auth/google/challenge" -> json("""{"data":{"nonce":"n-1"}}""")
+                else -> json(authBody("ana@gmail.com"))
+            }
+        }
+        val nonce = h.repository.googleNonce()
+        h.repository.signInWithGoogle("id-token", nonce, mainCurrency = "USD")
+
+        assertEquals("n-1", nonce)
+        val sent = calls[1].second
+        assertTrue(sent, sent.contains("\"nonce\":\"n-1\"") && sent.contains("\"credential\":\"id-token\""))
+        assertTrue(sent, sent.contains("\"main_currency\":\"USD\"") && !sent.contains("password"))
+        assertEquals(SessionState.SignedIn("ana@gmail.com"), h.session.session.value)
+        assertEquals(StoredSession("ana@gmail.com", "refresh-1"), h.tokens.load())
+    }
+
+    @Test
+    fun `an email that already has an account asks for its password to link Google`() = runTest {
+        var sent = ""
+        val h = Harness { request ->
+            sent = request.bodyText()
+            if (sent.contains("password")) json(authBody("ana@gmail.com"))
+            else json(errorBody("GOOGLE_LINK_REQUIRED"), HttpStatusCode.Conflict)
+        }
+        val failure = expectFailure { h.repository.signInWithGoogle("id-token", "n-1", "PEN") }
+        assertEquals(DataError.GOOGLE_LINK_REQUIRED, failure.error)
+
+        h.repository.signInWithGoogle("id-token", "n-1", "PEN", password = "vidanueva123")
+        assertTrue(sent, sent.contains("\"password\":\"vidanueva123\""))
+        assertEquals(SessionState.SignedIn("ana@gmail.com"), h.session.session.value)
     }
 }

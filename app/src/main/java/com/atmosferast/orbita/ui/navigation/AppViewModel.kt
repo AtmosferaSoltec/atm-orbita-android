@@ -7,14 +7,17 @@ import com.atmosferast.orbita.domain.model.Credentials
 import com.atmosferast.orbita.domain.model.SessionState
 import com.atmosferast.orbita.domain.model.ValidationError
 import com.atmosferast.orbita.domain.model.validateEmail
+import com.atmosferast.orbita.domain.model.validateName
 import com.atmosferast.orbita.domain.model.validatePasswordChange
 import com.atmosferast.orbita.domain.model.validateResetCode
 import com.atmosferast.orbita.domain.repository.AuthRepository
+import com.atmosferast.orbita.domain.repository.DataError
 import com.atmosferast.orbita.domain.repository.DataException
 import com.atmosferast.orbita.domain.repository.DateProvider
 import com.atmosferast.orbita.ui.common.MessageBus
 import com.atmosferast.orbita.ui.common.UiMessage
 import com.atmosferast.orbita.ui.common.toUiMessage
+import com.atmosferast.orbita.ui.feature.auth.GoogleResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import javax.inject.Inject
@@ -23,6 +26,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -58,11 +62,89 @@ class AppViewModel @Inject constructor(
         authAction(if (isDemo) null else credentials.validate()) { auth.signIn(credentials) }
     }
 
-    /** [mainCurrency]: the currency the user picked for their accounts. */
-    fun signUp(email: String, password: String, mainCurrency: String) {
+    /** [name]: how the app calls the user. [mainCurrency]: the currency of their accounts. */
+    fun signUp(name: String, email: String, password: String, mainCurrency: String) {
         val credentials = Credentials(email, password)
-        authAction(if (isDemo) null else credentials.validate()) {
-            auth.signUp(credentials, mainCurrency)
+        authAction(if (isDemo) null else validateName(name) ?: credentials.validate()) {
+            auth.signUp(name, credentials, mainCurrency)
+        }
+    }
+
+    // ---------- Continuar con Google ----------
+
+    private val _googleClientId = MutableStateFlow<String?>(null)
+
+    /** The Google client to ask tokens for; null hides the button (demo, or the API has none). */
+    val googleClientId: StateFlow<String?> = _googleClientId.asStateFlow()
+
+    /** A Google token whose email already has an account: its password is asked once to link. */
+    private data class PendingGoogle(val idToken: String, val nonce: String, val mainCurrency: String)
+
+    private val pendingGoogle = MutableStateFlow<PendingGoogle?>(null)
+    val googleLinking: StateFlow<Boolean> =
+        pendingGoogle.map { it != null }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    init {
+        if (!isDemo) {
+            viewModelScope.launch {
+                // Offline or with an older API there is simply no Google button.
+                _googleClientId.value = try {
+                    auth.googleClientId()
+                } catch (_: DataException) {
+                    null
+                }
+            }
+        }
+    }
+
+    /**
+     * Starts "Continuar con Google": the API's single-use nonce, then [askGoogle] (the screen,
+     * which has the Activity) for the token, then the session. [mainCurrency] is only used if
+     * the account is new.
+     */
+    fun continueWithGoogle(mainCurrency: String, askGoogle: suspend (clientId: String, nonce: String) -> GoogleResult) {
+        val clientId = _googleClientId.value ?: return
+        pendingGoogle.value = null
+        authAction(null) {
+            val nonce = auth.googleNonce()
+            when (val result = askGoogle(clientId, nonce)) {
+                is GoogleResult.Token -> signInWithGoogle(PendingGoogle(result.idToken, nonce, mainCurrency), null)
+                GoogleResult.Cancelled -> Unit
+                GoogleResult.Unavailable -> throw DataException(DataError.GOOGLE_UNAVAILABLE)
+            }
+        }
+    }
+
+    /** Links Google to the account that already has its email, with that account's password. */
+    fun linkGoogle(password: String) {
+        val pending = pendingGoogle.value ?: return
+        if (password.isEmpty()) {
+            _authError.value = UiMessage.Invalid(ValidationError.PASSWORD_REQUIRED)
+            return
+        }
+        authAction(null) { signInWithGoogle(pending, password) }
+    }
+
+    fun cancelGoogleLink() {
+        pendingGoogle.value = null
+        _authError.value = null
+    }
+
+    private suspend fun signInWithGoogle(pending: PendingGoogle, password: String?) {
+        try {
+            auth.signInWithGoogle(pending.idToken, pending.nonce, pending.mainCurrency, password)
+            pendingGoogle.value = null
+        } catch (e: DataException) {
+            when (e.error) {
+                // Not a failure: the screen asks for the password and explains why.
+                DataError.GOOGLE_LINK_REQUIRED -> pendingGoogle.value = pending
+                // The token cannot be used again: back to the Google button.
+                DataError.GOOGLE_INVALID, DataError.GOOGLE_CHALLENGE_EXPIRED -> {
+                    pendingGoogle.value = null
+                    throw e
+                }
+                else -> throw e
+            }
         }
     }
 

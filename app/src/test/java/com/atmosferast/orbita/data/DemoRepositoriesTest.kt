@@ -328,7 +328,7 @@ class DemoRepositoriesTest {
     @Test
     fun `deleting the account ends the session and leaves none of what was done`() = runTest {
         val auth = DemoAuthRepository(store)
-        auth.signUp(Credentials("ana@correo.com", "12345678"), mainCurrency = "MXN")
+        auth.signUp("Ana", Credentials("ana@correo.com", "12345678"), mainCurrency = "MXN")
         assertEquals(SessionState.SignedIn("ana@correo.com"), auth.session.first())
         entries.deleteMovement("m-lunch")
         accounts.create(AccountDraft("Yape", AccountType.OTHER, PEN, BigDecimal("50"), true))

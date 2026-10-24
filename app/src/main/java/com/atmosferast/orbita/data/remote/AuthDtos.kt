@@ -11,6 +11,7 @@ internal data class DataEnvelope<T>(val data: T)
 
 @Serializable
 internal data class RegisterRequest(
+    val name: String,
     val email: String,
     val password: String,
     @SerialName("main_currency") val mainCurrency: String,
@@ -51,3 +52,21 @@ internal data class ResetRequest(
 /** Deleting the account asks for the password again (plan 12 of the API). */
 @Serializable
 internal data class DeleteAccountRequest(val password: String)
+
+/** Sign in with Google (plan 19 of the API): an empty client ID means it is off. */
+@Serializable
+internal data class GoogleConfigDto(@SerialName("client_id") val clientId: String = "")
+
+@Serializable
+internal data class GoogleChallengeDto(val nonce: String)
+
+/** Without the browser's session header the API takes the nonce from the body. */
+@Serializable
+internal data class GoogleSignInRequest(
+    val nonce: String,
+    val credential: String,
+    @SerialName("main_currency") val mainCurrency: String,
+    val timezone: String,
+    /** Only to link Google to an account that already has this email. */
+    val password: String? = null,
+)

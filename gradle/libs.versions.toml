@@ -14,6 +14,8 @@ hiltCompose = "1.4.0"
 coroutines = "1.11.0"
 serialization = "1.11.0"
 ktor = "3.5.1"
+credentials = "1.6.0"
+googleId = "1.2.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -42,6 +44,9 @@ ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.r
 ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
 ktor-client-mock = { group = "io.ktor", name = "ktor-client-mock", version.ref = "ktor" }
+androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
+androidx-credentials-play-services = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
+google-googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleId" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

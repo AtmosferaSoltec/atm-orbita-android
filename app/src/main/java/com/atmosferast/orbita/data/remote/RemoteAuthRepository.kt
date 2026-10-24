@@ -6,6 +6,7 @@ import com.atmosferast.orbita.domain.repository.AuthRepository
 import com.atmosferast.orbita.domain.repository.DataError
 import com.atmosferast.orbita.domain.repository.DataException
 import io.ktor.client.call.body
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
@@ -14,10 +15,11 @@ import java.util.TimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.json.JsonObject
 
 /**
  * Signing in, up and out against the API (atm-orbita-api, plan 01), recovering the password
- * (plan 11) and deleting the account (plan 12).
+ * (plan 11), deleting the account (plan 12) and signing in with Google (plan 19).
  */
 @Singleton
 class RemoteAuthRepository @Inject constructor(
@@ -35,11 +37,12 @@ class RemoteAuthRepository @Inject constructor(
         api.start(auth.user.email, auth.tokens)
     }
 
-    override suspend fun signUp(credentials: Credentials, mainCurrency: String) {
+    override suspend fun signUp(name: String, credentials: Credentials, mainCurrency: String) {
         val response = networkCall {
             api.httpClient.post("auth/register") {
                 setBody(
                     RegisterRequest(
+                        name = name.trim(),
                         email = credentials.email.trim(),
                         password = credentials.password,
                         mainCurrency = mainCurrency,
@@ -84,6 +87,40 @@ class RemoteAuthRepository @Inject constructor(
                 setBody(ResetRequest(email.trim(), code.trim(), newPassword))
             }
         }.requireSuccess()
+    }
+
+    // Signing in with Google (plan 19 of the API), the native way: the nonce and the tokens
+    // travel in the body. Google itself is asked by the screen, which has the Activity.
+
+    override suspend fun googleClientId(): String? =
+        networkCall { api.httpClient.get("auth/google/config") }
+            .requireSuccess().body<DataEnvelope<GoogleConfigDto>>().data.clientId.ifBlank { null }
+
+    override suspend fun googleNonce(): String =
+        networkCall { api.httpClient.post("auth/google/challenge") { setBody(JsonObject(emptyMap())) } }
+            .requireSuccess().body<DataEnvelope<GoogleChallengeDto>>().data.nonce
+
+    override suspend fun signInWithGoogle(
+        idToken: String,
+        nonce: String,
+        mainCurrency: String,
+        password: String?,
+    ) {
+        val response = networkCall {
+            api.httpClient.post("auth/google") {
+                setBody(
+                    GoogleSignInRequest(
+                        nonce = nonce,
+                        credential = idToken,
+                        mainCurrency = mainCurrency,
+                        timezone = TimeZone.getDefault().id,
+                        password = password,
+                    ),
+                )
+            }
+        }
+        val auth = response.requireSuccess().body<DataEnvelope<AuthResponse>>().data
+        api.start(auth.user.email, auth.tokens)
     }
 
     /**
