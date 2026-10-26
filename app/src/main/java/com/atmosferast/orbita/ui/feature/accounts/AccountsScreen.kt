@@ -55,9 +55,10 @@ import com.atmosferast.orbita.domain.model.Account
 import com.atmosferast.orbita.domain.model.FxPair
 import com.atmosferast.orbita.data.demo.SampleData
 import com.atmosferast.orbita.ui.theme.ChipBorder
+import com.atmosferast.orbita.ui.theme.PrimaryDeep
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
-import com.atmosferast.orbita.ui.theme.OnHero
+import com.atmosferast.orbita.ui.components.LocalHeroContent
 import com.atmosferast.orbita.ui.theme.OrbitaShapes
 import com.atmosferast.orbita.ui.components.OrbitaPreview
 import com.atmosferast.orbita.ui.theme.Primary
@@ -119,7 +120,7 @@ private fun SavingsSummaryCard(
 ) {
     val otherCurrency = fx.other(displayCurrency)
     val rate = fx.rate
-    HeroCard(scrim = true) {
+    HeroCard {
         HeroLabel(
             stringResource(
                 R.string.accounts_total_label,
@@ -135,7 +136,7 @@ private fun SavingsSummaryCard(
             Text(
                 stringResource(R.string.fx_configure_link),
                 style = MaterialTheme.typography.bodyMedium,
-                color = OnHero,
+                color = LocalHeroContent.current,
                 modifier = Modifier.clickable(role = Role.Button, onClick = onConfigureFx),
             )
         } else {
@@ -147,7 +148,7 @@ private fun SavingsSummaryCard(
                     formatRate(rate),
                 ),
                 style = MaterialTheme.typography.bodyMedium,
-                color = OnHero.copy(alpha = 0.85f),
+                color = LocalHeroContent.current.copy(alpha = 0.9f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -174,7 +175,7 @@ private fun AccountCard(
                 .clickable(role = Role.Button, onClick = onClick),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconBadge(accountIcon(account), Primary, PrimarySoft)
+            IconBadge(accountIcon(account), PrimaryDeep, PrimarySoft)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
@@ -250,12 +251,12 @@ fun DashedAddButton(label: String, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(OrbitaIcons.Plus, contentDescription = null, tint = Primary, modifier = Modifier.size(20.dp))
+        Icon(OrbitaIcons.Plus, contentDescription = null, tint = PrimaryDeep, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(8.dp))
         Text(
             label,
             style = MaterialTheme.typography.labelLarge,
-            color = Primary,
+            color = PrimaryDeep,
         )
     }
 }

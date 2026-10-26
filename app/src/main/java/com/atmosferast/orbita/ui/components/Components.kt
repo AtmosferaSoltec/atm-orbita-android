@@ -35,8 +35,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -60,19 +62,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.atmosferast.orbita.ui.theme.ChipBorder
+import com.atmosferast.orbita.ui.theme.PrimaryDeep
+import com.atmosferast.orbita.ui.theme.OnPrimary
 import com.atmosferast.orbita.ui.theme.CreditGradientEnd
 import com.atmosferast.orbita.ui.theme.CreditGradientMid
 import com.atmosferast.orbita.ui.theme.CreditGradientStart
 import com.atmosferast.orbita.ui.theme.DividerSoft
 import com.atmosferast.orbita.ui.theme.HeroGlow
 import com.atmosferast.orbita.ui.theme.HeroGradientEnd
-import com.atmosferast.orbita.ui.theme.HeroGradientMid
 import com.atmosferast.orbita.ui.theme.HeroGradientStart
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
 import com.atmosferast.orbita.ui.theme.NeutralSoft
 import com.atmosferast.orbita.ui.theme.OnHero
-import com.atmosferast.orbita.ui.theme.OnHeroMuted
 import com.atmosferast.orbita.ui.theme.OrbitaShapes
 import com.atmosferast.orbita.ui.theme.Outline
 import com.atmosferast.orbita.ui.theme.Primary
@@ -206,7 +208,7 @@ fun SectionTitle(
             Text(
                 actionLabel,
                 style = MaterialTheme.typography.labelLarge,
-                color = Primary,
+                color = PrimaryDeep,
                 modifier = Modifier
                     .clip(OrbitaShapes.Pill)
                     .clickable(role = Role.Button, onClick = onAction)
@@ -253,11 +255,22 @@ fun OrbitaCard(
     )
 }
 
-/** Savings cards are violet-blue-teal with white text; credit is yellow-amber with dark text. */
+/**
+ * Savings cards are the logo's blue-to-cyan with dark text (white would be 3.1:1 on the blue and
+ * 1.8:1 on the cyan); credit is yellow-amber with dark text, or white over a dark scrim.
+ * [content] is the text color of a card without a scrim.
+ */
 enum class HeroTone(val gradient: List<Color>, val glow: Color, val content: Color) {
-    SAVINGS(listOf(HeroGradientStart, HeroGradientMid, HeroGradientEnd), HeroGlow, Color.White),
+    SAVINGS(listOf(HeroGradientStart, HeroGradientEnd), HeroGlow, Ink),
     CREDIT(listOf(CreditGradientStart, CreditGradientMid, CreditGradientEnd), Color.White, Ink),
 }
+
+/** The text color of the [HeroCard] around: white over a scrim, else the tone's own. */
+val LocalHeroContent = compositionLocalOf { OnHero }
+
+/** Translucent surface used inside a [HeroCard], in the card's text color. */
+@Composable
+fun heroGlass(): Color = LocalHeroContent.current.copy(alpha = 0.14f)
 
 /**
  * Highlighted card (savings total, credit to pay) over a three-color gradient.
@@ -307,12 +320,12 @@ fun HeroCard(
                 }
             }
             .padding(20.dp),
-        content = content,
-    )
+    ) {
+        CompositionLocalProvider(LocalHeroContent provides if (scrim) OnHero else tone.content) {
+            content()
+        }
+    }
 }
-
-/** Translucent surface used inside a [HeroCard]. */
-val HeroGlass = Color.White.copy(alpha = 0.14f)
 
 /** Secondary line of a [HeroCard] inside a translucent pill. */
 @Composable
@@ -320,12 +333,12 @@ fun HeroPill(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
         style = MaterialTheme.typography.labelSmall,
-        color = Color.White.copy(alpha = 0.9f),
+        color = LocalHeroContent.current.copy(alpha = 0.9f),
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier
             .clip(OrbitaShapes.Pill)
-            .background(HeroGlass)
+            .background(heroGlass())
             .padding(horizontal = 12.dp, vertical = 6.dp),
     )
 }
@@ -369,7 +382,7 @@ fun <T> SegmentedControl(
     fill: Boolean = true,
     onHero: Boolean = false,
 ) {
-    val track = if (onHero) Color.White.copy(alpha = 0.12f) else NeutralSoft
+    val track = if (onHero) LocalHeroContent.current.copy(alpha = 0.12f) else NeutralSoft
     Row(
         modifier = modifier
             .then(if (fill) Modifier.fillMaxWidth() else Modifier)
@@ -381,7 +394,7 @@ fun <T> SegmentedControl(
             val isSelected = value == selected
             val textColor = when {
                 isSelected -> Ink
-                onHero -> OnHeroMuted
+                onHero -> LocalHeroContent.current.copy(alpha = 0.9f)
                 else -> Muted
             }
             Box(
@@ -426,14 +439,14 @@ fun OrbitaChip(
                 Modifier
                     .size(8.dp)
                     .clip(CircleShape)
-                    .background(if (selected) Color.White else dotColor),
+                    .background(if (selected) OnPrimary else dotColor),
             )
             Spacer(Modifier.width(8.dp))
         }
         Text(
             label,
             style = MaterialTheme.typography.labelLarge,
-            color = if (selected) Color.White else Ink,
+            color = if (selected) OnPrimary else Ink,
             maxLines = 1,
         )
     }
@@ -496,7 +509,7 @@ fun PrimaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     container: Color = Primary,
-    content: Color = Color.White,
+    content: Color = OnPrimary,
     icon: ImageVector? = null,
 ) {
     Row(
@@ -526,7 +539,7 @@ fun PillButton(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
     container: Color = PrimarySoft,
-    content: Color = Primary,
+    content: Color = PrimaryDeep,
     enabled: Boolean = true,
 ) {
     Row(
@@ -680,7 +693,7 @@ fun <T> DropdownField(
                             Icon(
                                 OrbitaIcons.Check,
                                 contentDescription = null,
-                                tint = Primary,
+                                tint = PrimaryDeep,
                                 modifier = Modifier.size(18.dp),
                             )
                         }
@@ -863,17 +876,17 @@ fun LabelValueRow(
 }
 
 @Composable
-fun HeroLabel(text: String, modifier: Modifier = Modifier, color: Color = Color.White) {
+fun HeroLabel(text: String, modifier: Modifier = Modifier, color: Color = LocalHeroContent.current) {
     Text(
         text,
         style = MaterialTheme.typography.labelLarge,
-        color = color.copy(alpha = 0.85f),
+        color = color.copy(alpha = 0.9f),
         modifier = modifier,
     )
 }
 
 @Composable
-fun HeroAmount(text: String, modifier: Modifier = Modifier, color: Color = OnHero) {
+fun HeroAmount(text: String, modifier: Modifier = Modifier, color: Color = LocalHeroContent.current) {
     Text(
         text,
         style = MaterialTheme.typography.displaySmall,

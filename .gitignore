@@ -13,3 +13,10 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Release signing: the upload key and what the signed bundle wizard leaves behind never go in the repo
+*.jks
+*.keystore
+app-orbita
+/app/release/
+keystore.properties

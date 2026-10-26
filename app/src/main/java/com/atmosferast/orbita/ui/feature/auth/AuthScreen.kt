@@ -64,6 +64,7 @@ import com.atmosferast.orbita.ui.components.OrbitaTextField
 import com.atmosferast.orbita.ui.components.PrimaryButton
 import com.atmosferast.orbita.ui.components.ScreenScaffold
 import com.atmosferast.orbita.ui.theme.Expense
+import com.atmosferast.orbita.ui.theme.PrimaryDeep
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
 import com.atmosferast.orbita.ui.theme.Income
 import com.atmosferast.orbita.ui.theme.IncomeSoft
@@ -144,7 +145,7 @@ fun AuthScreen(
                 Text(
                     stringResource(R.string.auth_forgot_link),
                     style = MaterialTheme.typography.labelLarge,
-                    color = Primary,
+                    color = PrimaryDeep,
                     modifier = Modifier
                         .clip(OrbitaShapes.Pill)
                         .clickable(role = Role.Button, onClick = onForgotPassword)
@@ -276,7 +277,7 @@ internal fun AuthLink(link: String, onClick: () -> Unit, prefix: String? = null)
         Text(
             link,
             style = MaterialTheme.typography.labelLarge,
-            color = Primary,
+            color = PrimaryDeep,
             modifier = Modifier
                 .clip(OrbitaShapes.Pill)
                 .clickable(role = Role.Button, onClick = onClick)

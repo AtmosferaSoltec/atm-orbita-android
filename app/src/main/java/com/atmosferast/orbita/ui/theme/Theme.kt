@@ -10,9 +10,9 @@ import androidx.compose.ui.unit.dp
 // No dark theme in the MVP (docs/01, out of scope).
 private val LightColorScheme = lightColorScheme(
     primary = Primary,
-    onPrimary = Color.White,
+    onPrimary = OnPrimary,
     primaryContainer = PrimarySoft,
-    onPrimaryContainer = Primary,
+    onPrimaryContainer = PrimaryDeep,
     secondary = Neutral,
     onSecondary = Color.White,
     secondaryContainer = NeutralSoft,

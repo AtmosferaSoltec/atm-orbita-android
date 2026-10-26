@@ -1,30 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Orbita "O" with its gradient (#6E8CFF to #23D6E0). The logo's 512 px tile is drawn onto the
+  72 dp that stay visible of the 108 dp adaptive icon (72 / 512 = 0.1406), so the launcher mask
+  never cuts it: the viewport is 768 and the logo sits 128 in from each edge.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <path android:pathData="M31,63.928c0,0 6.4,-11 12.1,-13.1c7.2,-2.6 26,-1.4 26,-1.4l38.1,38.1L107,108.928l-32,-1L31,63.928z">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:endX="85.84757"
-                android:endY="92.4963"
-                android:startX="42.9492"
-                android:startY="49.59793"
-                android:type="linear">
-                <item
-                    android:color="#44000000"
-                    android:offset="0.0" />
-                <item
-                    android:color="#00000000"
-                    android:offset="1.0" />
-            </gradient>
-        </aapt:attr>
-    </path>
-    <path
-        android:fillColor="#FFFFFF"
-        android:fillType="nonZero"
-        android:pathData="M65.3,45.828l3.8,-6.6c0.2,-0.4 0.1,-0.9 -0.3,-1.1c-0.4,-0.2 -0.9,-0.1 -1.1,0.3l-3.9,6.7c-6.3,-2.8 -13.4,-2.8 -19.7,0l-3.9,-6.7c-0.2,-0.4 -0.7,-0.5 -1.1,-0.3C38.8,38.328 38.7,38.828 38.9,39.228l3.8,6.6C36.2,49.428 31.7,56.028 31,63.928h46C76.3,56.028 71.8,49.428 65.3,45.828zM43.4,57.328c-0.8,0 -1.5,-0.5 -1.8,-1.2c-0.3,-0.7 -0.1,-1.5 0.4,-2.1c0.5,-0.5 1.4,-0.7 2.1,-0.4c0.7,0.3 1.2,1 1.2,1.8C45.3,56.528 44.5,57.328 43.4,57.328L43.4,57.328zM64.6,57.328c-0.8,0 -1.5,-0.5 -1.8,-1.2s-0.1,-1.5 0.4,-2.1c0.5,-0.5 1.4,-0.7 2.1,-0.4c0.7,0.3 1.2,1 1.2,1.8C66.5,56.528 65.6,57.328 64.6,57.328L64.6,57.328z"
-        android:strokeWidth="1"
-        android:strokeColor="#00000000" />
+    android:viewportWidth="768"
+    android:viewportHeight="768">
+    <group
+        android:translateX="128"
+        android:translateY="128">
+        <path android:pathData="M389.62,216.16C399.923,247.877 398.609,282.224 385.912,313.061C373.216,343.898 349.964,369.214 320.316,384.481C290.668,399.749 256.555,403.973 224.078,396.398C191.602,388.823 162.878,369.944 143.043,343.135C123.208,316.326 113.556,283.337 115.811,250.065C118.067,216.792 132.084,185.407 155.355,161.521C178.627,137.635 209.636,122.805 242.838,119.683C276.04,116.561 309.27,125.35 336.587,144.48L303.807,191.298C287.602,179.949 267.89,174.735 248.193,176.586C228.497,178.438 210.101,187.235 196.296,201.404C182.49,215.574 174.175,234.192 172.836,253.93C171.498,273.668 177.224,293.238 188.99,309.142C200.756,325.046 217.796,336.246 237.062,340.739C256.328,345.233 276.564,342.727 294.152,333.67C311.741,324.613 325.534,309.595 333.066,291.302C340.598,273.009 341.377,252.633 335.265,233.818L389.62,216.16Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="256"
+                    android:startY="119.07"
+                    android:endX="256"
+                    android:endY="400.075">
+                    <item
+                        android:color="#6E8CFF"
+                        android:offset="0" />
+                    <item
+                        android:color="#23D6E0"
+                        android:offset="1" />
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
 </vector>
