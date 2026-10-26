@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  The Orbita "O" in the app's violet, blue and cyan, in the lighter tones that stand out on the dark tile (#8B5CF6, #3B82F6, #22D3EE: 4.1, 4.7 and 9.6:1 against #1A1A1A). The logo's 512 px tile is drawn onto the
+  The Orbita "O" in the app's blue and celeste, in tones that stand out on the dark tile (#2563EB, #0EA5E9, #67E8F9: 3.4, 6.3 and 12:1 against #1A1A1A). The logo's 512 px tile is drawn onto the
   72 dp that stay visible of the 108 dp adaptive icon (72 / 512 = 0.1406), so the launcher mask
   never cuts it: the viewport is 768 and the logo sits 128 in from each edge.
 -->
@@ -22,13 +22,13 @@
                     android:endX="256"
                     android:endY="400.075">
                     <item
-                        android:color="#8B5CF6"
+                        android:color="#2563EB"
                         android:offset="0" />
                     <item
-                        android:color="#3B82F6"
+                        android:color="#0EA5E9"
                         android:offset="0.5" />
                     <item
-                        android:color="#22D3EE"
+                        android:color="#67E8F9"
                         android:offset="1" />
                 </gradient>
             </aapt:attr>
