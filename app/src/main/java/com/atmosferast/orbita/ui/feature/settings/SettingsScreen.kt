@@ -50,7 +50,6 @@ import com.atmosferast.orbita.ui.components.SegmentedControl
 import com.atmosferast.orbita.domain.model.FxPair
 import com.atmosferast.orbita.data.demo.SampleData
 import com.atmosferast.orbita.ui.theme.Expense
-import com.atmosferast.orbita.ui.theme.PrimaryDeep
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
@@ -240,7 +239,7 @@ fun SettingsScreen(
         SectionTitle(stringResource(R.string.categories_title))
         OrbitaCard(onClick = onManageCategories) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconBadge(OrbitaIcons.Tag, PrimaryDeep, PrimarySoft, size = 40.dp)
+                IconBadge(OrbitaIcons.Tag, Primary, PrimarySoft, size = 40.dp)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(

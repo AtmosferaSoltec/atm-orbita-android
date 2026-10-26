@@ -49,8 +49,7 @@ import com.atmosferast.orbita.core.monthName
 import com.atmosferast.orbita.ui.components.CircleIconButton
 import com.atmosferast.orbita.ui.components.EntryList
 import com.atmosferast.orbita.ui.components.HeroCard
-import com.atmosferast.orbita.ui.components.LocalHeroContent
-import com.atmosferast.orbita.ui.components.heroGlass
+import com.atmosferast.orbita.ui.components.HeroGlass
 import com.atmosferast.orbita.ui.components.HeroLabel
 import com.atmosferast.orbita.ui.components.HintText
 import com.atmosferast.orbita.ui.components.IconBadge
@@ -187,7 +186,7 @@ private fun SavingsHeroCard(
     val otherCurrency = fx.other(displayCurrency)
     val total = savings[displayCurrency] ?: BigDecimal.ZERO
     val rate = fx.rate
-    HeroCard {
+    HeroCard(scrim = true) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             HeroLabel(stringResource(R.string.savings_total), Modifier.weight(1f))
             SegmentedControl(
@@ -203,7 +202,7 @@ private fun SavingsHeroCard(
         Text(
             formatMoney(total, displayCurrency),
             style = MaterialTheme.typography.displaySmall.copy(fontSize = 42.sp, lineHeight = 48.sp),
-            color = LocalHeroContent.current,
+            color = Color.White,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -213,7 +212,7 @@ private fun SavingsHeroCard(
             Text(
                 stringResource(R.string.fx_configure_link),
                 style = MaterialTheme.typography.bodyMedium,
-                color = LocalHeroContent.current,
+                color = Color.White,
                 modifier = Modifier.clickable(role = Role.Button, onClick = onConfigureFx),
             )
         } else {
@@ -225,7 +224,7 @@ private fun SavingsHeroCard(
                     formatRate(rate),
                 ),
                 style = MaterialTheme.typography.bodyMedium,
-                color = LocalHeroContent.current.copy(alpha = 0.9f),
+                color = Color.White.copy(alpha = 0.85f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -235,7 +234,7 @@ private fun SavingsHeroCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
-                .background(heroGlass())
+                .background(HeroGlass)
                 .clickable(role = Role.Button, onClick = onOpenAccounts)
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -243,7 +242,7 @@ private fun SavingsHeroCard(
             Icon(
                 OrbitaIcons.Wallet,
                 contentDescription = null,
-                tint = LocalHeroContent.current,
+                tint = Color.White,
                 modifier = Modifier.size(18.dp),
             )
             Spacer(Modifier.width(10.dp))
@@ -254,18 +253,18 @@ private fun SavingsHeroCard(
                     activeAccounts,
                 ),
                 style = MaterialTheme.typography.bodyMedium,
-                color = LocalHeroContent.current,
+                color = Color.White,
                 modifier = Modifier.weight(1f),
             )
             Text(
                 stringResource(R.string.action_choose),
                 style = MaterialTheme.typography.labelLarge,
-                color = LocalHeroContent.current,
+                color = Color.White,
             )
             Icon(
                 OrbitaIcons.ChevronRight,
                 contentDescription = null,
-                tint = LocalHeroContent.current,
+                tint = Color.White,
                 modifier = Modifier.size(18.dp),
             )
         }

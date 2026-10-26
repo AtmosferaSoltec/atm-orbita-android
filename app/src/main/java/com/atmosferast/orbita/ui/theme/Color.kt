@@ -10,27 +10,16 @@ val Muted = Color(0xFF5B6778)
 val MutedLight = Color(0xFF94A0B2)
 val Outline =Color(0xFFE3E8EE)
 val DividerSoft = Color(0xFFEEF1F5)
-// Brand: the two colors of the logo's gradient, on its dark tile (docs/brand/orbita-logo.svg).
-val BrandBlue = Color(0xFF6E8CFF)
-val BrandCyan = Color(0xFF23D6E0)
-
-// Fills (buttons, selected states, the + button). Text and icons ON them are OnPrimary, never
-// white: white is 3.1:1 on BrandBlue (4.5 is needed) and 1.8:1 on BrandCyan, while Ink is 5.7:1
-// and 9.8:1.
-val Primary = BrandBlue
-val OnPrimary = Ink
-
-// The same blue as text or icon over light surfaces (links, the selected tab, soft pills):
-// BrandBlue itself is only 3.1:1 on white. This one is 6.1:1 on white and 5.3:1 on PrimarySoft.
-val PrimaryDeep = Color(0xFF3B54D6)
-val PrimarySoft = Color(0xFFE9EEFF)
+val Primary = Color(0xFF1D4ED8)
+val PrimarySoft = Color(0xFFE8EEFD)
 val OnHero = Color(0xFFFFFFFF)
 val OnHeroMuted = Color(0xFFC7D2E3)
 
-// Gradient of the savings cards (Inicio, Cuentas): the logo's two colors, with Ink text.
-val HeroGradientStart = BrandBlue
-val HeroGradientEnd = BrandCyan
-val HeroGlow = Color.White
+// Gradient of the highlighted cards (Inicio, Cuentas, Crédito): violet -> blue -> teal
+val HeroGradientStart = Color(0xFF3B1D8F)
+val HeroGradientMid = Color(0xFF1D4ED8)
+val HeroGradientEnd = Color(0xFF0E7490)
+val HeroGlow = Color(0xFF67E8F9)
 
 // Gradient of the credit card (Crédito): yellow -> amber -> orange, with dark text
 val CreditGradientStart = Color(0xFFFDE047)

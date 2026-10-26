@@ -48,8 +48,6 @@ import com.atmosferast.orbita.core.formatMonthYear
 import com.atmosferast.orbita.core.monthShortName
 import com.atmosferast.orbita.core.weekdayInitials
 import com.atmosferast.orbita.ui.theme.Background
-import com.atmosferast.orbita.ui.theme.PrimaryDeep
-import com.atmosferast.orbita.ui.theme.OnPrimary
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
 import com.atmosferast.orbita.ui.theme.MutedLight
@@ -197,7 +195,7 @@ private fun CalendarDialog(
                     onConfirm,
                     Modifier.weight(1f),
                     container = if (canConfirm) Primary else NeutralSoft,
-                    content = if (canConfirm) OnPrimary else MutedLight,
+                    content = if (canConfirm) Color.White else MutedLight,
                     enabled = canConfirm,
                 )
             }
@@ -440,9 +438,9 @@ private fun DayCell(
                 style = if (selected || isToday) MaterialTheme.typography.labelLarge
                 else MaterialTheme.typography.bodyMedium,
                 color = when {
-                    selected -> OnPrimary
+                    selected -> Color.White
                     !enabled -> MutedLight.copy(alpha = 0.45f)
-                    isToday || band != RangeBand.NONE -> PrimaryDeep
+                    isToday || band != RangeBand.NONE -> Primary
                     else -> Ink
                 },
             )
@@ -476,7 +474,7 @@ private fun MonthGrid(month: LocalDate, lastMonth: LocalDate?, onPick: (LocalDat
                             monthShortName(option.monthValue).replaceFirstChar { it.uppercase() },
                             style = MaterialTheme.typography.labelLarge,
                             color = when {
-                                selected -> OnPrimary
+                                selected -> Color.White
                                 !enabled -> MutedLight.copy(alpha = 0.45f)
                                 else -> Ink
                             },

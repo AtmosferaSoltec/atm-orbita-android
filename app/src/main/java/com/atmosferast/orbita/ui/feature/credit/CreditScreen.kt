@@ -58,7 +58,6 @@ import com.atmosferast.orbita.data.demo.SampleData
 import com.atmosferast.orbita.domain.model.debtCurrencies
 import com.atmosferast.orbita.domain.model.debtIn
 import com.atmosferast.orbita.ui.theme.Expense
-import com.atmosferast.orbita.ui.theme.PrimaryDeep
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
@@ -103,7 +102,7 @@ fun CreditScreen(
             stringResource(R.string.credit_register),
             onRegisterPurchase,
             container = PrimarySoft,
-            content = PrimaryDeep,
+            content = Primary,
             icon = OrbitaIcons.Plus,
         )
         Spacer(Modifier.height(12.dp))
@@ -235,7 +234,7 @@ private fun CreditCardCard(
             // Red when a payment is due in 3 days or less, or overdue; blue otherwise.
             IconBadge(
                 OrbitaIcons.CreditCard,
-                tint = if (urgent) Expense else PrimaryDeep,
+                tint = if (urgent) Expense else Primary,
                 container = if (urgent) ExpenseSoft else PrimarySoft,
             )
             Spacer(Modifier.width(12.dp))
@@ -317,14 +316,14 @@ private fun CreditCardCard(
                     Icon(
                         OrbitaIcons.Edit,
                         contentDescription = null,
-                        tint = PrimaryDeep,
+                        tint = Primary,
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         stringResource(R.string.credit_card_edit),
                         style = MaterialTheme.typography.labelLarge,
-                        color = PrimaryDeep,
+                        color = Primary,
                     )
                 }
             }

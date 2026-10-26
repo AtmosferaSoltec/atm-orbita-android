@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  The Orbita "O" with its gradient (#6E8CFF to #23D6E0). The logo's 512 px tile is drawn onto the
+  The Orbita "O" with the app's own gradient (violet #3B1D8F, blue #1D4ED8, teal #0E7490: the one of the savings cards). The logo's 512 px tile is drawn onto the
   72 dp that stay visible of the 108 dp adaptive icon (72 / 512 = 0.1406), so the launcher mask
   never cuts it: the viewport is 768 and the logo sits 128 in from each edge.
 -->
@@ -22,10 +22,13 @@
                     android:endX="256"
                     android:endY="400.075">
                     <item
-                        android:color="#6E8CFF"
+                        android:color="#3B1D8F"
                         android:offset="0" />
                     <item
-                        android:color="#23D6E0"
+                        android:color="#1D4ED8"
+                        android:offset="0.5" />
+                    <item
+                        android:color="#0E7490"
                         android:offset="1" />
                 </gradient>
             </aapt:attr>

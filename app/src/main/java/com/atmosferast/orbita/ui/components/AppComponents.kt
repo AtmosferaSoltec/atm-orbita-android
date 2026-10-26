@@ -48,8 +48,6 @@ import com.atmosferast.orbita.domain.model.Movement
 import com.atmosferast.orbita.domain.model.Transfer
 import com.atmosferast.orbita.domain.model.MovementKind
 import com.atmosferast.orbita.ui.theme.Background
-import com.atmosferast.orbita.ui.theme.PrimaryDeep
-import com.atmosferast.orbita.ui.theme.OnPrimary
 import com.atmosferast.orbita.ui.theme.DividerSoft
 import com.atmosferast.orbita.ui.theme.Expense
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
@@ -382,7 +380,7 @@ fun OrbitaBottomBar(
                     Icon(
                         OrbitaIcons.Plus,
                         contentDescription = stringResource(R.string.movement_new_title),
-                        tint = OnPrimary,
+                        tint = Color.White,
                         modifier = Modifier.size(26.dp),
                     )
                 }
@@ -402,7 +400,7 @@ private fun RowScope.BottomBarItem(
     onSelect: (BottomTab) -> Unit,
 ) {
     val selected = tab == current
-    val color = if (selected) PrimaryDeep else Muted
+    val color = if (selected) Primary else Muted
     Column(
         modifier = Modifier
             .weight(1f)

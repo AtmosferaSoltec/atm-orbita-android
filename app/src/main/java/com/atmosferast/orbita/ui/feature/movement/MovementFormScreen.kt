@@ -69,7 +69,6 @@ import com.atmosferast.orbita.domain.model.Movement
 import com.atmosferast.orbita.domain.model.MovementKind
 import com.atmosferast.orbita.data.demo.SampleData
 import com.atmosferast.orbita.ui.theme.Expense
-import com.atmosferast.orbita.ui.theme.PrimaryDeep
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
 import com.atmosferast.orbita.ui.theme.Income
 import com.atmosferast.orbita.ui.theme.IncomeSoft
@@ -314,7 +313,7 @@ fun MovementFormScreen(
                         Icon(
                             accountIcon(option),
                             contentDescription = null,
-                            tint = PrimaryDeep,
+                            tint = Primary,
                             modifier = Modifier.size(20.dp),
                         )
                     },
@@ -418,7 +417,7 @@ fun MovementFormScreen(
                                 Icon(
                                     OrbitaIcons.CreditCard,
                                     contentDescription = null,
-                                    tint = PrimaryDeep,
+                                    tint = Primary,
                                     modifier = Modifier.size(20.dp),
                                 )
                             },

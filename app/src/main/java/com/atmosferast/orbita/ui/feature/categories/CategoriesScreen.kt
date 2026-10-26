@@ -58,7 +58,6 @@ import com.atmosferast.orbita.domain.model.MovementKind
 import com.atmosferast.orbita.domain.model.normalizeName
 import com.atmosferast.orbita.data.demo.SampleData
 import com.atmosferast.orbita.ui.theme.CategoryPalette
-import com.atmosferast.orbita.ui.theme.PrimaryDeep
 import com.atmosferast.orbita.ui.theme.DividerSoft
 import com.atmosferast.orbita.ui.theme.Expense
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
@@ -95,7 +94,7 @@ fun CategoriesScreen(
                 stringResource(R.string.category_new),
                 onClick = { onNewCategory(kind) },
                 container = PrimarySoft,
-                content = PrimaryDeep,
+                content = Primary,
                 icon = OrbitaIcons.Plus,
             )
         },

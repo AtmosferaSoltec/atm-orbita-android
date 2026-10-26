@@ -77,7 +77,6 @@ import com.atmosferast.orbita.domain.model.FxPair
 import com.atmosferast.orbita.domain.model.Transfer
 import com.atmosferast.orbita.data.demo.SampleData
 import com.atmosferast.orbita.ui.theme.Expense
-import com.atmosferast.orbita.ui.theme.PrimaryDeep
 import com.atmosferast.orbita.ui.theme.ExpenseSoft
 import com.atmosferast.orbita.ui.theme.Ink
 import com.atmosferast.orbita.ui.theme.Muted
@@ -325,7 +324,7 @@ fun TransferScreen(
                 Icon(
                     OrbitaIcons.SwapVertical,
                     contentDescription = stringResource(R.string.transfer_swap),
-                    tint = PrimaryDeep,
+                    tint = Primary,
                     modifier = Modifier.size(20.dp),
                 )
             }
@@ -498,7 +497,7 @@ private fun AccountDropdown(
             Icon(
                 accountIcon(option),
                 contentDescription = null,
-                tint = PrimaryDeep,
+                tint = Primary,
                 modifier = Modifier.size(20.dp),
             )
         },
