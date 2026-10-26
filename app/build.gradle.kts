@@ -38,9 +38,10 @@ android {
 
     buildTypes {
         release {
+            // R8: shrinks, obfuscates and optimizes. Its mapping.txt travels inside the .aab, so
+            // Play Console deobfuscates crash reports by itself.
             optimization {
                 enable = true
-                packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
             }
         }
     }
