@@ -6,8 +6,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import dagger.hilt.android.AndroidEntryPoint
 import com.atmosferast.orbita.data.remote.RemoteChanges
+import com.atmosferast.orbita.domain.model.SessionState
+import com.atmosferast.orbita.ui.navigation.AppViewModel
 import com.atmosferast.orbita.ui.navigation.OrbitaApp
 import com.atmosferast.orbita.ui.theme.OrbitaTheme
 import javax.inject.Inject
@@ -20,7 +24,12 @@ class MainActivity : ComponentActivity() {
     /** Set when the app goes to the background; turning the screen does not count. */
     private var wasInBackground = false
 
+    private val app: AppViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        // The launch screen stays until the stored session is restored, so the app never
+        // flashes the login form to someone who is already signed in.
+        installSplashScreen().setKeepOnScreenCondition { app.session.value == SessionState.Loading }
         super.onCreate(savedInstanceState)
         // Light-only theme: keep dark system bar icons regardless of the system setting.
         enableEdgeToEdge(

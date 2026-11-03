@@ -92,6 +92,15 @@
     <string name="fx_currency_locked_hint">Configura tu tipo de cambio en Ajustes para usar otras monedas.</string>
 
     <!-- Login / sign-up -->
+    <string name="onboarding_skip">Omitir</string>
+    <string name="onboarding_next">Siguiente</string>
+    <string name="onboarding_start">Comenzar</string>
+    <string name="onboarding_1_title">Todo tu dinero en un solo lugar</string>
+    <string name="onboarding_1_text">Registra tus ingresos y gastos por cuenta, en soles o en dólares, y mira cuánto tienes ahorrado.</string>
+    <string name="onboarding_2_title">Transferencias y tarjetas de crédito</string>
+    <string name="onboarding_2_text">Mueve dinero entre tus cuentas y deja tus compras con tarjeta pendientes hasta que las pagues.</string>
+    <string name="onboarding_3_title">Entiende a dónde va tu plata</string>
+    <string name="onboarding_3_text">Los reportes te muestran en qué categorías gastas y cuánto ingresas cada mes.</string>
     <string name="auth_login_title">Inicia sesión</string>
     <string name="auth_login_subtitle">Registra tus ingresos y gastos, y mira cuánto tienes ahorrado.</string>
     <string name="auth_register_title">Crea tu cuenta</string>

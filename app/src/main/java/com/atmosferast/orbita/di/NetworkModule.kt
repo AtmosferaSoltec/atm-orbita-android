@@ -20,9 +20,15 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
+    /** Google sign-in is built but off for the first store release: no client ID, no button. */
+    private const val GOOGLE_SIGN_IN_ENABLED = false
+
     @Provides
     @Singleton
-    fun provideAuthEndpoint() = AuthEndpoint(BuildConfig.AUTH_API_BASE_URL, BuildConfig.GOOGLE_SERVER_CLIENT_ID)
+    fun provideAuthEndpoint() = AuthEndpoint(
+        BuildConfig.AUTH_API_BASE_URL,
+        if (GOOGLE_SIGN_IN_ENABLED) BuildConfig.GOOGLE_SERVER_CLIENT_ID else "",
+    )
 
     @Provides
     @Singleton

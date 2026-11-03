@@ -58,6 +58,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.atmosferast.orbita.ui.theme.ChipBorder
 import com.atmosferast.orbita.ui.theme.CreditGradientEnd
@@ -391,7 +392,7 @@ fun <T> SegmentedControl(
                     .clip(OrbitaShapes.Pill)
                     .background(if (isSelected) Surface else Color.Transparent)
                     .selectable(isSelected, role = Role.Tab) { onSelect(value) }
-                    .padding(horizontal = 14.dp),
+                    .padding(horizontal = if (fill) 4.dp else 14.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(label, style = MaterialTheme.typography.labelLarge, color = textColor, maxLines = 1)
@@ -851,14 +852,16 @@ fun LabelValueRow(
     valueStyle: TextStyle = MaterialTheme.typography.titleSmall,
 ) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = labelColor)
+        Spacer(Modifier.width(12.dp))
+        // The value takes what the label leaves, so a long email wraps instead of the label.
         Text(
-            label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = labelColor,
+            value,
+            style = valueStyle,
+            color = valueColor,
+            textAlign = TextAlign.End,
             modifier = Modifier.weight(1f),
         )
-        Spacer(Modifier.width(12.dp))
-        Text(value, style = valueStyle, color = valueColor)
     }
 }
 

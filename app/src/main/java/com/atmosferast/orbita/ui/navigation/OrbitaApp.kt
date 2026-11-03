@@ -1,6 +1,8 @@
 package com.atmosferast.orbita.ui.navigation
 
+import android.content.Context
 import androidx.activity.compose.BackHandler
+import androidx.core.content.edit
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -70,6 +72,7 @@ import com.atmosferast.orbita.ui.feature.home.HomeState
 import com.atmosferast.orbita.domain.model.HomeSummary
 import com.atmosferast.orbita.ui.feature.home.HomeViewModel
 import com.atmosferast.orbita.ui.feature.movement.MovementFormScreen
+import com.atmosferast.orbita.ui.feature.onboarding.OnboardingScreen
 import com.atmosferast.orbita.ui.feature.movement.MovementsScreen
 import com.atmosferast.orbita.ui.feature.movement.MovementsViewModel
 import com.atmosferast.orbita.ui.feature.reports.ReportsScreen
@@ -81,6 +84,8 @@ import com.atmosferast.orbita.ui.feature.transfer.TransferViewModel
 import com.atmosferast.orbita.ui.theme.Background
 import java.math.BigDecimal
 import kotlinx.coroutines.flow.collectLatest
+
+private const val ONBOARDED_KEY = "onboarded"
 
 private sealed interface Screen {
     data object Main : Screen
@@ -112,6 +117,10 @@ fun OrbitaApp(app: AppViewModel = hiltViewModel()) {
     val session by app.session.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val resources = LocalResources.current
+    // The introduction is shown once, before the first login or sign-up.
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("orbita", Context.MODE_PRIVATE) }
+    var onboarded by rememberSaveable { mutableStateOf(prefs.getBoolean(ONBOARDED_KEY, false)) }
 
     // A newer message replaces the one on screen instead of queueing behind it.
     LaunchedEffect(Unit) {
@@ -128,7 +137,10 @@ fun OrbitaApp(app: AppViewModel = hiltViewModel()) {
             when (val current = session) {
                 // The stored session is being restored: nothing to show yet.
                 SessionState.Loading -> Unit
-                SessionState.SignedOut -> AuthFlow(app)
+                SessionState.SignedOut -> {
+                    if (onboarded) AuthFlow(app)
+                    else OnboardingScreen(onFinish = { onboarded = true; prefs.edit { putBoolean(ONBOARDED_KEY, true) } })
+                }
                 is SessionState.SignedIn -> MainFlow(
                     email = current.email,
                     onLogout = app::signOut,
