@@ -45,7 +45,7 @@ private class SettingsHarness(
     handler: suspend io.ktor.client.engine.mock.MockRequestHandleScope.(io.ktor.client.request.HttpRequestData) -> io.ktor.client.request.HttpResponseData,
 ) {
     val engine = MockEngine(handler)
-    val session = ApiSession(createApiClient("http://api.test/api/v1", engine, "test"), SettingsTokens())
+    val session = ApiSession(createApiClient("http://api.test/api/v1", engine, "test"), SettingsTokens(), TestAuthEndpoint)
     val repository = RemoteSettingsRepository(session)
 }
 
@@ -143,7 +143,7 @@ class RemoteSettingsRepositoryTest {
 
         h.session.end()
         main = "MXN"
-        h.session.start("beto@correo.com", TokensDto("access-2", 900, "refresh-2"))
+        h.session.start("beto@correo.com", TokensDto("access-2", "refresh-2", 900))
 
         assertEquals("MXN", h.repository.observeSettings().first().fx.main)
     }

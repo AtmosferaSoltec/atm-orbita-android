@@ -41,7 +41,7 @@ private class AccountTokens : TokenStore {
 private class AccountsHarness(
     handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
 ) {
-    val session = ApiSession(createApiClient("http://api.test/api/v1", MockEngine(handler), "test"), AccountTokens())
+    val session = ApiSession(createApiClient("http://api.test/api/v1", MockEngine(handler), "test"), AccountTokens(), TestAuthEndpoint)
     val repository = RemoteAccountsRepository(session)
 }
 
@@ -140,7 +140,7 @@ class RemoteAccountsRepositoryTest {
 
         h.session.end()
         body = """{"data":{"accounts":[${account("b1", "Efectivo", "cash", "MXN", "0.00")}],"savings":{}}}"""
-        h.session.start("beto@correo.com", TokensDto("access-2", 900, "refresh-2"))
+        h.session.start("beto@correo.com", TokensDto("access-2", "refresh-2", 900))
 
         assertEquals(listOf("MXN"), h.repository.observeAccounts().first().map { it.currency })
     }

@@ -22,13 +22,20 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * The session against the API: its tokens and every authorized request.
+ * Where atm-auth-api is (AUTH_API_BASE_URL, e.g. `https://auth.atmosferast.com/v1`) and the
+ * Google server client ID it accepts (blank: no Google sign-in).
+ */
+data class AuthEndpoint(val baseUrl: String, val googleClientId: String)
+
+/**
+ * The session: its tokens (issued and renewed by atm-auth-api) and every authorized request
+ * to atm-orbita-api with the access token.
  *
  * - With a refresh token stored, the app opens signed in, also offline; the access token is
  *   asked for on the first request.
  * - Before a request without an access token, and after a 401, the session is renewed once and
  *   the request repeated. Renewing is serialized: five requests that hit a 401 at the same time
- *   produce a single renewal (the API revokes a session whose refresh token is reused).
+ *   produce a single renewal (the refresh token rotates and reusing one ends the session).
  * - If renewing is refused, the session is over: back to the login form.
  * - A 401 for a wrong password (deleting the account) is not about the session: no renewal.
  */
@@ -36,6 +43,7 @@ import kotlinx.coroutines.sync.withLock
 class ApiSession @Inject constructor(
     private val client: HttpClient,
     private val tokens: TokenStore,
+    private val authEndpoint: AuthEndpoint,
 ) {
     private val state = MutableStateFlow(
         tokens.load()?.let { SessionState.SignedIn(it.email) } ?: SessionState.SignedOut,
@@ -48,6 +56,11 @@ class ApiSession @Inject constructor(
 
     internal val httpClient: HttpClient get() = client
 
+    internal val googleClientId: String? get() = authEndpoint.googleClientId.ifBlank { null }
+
+    /** The full URL of a path of atm-auth-api; everything else goes to atm-orbita-api. */
+    internal fun authUrl(path: String): String = authEndpoint.baseUrl.trimEnd('/') + "/" + path
+
     /**
      * Called whenever the session starts or ends. Repositories that keep data in memory clear
      * it here, so the next person to sign in never sees the previous one's data.
@@ -56,7 +69,7 @@ class ApiSession @Inject constructor(
         changeListeners += listener
     }
 
-    /** After signing in or up: the API's tokens for [email]. */
+    /** After signing in or up: the tokens of the auth API for [email]. */
     internal fun start(email: String, received: TokensDto) {
         tokens.accessToken = received.accessToken
         tokens.save(StoredSession(email, received.refreshToken))
@@ -98,13 +111,13 @@ class ApiSession @Inject constructor(
             throw DataException(DataError.SESSION_EXPIRED)
         }
         val response = networkCall {
-            client.post("auth/refresh") { setBody(RefreshRequest(stored.refreshToken)) }
+            client.post(authUrl("refresh")) { setBody(RefreshRequest(stored.refreshToken)) }
         }
         if (response.status == HttpStatusCode.Unauthorized) {
             end()
             throw DataException(DataError.SESSION_EXPIRED)
         }
-        val renewed = response.requireSuccess().body<DataEnvelope<RefreshResponse>>().data.tokens
+        val renewed = response.requireSuccess().body<TokensDto>()
         tokens.accessToken = renewed.accessToken
         tokens.save(stored.copy(refreshToken = renewed.refreshToken))
         renewed.accessToken

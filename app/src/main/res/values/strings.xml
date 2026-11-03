@@ -140,6 +140,10 @@
     <string name="error_google_invalid">No pudimos verificar tu cuenta de Google. Vuelve a continuar con Google.</string>
     <string name="error_google_expired">El intento de acceso venció. Vuelve a continuar con Google.</string>
     <string name="error_google_link_required">Confirma tu contraseña de Orbita para vincular Google.</string>
+    <string name="error_signup_closed">Por ahora no se están creando cuentas nuevas.</string>
+    <string name="error_no_access">Tu cuenta no tiene acceso a Orbita.</string>
+    <string name="error_google_not_linked">Esa cuenta de Google no está vinculada a tu cuenta de Orbita.</string>
+    <string name="error_account_cleanup_failed">No pudimos eliminar tu cuenta. No se borró nada; inténtalo de nuevo.</string>
     <string name="error_google_conflict">Tu cuenta ya tiene otra cuenta de Google vinculada. Usa esa cuenta o ingresa con contraseña.</string>
     <string name="error_code_invalid">Escribe los 6 dígitos del código.</string>
     <string name="account_delete">Eliminar cuenta</string>

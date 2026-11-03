@@ -49,6 +49,10 @@ val UiMessage.textRes: Int
             DataError.GOOGLE_CHALLENGE_EXPIRED -> R.string.error_google_expired
             DataError.GOOGLE_LINK_REQUIRED -> R.string.error_google_link_required
             DataError.GOOGLE_IDENTITY_CONFLICT -> R.string.error_google_conflict
+            DataError.SIGNUP_CLOSED -> R.string.error_signup_closed
+            DataError.NO_ACCESS -> R.string.error_no_access
+            DataError.GOOGLE_NOT_LINKED -> R.string.error_google_not_linked
+            DataError.ACCOUNT_CLEANUP_FAILED -> R.string.error_account_cleanup_failed
             DataError.UNKNOWN -> R.string.error_unknown
         }
     }

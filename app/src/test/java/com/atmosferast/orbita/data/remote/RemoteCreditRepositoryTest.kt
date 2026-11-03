@@ -42,7 +42,7 @@ private class CreditTokens : TokenStore {
 }
 
 private class CreditHarness(handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData) {
-    val session = ApiSession(createApiClient("http://api.test/api/v1", MockEngine(handler), "test"), CreditTokens())
+    val session = ApiSession(createApiClient("http://api.test/api/v1", MockEngine(handler), "test"), CreditTokens(), TestAuthEndpoint)
     val changes = RemoteChanges()
     val accounts = RemoteAccountsRepository(session, changes)
     val repository = RemoteCreditRepository(session, changes, accounts)

@@ -2,6 +2,7 @@ package com.atmosferast.orbita.di
 
 import android.os.Build
 import com.atmosferast.orbita.BuildConfig
+import com.atmosferast.orbita.data.remote.AuthEndpoint
 import com.atmosferast.orbita.data.remote.KeystoreTokenStore
 import com.atmosferast.orbita.data.remote.TokenStore
 import com.atmosferast.orbita.data.remote.createApiClient
@@ -18,6 +19,10 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
+
+    @Provides
+    @Singleton
+    fun provideAuthEndpoint() = AuthEndpoint(BuildConfig.AUTH_API_BASE_URL, BuildConfig.GOOGLE_SERVER_CLIENT_ID)
 
     @Provides
     @Singleton

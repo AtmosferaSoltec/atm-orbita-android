@@ -9,64 +9,61 @@ import kotlinx.serialization.Serializable
 @Serializable
 internal data class DataEnvelope<T>(val data: T)
 
+/** The system this app signs into at atm-auth-api. */
+internal const val ORBITA_SYSTEM = "orbita"
+
 @Serializable
 internal data class RegisterRequest(
-    val name: String,
+    val system: String,
     val email: String,
+    @SerialName("full_name") val fullName: String,
     val password: String,
-    @SerialName("main_currency") val mainCurrency: String,
-    /** IANA zone of the phone: the API computes "today" with it. */
-    val timezone: String,
 )
 
 @Serializable
-internal data class LoginRequest(val email: String, val password: String)
+internal data class LoginRequest(val system: String, val email: String, val password: String)
 
 @Serializable
 internal data class RefreshRequest(@SerialName("refresh_token") val refreshToken: String)
 
-@Serializable
-internal data class UserDto(val id: String, val email: String)
-
+/** Answer of register, login, refresh and Google: the tokens, with no user. */
 @Serializable
 internal data class TokensDto(
     @SerialName("access_token") val accessToken: String,
-    @SerialName("access_token_expires_in") val accessTokenExpiresIn: Int,
     @SerialName("refresh_token") val refreshToken: String,
+    @SerialName("expires_in") val expiresIn: Int = 0,
 )
 
 @Serializable
-internal data class AuthResponse(val user: UserDto, val tokens: TokensDto)
+internal data class ForgotPasswordRequest(val email: String, val system: String)
 
 @Serializable
-internal data class RefreshResponse(val tokens: TokensDto)
+internal data class VerifyResetCodeRequest(val email: String, val code: String)
 
-/** Body of the three steps of recovering the password; each sends what it has so far. */
 @Serializable
-internal data class ResetRequest(
+internal data class ResetPasswordRequest(
     val email: String,
-    val code: String? = null,
-    @SerialName("new_password") val newPassword: String? = null,
+    val code: String,
+    @SerialName("new_password") val newPassword: String,
+    val system: String,
 )
 
-/** Deleting the account asks for the password again (plan 12 of the API). */
+/** Deleting the account: the password, or for a Google-only account a fresh Google credential. */
 @Serializable
-internal data class DeleteAccountRequest(val password: String)
-
-/** Sign in with Google (plan 19 of the API): an empty client ID means it is off. */
-@Serializable
-internal data class GoogleConfigDto(@SerialName("client_id") val clientId: String = "")
+internal data class DeleteAccountRequest(
+    val password: String? = null,
+    val credential: String? = null,
+    val nonce: String? = null,
+)
 
 @Serializable
 internal data class GoogleChallengeDto(val nonce: String)
 
-/** Without the browser's session header the API takes the nonce from the body. */
 @Serializable
 internal data class GoogleSignInRequest(
-    val nonce: String,
+    val system: String,
     val credential: String,
-    @SerialName("main_currency") val mainCurrency: String,
-    val timezone: String,
+    val nonce: String,
     /** Only to link Google to an account that already has this email. */
     val password: String? = null,
 )

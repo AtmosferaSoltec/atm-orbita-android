@@ -65,7 +65,7 @@ class RemoteHomeRepositoryTest {
             reads++
             respond(HOME, HttpStatusCode.OK, json)
         }
-        val session = ApiSession(createApiClient("http://api.test/api/v1", engine, "test"), HomeTokens())
+        val session = ApiSession(createApiClient("http://api.test/api/v1", engine, "test"), HomeTokens(), TestAuthEndpoint)
         val home = RemoteHomeRepository(session, RemoteChanges()).observeHome().first()
 
         assertEquals(1, reads)
@@ -83,7 +83,7 @@ class RemoteHomeRepositoryTest {
     @Test
     fun `a new user has no rate, no entries and no card reminder`() = runTest {
         val engine = MockEngine { respond(NEW_USER, HttpStatusCode.OK, json) }
-        val session = ApiSession(createApiClient("http://api.test/api/v1", engine, "test"), HomeTokens())
+        val session = ApiSession(createApiClient("http://api.test/api/v1", engine, "test"), HomeTokens(), TestAuthEndpoint)
         val home = RemoteHomeRepository(session, RemoteChanges()).observeHome().first()
 
         assertNull(home.fx.rate)
@@ -105,7 +105,7 @@ class RemoteHomeRepositoryTest {
                 else -> respond("""{"data":[]}""", HttpStatusCode.OK, json)
             }
         }
-        val session = ApiSession(createApiClient("http://api.test/api/v1", engine, "test"), HomeTokens())
+        val session = ApiSession(createApiClient("http://api.test/api/v1", engine, "test"), HomeTokens(), TestAuthEndpoint)
         val changes = RemoteChanges()
         val home = RemoteHomeRepository(session, changes)
         val credit = RemoteCreditRepository(session, changes)

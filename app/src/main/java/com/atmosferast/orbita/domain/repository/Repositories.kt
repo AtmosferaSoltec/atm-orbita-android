@@ -77,6 +77,18 @@ enum class DataError {
 
     /** The account already has another Google account linked. */
     GOOGLE_IDENTITY_CONFLICT,
+
+    /** The authentication service is not taking new accounts. */
+    SIGNUP_CLOSED,
+
+    /** The account exists but has no access to Orbita. */
+    NO_ACCESS,
+
+    /** Deleting with a Google credential an account that has no such Google linked. */
+    GOOGLE_NOT_LINKED,
+
+    /** Cleaning up the account's data failed; nothing was deleted, try again. */
+    ACCOUNT_CLEANUP_FAILED,
     UNKNOWN,
 }
 
@@ -139,6 +151,9 @@ interface AuthRepository {
      * for the password again: an unlocked phone is not enough to delete an account.
      */
     suspend fun deleteAccount(password: String)
+
+    /** Same, for an account that only signs in with Google: a fresh Google token and its [nonce]. */
+    suspend fun deleteAccountWithGoogle(idToken: String, nonce: String)
 }
 
 interface AccountsRepository {

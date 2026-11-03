@@ -135,6 +135,9 @@ class DemoAuthRepository @Inject constructor(private val store: DemoStore) : Aut
         password: String?,
     ) = throw DataException(DataError.GOOGLE_UNAVAILABLE)
 
+    override suspend fun deleteAccountWithGoogle(idToken: String, nonce: String) =
+        throw DataException(DataError.GOOGLE_UNAVAILABLE)
+
     /** The account "is gone": the data goes back to the sample and the session ends. */
     override suspend fun deleteAccount(password: String) {
         store.reset()

@@ -45,10 +45,20 @@ private val jsonHeaders = headersOf(HttpHeaders.ContentType, "application/json")
 private fun MockRequestHandleScope.json(body: String, status: HttpStatusCode = HttpStatusCode.OK): HttpResponseData =
     respond(body, status, jsonHeaders)
 
-private fun authBody(email: String, access: String = "access-1", refresh: String = "refresh-1") = """
-    {"data":{"user":{"id":"0192","email":"$email","created_at":"2026-10-02T15:00:00Z"},
-    "tokens":{"access_token":"$access","access_token_expires_in":900,"refresh_token":"$refresh"}}}
+internal val TestAuthEndpoint = AuthEndpoint("https://auth.test/v1", "web.apps.googleusercontent.com")
+
+private fun tokensBody(access: String = "access-1", refresh: String = "refresh-1") = """
+    {"access_token":"$access","refresh_token":"$refresh","token_type":"Bearer","expires_in":900,
+    "refresh_expires_in":2592000,"session_mode":"native"}
 """.trimIndent()
+
+/** A Google ID token whose payload says [email]. */
+private fun googleIdToken(email: String): String {
+    val b64 = java.util.Base64.getUrlEncoder().withoutPadding()
+    return listOf("""{"alg":"RS256"}""", """{"email":"$email"}""").joinToString(".") {
+        b64.encodeToString(it.toByteArray())
+    } + ".sig"
+}
 
 private fun errorBody(code: String, details: String = "[]") =
     """{"error":{"code":"$code","message":"texto del API","details":$details}}"""
@@ -61,7 +71,7 @@ private class Harness(
 ) {
     val tokens = store
     val engine = MockEngine(handler)
-    val session = ApiSession(createApiClient("http://api.test/api/v1", engine, "Orbita-Android/test"), tokens)
+    val session = ApiSession(createApiClient("http://api.test/api/v1", engine, "Orbita-Android/test"), tokens, TestAuthEndpoint)
     val repository = RemoteAuthRepository(session)
 }
 
@@ -80,8 +90,9 @@ class RemoteAuthRepositoryTest {
     @Test
     fun `signing in keeps the session and its tokens`() = runTest {
         val h = Harness { request ->
-            assertEquals("/api/v1/auth/login", request.url.encodedPath)
-            json(authBody("ana@correo.com"))
+            assertEquals("https://auth.test/v1/login", request.url.toString())
+            assertEquals("""{"system":"orbita","email":"ana@correo.com","password":"vidanueva123"}""", request.bodyText())
+            json(tokensBody())
         }
         h.repository.signIn(Credentials(" ana@correo.com ", "vidanueva123"))
 
@@ -91,31 +102,69 @@ class RemoteAuthRepositoryTest {
     }
 
     @Test
-    fun `signing up sends the name, the currency and the time zone of the phone`() = runTest {
-        var sent = ""
+    fun `signing up goes to the auth API and then sets the time zone of the phone in the data API`() = runTest {
+        val calls = mutableListOf<Triple<String, String, String>>()
         val h = Harness { request ->
-            sent = request.bodyText()
-            json(authBody("mx@correo.com"), HttpStatusCode.Created)
+            calls += Triple("${request.method.value} ${request.url}", request.bodyText(), request.headers[HttpHeaders.Authorization].orEmpty())
+            if (request.url.host == "auth.test") json(tokensBody(), HttpStatusCode.Created)
+            else json("""{"data":{}}""")
         }
         h.repository.signUp(" Ana Torres ", Credentials("mx@correo.com", "vidanueva123"), mainCurrency = "MXN")
 
-        assertTrue(sent, sent.contains("\"name\":\"Ana Torres\""))
-        assertTrue(sent, sent.contains("\"main_currency\":\"MXN\""))
-        assertTrue(sent, sent.contains("\"timezone\":"))
+        assertEquals("POST https://auth.test/v1/register", calls[0].first)
+        assertEquals(
+            """{"system":"orbita","email":"mx@correo.com","full_name":"Ana Torres","password":"vidanueva123"}""",
+            calls[0].second,
+        )
+        assertEquals("PATCH http://api.test/api/v1/settings", calls[1].first)
+        assertTrue(calls[1].second, calls[1].second.contains("\"timezone\":"))
+        assertEquals("Bearer access-1", calls[1].third)
         assertEquals(SessionState.SignedIn("mx@correo.com"), h.session.session.value)
+    }
+
+    @Test
+    fun `signing up without a name uses the part of the email before the at`() = runTest {
+        var sent = ""
+        val h = Harness { request ->
+            if (request.url.host == "auth.test") sent = request.bodyText()
+            json(tokensBody(), HttpStatusCode.Created)
+        }
+        h.repository.signUp(" ", Credentials("ana.t@correo.com", "vidanueva123"), "PEN")
+        assertTrue(sent, sent.contains("\"full_name\":\"ana.t\""))
+    }
+
+    @Test
+    fun `a failing profile call does not undo a sign up`() = runTest {
+        val h = Harness { request ->
+            if (request.url.host == "auth.test") json(tokensBody(), HttpStatusCode.Created)
+            else throw IOException("offline")
+        }
+        h.repository.signUp("Ana", Credentials("ana@correo.com", "vidanueva123"), "PEN")
+        assertEquals(SessionState.SignedIn("ana@correo.com"), h.session.session.value)
     }
 
     @Test
     fun `the errors of the API become the errors of the app`() = runTest {
         val responses = mapOf(
-            "INVALID_CREDENTIALS" to HttpStatusCode.Unauthorized,
-            "EMAIL_ALREADY_REGISTERED" to HttpStatusCode.Conflict,
-            "TOO_MANY_REQUESTS" to HttpStatusCode.TooManyRequests,
-            "SOMETHING_NEW" to HttpStatusCode.InternalServerError,
+            "invalid_credentials" to HttpStatusCode.Unauthorized,
+            "email_taken" to HttpStatusCode.Conflict,
+            "too_many_attempts" to HttpStatusCode.TooManyRequests,
+            "signup_closed" to HttpStatusCode.Forbidden,
+            "no_access" to HttpStatusCode.Forbidden,
+            "invalid_refresh_token" to HttpStatusCode.Unauthorized,
+            "password_required_to_link" to HttpStatusCode.Conflict,
+            "google_challenge_expired" to HttpStatusCode.BadRequest,
+            "google_unavailable" to HttpStatusCode.ServiceUnavailable,
+            "google_not_linked" to HttpStatusCode.Conflict,
+            "account_cleanup_failed" to HttpStatusCode.BadGateway,
+            "something_new" to HttpStatusCode.InternalServerError,
         )
         val expected = listOf(
             DataError.INVALID_CREDENTIALS, DataError.EMAIL_ALREADY_REGISTERED,
-            DataError.TOO_MANY_REQUESTS, DataError.UNKNOWN,
+            DataError.TOO_MANY_REQUESTS, DataError.SIGNUP_CLOSED, DataError.NO_ACCESS,
+            DataError.SESSION_EXPIRED, DataError.GOOGLE_LINK_REQUIRED, DataError.GOOGLE_CHALLENGE_EXPIRED,
+            DataError.GOOGLE_UNAVAILABLE, DataError.GOOGLE_NOT_LINKED, DataError.ACCOUNT_CLEANUP_FAILED,
+            DataError.UNKNOWN,
         )
         responses.entries.zip(expected).forEach { (response, error) ->
             val h = Harness { json(errorBody(response.key), response.value) }
@@ -126,11 +175,18 @@ class RemoteAuthRepositoryTest {
     }
 
     @Test
-    fun `a rejected form tells its first field problem`() = runTest {
-        val details = """[{"field":"email","code":"EMAIL_INVALID"},{"field":"password","code":"PASSWORD_TOO_SHORT"}]"""
-        val h = Harness { json(errorBody("VALIDATION_FAILED", details), HttpStatusCode.BadRequest) }
-        val failure = expectFailure { h.repository.signUp("Ana", Credentials("x", "y"), "PEN") }
-        assertEquals(ValidationError.EMAIL_INVALID, failure.invalid)
+    fun `a rejected form tells its field problem`() = runTest {
+        val expected = mapOf(
+            "invalid_email" to ValidationError.EMAIL_INVALID,
+            "invalid_full_name" to ValidationError.NAME_REQUIRED,
+            "weak_password" to ValidationError.PASSWORD_TOO_SHORT,
+            "invalid_code_format" to ValidationError.CODE_INVALID,
+        )
+        expected.forEach { (code, invalid) ->
+            val h = Harness { json(errorBody(code), HttpStatusCode.BadRequest) }
+            val failure = expectFailure { h.repository.signUp("Ana", Credentials("x", "y"), "PEN") }
+            assertEquals(code, invalid, failure.invalid)
+        }
     }
 
     @Test
@@ -153,8 +209,9 @@ class RemoteAuthRepositoryTest {
         var loggedOut = ""
         val h = Harness { request ->
             when (request.url.encodedPath) {
-                "/api/v1/auth/login" -> json(authBody("ana@correo.com"))
+                "/v1/login" -> json(tokensBody())
                 else -> {
+                    assertEquals("https://auth.test/v1/logout", request.url.toString())
                     loggedOut = request.bodyText()
                     throw IOException("offline")
                 }
@@ -174,9 +231,9 @@ class RemoteAuthRepositoryTest {
         val renewals = AtomicInteger()
         val h = Harness(MemoryTokenStore(StoredSession("ana@correo.com", "refresh-1"))) { request ->
             when (request.url.encodedPath) {
-                "/api/v1/auth/refresh" -> {
+                "/v1/refresh" -> {
                     renewals.incrementAndGet()
-                    json("""{"data":{"tokens":{"access_token":"fresh","access_token_expires_in":900,"refresh_token":"refresh-2"}}}""")
+                    json(tokensBody("fresh", "refresh-2"))
                 }
                 else -> {
                     if (request.headers[HttpHeaders.Authorization] == "Bearer fresh") json("""{"data":{}}""")
@@ -197,7 +254,7 @@ class RemoteAuthRepositoryTest {
     fun `a refused renewal ends the session`() = runTest {
         val h = Harness(MemoryTokenStore(StoredSession("ana@correo.com", "reused"))) { request ->
             when (request.url.encodedPath) {
-                "/api/v1/auth/refresh" -> json(errorBody("SESSION_EXPIRED"), HttpStatusCode.Unauthorized)
+                "/v1/refresh" -> json(errorBody("invalid_refresh_token"), HttpStatusCode.Unauthorized)
                 else -> json(errorBody("UNAUTHORIZED"), HttpStatusCode.Unauthorized)
             }
         }
@@ -220,18 +277,18 @@ class RemoteAuthRepositoryTest {
         h.repository.resetPassword("ana@correo.com", "042317", "otraclave123")
 
         assertEquals(
-            listOf("/api/v1/auth/forgot-password", "/api/v1/auth/verify-reset-code", "/api/v1/auth/reset-password"),
+            listOf("/v1/password/forgot", "/v1/password/verify", "/v1/password/reset"),
             calls.map { it.first },
         )
-        assertEquals("""{"email":"ana@correo.com"}""", calls[0].second)
+        assertEquals("""{"email":"ana@correo.com","system":"orbita"}""", calls[0].second)
         assertEquals("""{"email":"ana@correo.com","code":"042317"}""", calls[1].second)
-        assertEquals("""{"email":"ana@correo.com","code":"042317","new_password":"otraclave123"}""", calls[2].second)
+        assertEquals("""{"email":"ana@correo.com","code":"042317","new_password":"otraclave123","system":"orbita"}""", calls[2].second)
         assertEquals(SessionState.SignedOut, h.session.session.value)
     }
 
     @Test
     fun `a wrong or expired code is told as such`() = runTest {
-        val h = Harness { json(errorBody("RESET_CODE_INVALID"), HttpStatusCode.UnprocessableEntity) }
+        val h = Harness { json(errorBody("reset_code_invalid"), HttpStatusCode.UnprocessableEntity) }
         val failure = expectFailure { h.repository.verifyResetCode("ana@correo.com", "000000") }
         assertEquals(DataError.RESET_CODE_INVALID, failure.error)
     }
@@ -241,7 +298,7 @@ class RemoteAuthRepositoryTest {
         val calls = mutableListOf<Pair<String, String>>()
         val h = Harness { request ->
             when (request.url.encodedPath) {
-                "/api/v1/auth/login" -> json(authBody("ana@correo.com"))
+                "/v1/login" -> json(tokensBody())
                 else -> {
                     calls += "${request.method.value} ${request.url.encodedPath}" to request.bodyText()
                     respond("", HttpStatusCode.NoContent)
@@ -251,7 +308,7 @@ class RemoteAuthRepositoryTest {
         h.repository.signIn(Credentials("ana@correo.com", "vidanueva123"))
         h.repository.deleteAccount("vidanueva123")
 
-        assertEquals(listOf("DELETE /api/v1/me" to """{"password":"vidanueva123"}"""), calls)
+        assertEquals(listOf("DELETE /v1/account" to """{"password":"vidanueva123"}"""), calls)
         assertEquals(SessionState.SignedOut, h.session.session.value)
         assertNull(h.tokens.load())
     }
@@ -262,14 +319,14 @@ class RemoteAuthRepositoryTest {
         val deletes = AtomicInteger()
         val h = Harness { request ->
             when (request.url.encodedPath) {
-                "/api/v1/auth/login" -> json(authBody("ana@correo.com"))
-                "/api/v1/auth/refresh" -> {
+                "/v1/login" -> json(tokensBody())
+                "/v1/refresh" -> {
                     renewals.incrementAndGet()
-                    json("""{"data":{"tokens":{"access_token":"fresh","access_token_expires_in":900,"refresh_token":"refresh-2"}}}""")
+                    json(tokensBody("fresh", "refresh-2"))
                 }
                 else -> {
                     deletes.incrementAndGet()
-                    json(errorBody("INVALID_CREDENTIALS"), HttpStatusCode.Unauthorized)
+                    json(errorBody("invalid_credentials"), HttpStatusCode.Unauthorized)
                 }
             }
         }
@@ -284,31 +341,36 @@ class RemoteAuthRepositoryTest {
     }
 
     @Test
-    fun `Google is off when the API has no client for it`() = runTest {
-        val h = Harness { json("""{"data":{"client_id":""}}""") }
-        assertNull(h.repository.googleClientId())
-        val on = Harness { json("""{"data":{"client_id":"web.apps.googleusercontent.com"}}""") }
-        assertEquals("web.apps.googleusercontent.com", on.repository.googleClientId())
+    fun `Google is off without a configured client`() = runTest {
+        val h = Harness { json("{}") }
+        assertEquals("web.apps.googleusercontent.com", h.repository.googleClientId())
+        val off = ApiSession(
+            createApiClient("http://api.test/api/v1", MockEngine { json("{}") }, "t"),
+            MemoryTokenStore(), AuthEndpoint("https://auth.test/v1", " "),
+        )
+        assertNull(RemoteAuthRepository(off).googleClientId())
     }
 
     @Test
-    fun `signing in with Google sends the nonce in the body and keeps the session`() = runTest {
+    fun `signing in with Google sends the credential and nonce and keeps the session`() = runTest {
         val calls = mutableListOf<Pair<String, String>>()
+        val idToken = googleIdToken("ana@gmail.com")
         val h = Harness { request ->
             calls += request.url.encodedPath to request.bodyText()
-            assertNull("no browser cookie session", request.headers["X-Session-Transport"])
             when (request.url.encodedPath) {
-                "/api/v1/auth/google/challenge" -> json("""{"data":{"nonce":"n-1"}}""")
-                else -> json(authBody("ana@gmail.com"))
+                "/v1/google/challenge" -> json("""{"nonce":"n-1","expires_in":300}""")
+                "/v1/google" -> json(tokensBody())
+                else -> json("""{"data":{}}""")
             }
         }
         val nonce = h.repository.googleNonce()
-        h.repository.signInWithGoogle("id-token", nonce, mainCurrency = "USD")
+        h.repository.signInWithGoogle(idToken, nonce, mainCurrency = "USD")
 
         assertEquals("n-1", nonce)
-        val sent = calls[1].second
-        assertTrue(sent, sent.contains("\"nonce\":\"n-1\"") && sent.contains("\"credential\":\"id-token\""))
-        assertTrue(sent, sent.contains("\"main_currency\":\"USD\"") && !sent.contains("password"))
+        assertEquals(
+            """{"system":"orbita","credential":"$idToken","nonce":"n-1"}""",
+            calls[1].second,
+        )
         assertEquals(SessionState.SignedIn("ana@gmail.com"), h.session.session.value)
         assertEquals(StoredSession("ana@gmail.com", "refresh-1"), h.tokens.load())
     }
@@ -316,16 +378,37 @@ class RemoteAuthRepositoryTest {
     @Test
     fun `an email that already has an account asks for its password to link Google`() = runTest {
         var sent = ""
+        val token = googleIdToken("ana@gmail.com")
         val h = Harness { request ->
-            sent = request.bodyText()
-            if (sent.contains("password")) json(authBody("ana@gmail.com"))
-            else json(errorBody("GOOGLE_LINK_REQUIRED"), HttpStatusCode.Conflict)
+            if (request.url.host == "auth.test") sent = request.bodyText()
+            if (request.url.host != "auth.test") json("""{"data":{}}""")
+            else if (sent.contains("password")) json(tokensBody())
+            else json(errorBody("password_required_to_link"), HttpStatusCode.Conflict)
         }
-        val failure = expectFailure { h.repository.signInWithGoogle("id-token", "n-1", "PEN") }
+        val failure = expectFailure { h.repository.signInWithGoogle(token, "n-1", "PEN") }
         assertEquals(DataError.GOOGLE_LINK_REQUIRED, failure.error)
 
-        h.repository.signInWithGoogle("id-token", "n-1", "PEN", password = "vidanueva123")
+        h.repository.signInWithGoogle(token, "n-1", "PEN", password = "vidanueva123")
         assertTrue(sent, sent.contains("\"password\":\"vidanueva123\""))
         assertEquals(SessionState.SignedIn("ana@gmail.com"), h.session.session.value)
+    }
+
+    @Test
+    fun `a Google-only account deletes itself with a fresh credential and nonce`() = runTest {
+        val calls = mutableListOf<Pair<String, String>>()
+        val h = Harness { request ->
+            when (request.url.encodedPath) {
+                "/v1/login" -> json(tokensBody())
+                else -> {
+                    calls += "${request.method.value} ${request.url.encodedPath}" to request.bodyText()
+                    respond("", HttpStatusCode.NoContent)
+                }
+            }
+        }
+        h.repository.signIn(Credentials("ana@gmail.com", "vidanueva123"))
+        h.repository.deleteAccountWithGoogle("cred", "n-2")
+
+        assertEquals(listOf("DELETE /v1/account" to """{"credential":"cred","nonce":"n-2"}"""), calls)
+        assertEquals(SessionState.SignedOut, h.session.session.value)
     }
 }

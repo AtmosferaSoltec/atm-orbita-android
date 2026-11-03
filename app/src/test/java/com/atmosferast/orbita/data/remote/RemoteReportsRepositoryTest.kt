@@ -61,7 +61,7 @@ class RemoteReportsRepositoryTest {
                 else -> respond("""{"data":{"accounts":[],"savings":{}}}""", HttpStatusCode.OK, json)
             }
         }
-        val session = ApiSession(createApiClient("http://api.test/api/v1", engine, "test"), ReportTokens())
+        val session = ApiSession(createApiClient("http://api.test/api/v1", engine, "test"), ReportTokens(), TestAuthEndpoint)
         val entries = RemoteEntriesRepository(session, RemoteAccountsRepository(session))
         val reports = RemoteReportsRepository(session, entries)
         val period = DatePeriod(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30))

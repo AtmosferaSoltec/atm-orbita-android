@@ -45,7 +45,7 @@ private class EntryTokens : TokenStore {
 private class EntriesHarness(
     handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
 ) {
-    val session = ApiSession(createApiClient("http://api.test/api/v1", MockEngine(handler), "test"), EntryTokens())
+    val session = ApiSession(createApiClient("http://api.test/api/v1", MockEngine(handler), "test"), EntryTokens(), TestAuthEndpoint)
     val accounts = RemoteAccountsRepository(session)
     val repository = RemoteEntriesRepository(session, accounts)
 }

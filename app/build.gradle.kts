@@ -34,6 +34,11 @@ android {
 
         // No key or secret ever goes here: the app only knows where the API is.
         buildConfigField("String", "API_BASE_URL", "\"${localProperty("API_BASE_URL")}\"")
+        // atm-auth-api, where every sign-in/up/out, renewal and password call goes.
+        val authBaseUrl = localProperty("AUTH_API_BASE_URL").ifBlank { "https://auth.atmosferast.com/v1" }
+        buildConfigField("String", "AUTH_API_BASE_URL", "\"$authBaseUrl\"")
+        // A public identifier (not a secret): the Google server client ID auth-api accepts.
+        buildConfigField("String", "GOOGLE_SERVER_CLIENT_ID", "\"${localProperty("GOOGLE_SERVER_CLIENT_ID")}\"")
     }
 
     buildTypes {

@@ -49,7 +49,7 @@ private class CategoriesHarness(
     val changes: RemoteChanges = RemoteChanges(),
     handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
 ) {
-    val session = ApiSession(createApiClient("http://api.test/api/v1", MockEngine(handler), "test"), CategoryTokens())
+    val session = ApiSession(createApiClient("http://api.test/api/v1", MockEngine(handler), "test"), CategoryTokens(), TestAuthEndpoint)
     val repository = RemoteCategoriesRepository(session, changes)
 }
 
@@ -147,7 +147,7 @@ class RemoteCategoriesRepositoryTest {
 
         h.session.end()
         body = """{"data":[${category("b1", "Viajes", "expense")}]}"""
-        h.session.start("beto@correo.com", TokensDto("access-2", 900, "refresh-2"))
+        h.session.start("beto@correo.com", TokensDto("access-2", "refresh-2", 900))
 
         assertEquals(listOf("Viajes"), h.repository.observeCategories().first().map { it.name })
     }

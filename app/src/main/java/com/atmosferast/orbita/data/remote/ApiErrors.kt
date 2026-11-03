@@ -27,10 +27,25 @@ internal data class ApiErrorBody(
 @Serializable
 internal data class ApiFieldError(val field: String = "", val code: String = "")
 
-/** The domain error for a [code] of the API. */
+/**
+ * The domain error for a [code]. atm-auth-api codes are lowercase snake_case; the ones of
+ * atm-orbita-api (data) are SCREAMING_SNAKE.
+ */
 internal fun dataErrorFor(code: String): DataError = when (code) {
-    "INVALID_CREDENTIALS" -> DataError.INVALID_CREDENTIALS
-    "EMAIL_ALREADY_REGISTERED" -> DataError.EMAIL_ALREADY_REGISTERED
+    // atm-auth-api
+    "invalid_credentials" -> DataError.INVALID_CREDENTIALS
+    "email_taken" -> DataError.EMAIL_ALREADY_REGISTERED
+    "signup_closed" -> DataError.SIGNUP_CLOSED
+    "no_access" -> DataError.NO_ACCESS
+    "too_many_attempts" -> DataError.TOO_MANY_REQUESTS
+    "invalid_refresh_token" -> DataError.SESSION_EXPIRED
+    "reset_code_invalid" -> DataError.RESET_CODE_INVALID
+    "google_unavailable" -> DataError.GOOGLE_UNAVAILABLE
+    "google_challenge_expired" -> DataError.GOOGLE_CHALLENGE_EXPIRED
+    "password_required_to_link" -> DataError.GOOGLE_LINK_REQUIRED
+    "google_not_linked" -> DataError.GOOGLE_NOT_LINKED
+    "account_cleanup_failed" -> DataError.ACCOUNT_CLEANUP_FAILED
+    // atm-orbita-api
     "NOT_FOUND" -> DataError.NOT_FOUND
     "CATEGORY_NAME_TAKEN" -> DataError.NAME_TAKEN
     "FX_RATE_NOT_CONFIGURED" -> DataError.FX_NOT_CONFIGURED
@@ -39,13 +54,16 @@ internal fun dataErrorFor(code: String): DataError = when (code) {
     "PAYMENT_EXPENSE_LOCKED" -> DataError.PAYMENT_LOCKED
     "SESSION_EXPIRED", "UNAUTHORIZED" -> DataError.SESSION_EXPIRED
     "TOO_MANY_REQUESTS" -> DataError.TOO_MANY_REQUESTS
-    "RESET_CODE_INVALID" -> DataError.RESET_CODE_INVALID
-    "GOOGLE_UNAVAILABLE" -> DataError.GOOGLE_UNAVAILABLE
-    "GOOGLE_INVALID" -> DataError.GOOGLE_INVALID
-    "GOOGLE_CHALLENGE_EXPIRED" -> DataError.GOOGLE_CHALLENGE_EXPIRED
-    "GOOGLE_LINK_REQUIRED" -> DataError.GOOGLE_LINK_REQUIRED
-    "GOOGLE_IDENTITY_CONFLICT" -> DataError.GOOGLE_IDENTITY_CONFLICT
     else -> DataError.UNKNOWN
+}
+
+/** auth-api rejections of a single field, told like the app's own validation. */
+private fun authValidationErrorFor(code: String): ValidationError? = when (code) {
+    "invalid_email" -> ValidationError.EMAIL_INVALID
+    "invalid_full_name" -> ValidationError.NAME_REQUIRED
+    "weak_password" -> ValidationError.PASSWORD_TOO_SHORT
+    "invalid_code_format" -> ValidationError.CODE_INVALID
+    else -> null
 }
 
 /** The first field problem the app knows how to tell; the API sends them in the app's order. */
@@ -61,6 +79,7 @@ internal suspend fun HttpResponse.toDataException(): DataException {
     if (code == "VALIDATION_FAILED") {
         return DataException(DataError.UNKNOWN, invalid = validationErrorFor(body?.details.orEmpty()))
     }
+    authValidationErrorFor(code)?.let { return DataException(DataError.UNKNOWN, invalid = it) }
     return DataException(dataErrorFor(code))
 }
 
@@ -70,7 +89,7 @@ internal suspend fun HttpResponse.toDataException(): DataException {
  */
 internal suspend fun HttpResponse.isWrongPassword(): Boolean =
     status == HttpStatusCode.Unauthorized &&
-        runCatching { body<ApiErrorEnvelope>().error?.code }.getOrNull() == "INVALID_CREDENTIALS"
+        runCatching { body<ApiErrorEnvelope>().error?.code }.getOrNull() == "invalid_credentials"
 
 /** Throws the API's error unless the response succeeded. */
 internal suspend fun HttpResponse.requireSuccess(): HttpResponse {
