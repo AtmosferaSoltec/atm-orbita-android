@@ -62,11 +62,11 @@ class AppViewModel @Inject constructor(
         authAction(if (isDemo) null else credentials.validate()) { auth.signIn(credentials) }
     }
 
-    /** [name]: how the app calls the user. [mainCurrency]: the currency of their accounts. */
-    fun signUp(name: String, email: String, password: String, mainCurrency: String) {
+    /** [name]: how the app calls the user. */
+    fun signUp(name: String, email: String, password: String) {
         val credentials = Credentials(email, password)
         authAction(if (isDemo) null else validateName(name) ?: credentials.validate()) {
-            auth.signUp(name, credentials, mainCurrency)
+            auth.signUp(name, credentials)
         }
     }
 
@@ -78,7 +78,7 @@ class AppViewModel @Inject constructor(
     val googleClientId: StateFlow<String?> = _googleClientId.asStateFlow()
 
     /** A Google token whose email already has an account: its password is asked once to link. */
-    private data class PendingGoogle(val idToken: String, val nonce: String, val mainCurrency: String)
+    private data class PendingGoogle(val idToken: String, val nonce: String)
 
     private val pendingGoogle = MutableStateFlow<PendingGoogle?>(null)
     val googleLinking: StateFlow<Boolean> =
@@ -99,16 +99,15 @@ class AppViewModel @Inject constructor(
 
     /**
      * Starts "Continuar con Google": the API's single-use nonce, then [askGoogle] (the screen,
-     * which has the Activity) for the token, then the session. [mainCurrency] is only used if
-     * the account is new.
+     * which has the Activity) for the token, then the session.
      */
-    fun continueWithGoogle(mainCurrency: String, askGoogle: suspend (clientId: String, nonce: String) -> GoogleResult) {
+    fun continueWithGoogle(askGoogle: suspend (clientId: String, nonce: String) -> GoogleResult) {
         val clientId = _googleClientId.value ?: return
         pendingGoogle.value = null
         authAction(null) {
             val nonce = auth.googleNonce()
             when (val result = askGoogle(clientId, nonce)) {
-                is GoogleResult.Token -> signInWithGoogle(PendingGoogle(result.idToken, nonce, mainCurrency), null)
+                is GoogleResult.Token -> signInWithGoogle(PendingGoogle(result.idToken, nonce), null)
                 GoogleResult.Cancelled -> Unit
                 GoogleResult.Unavailable -> throw DataException(DataError.GOOGLE_UNAVAILABLE)
             }
@@ -132,7 +131,7 @@ class AppViewModel @Inject constructor(
 
     private suspend fun signInWithGoogle(pending: PendingGoogle, password: String?) {
         try {
-            auth.signInWithGoogle(pending.idToken, pending.nonce, pending.mainCurrency, password)
+            auth.signInWithGoogle(pending.idToken, pending.nonce, password)
             pendingGoogle.value = null
         } catch (e: DataException) {
             when (e.error) {

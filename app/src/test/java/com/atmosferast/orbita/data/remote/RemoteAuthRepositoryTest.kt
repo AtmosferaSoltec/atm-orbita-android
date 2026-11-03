@@ -109,7 +109,7 @@ class RemoteAuthRepositoryTest {
             if (request.url.host == "auth.test") json(tokensBody(), HttpStatusCode.Created)
             else json("""{"data":{}}""")
         }
-        h.repository.signUp(" Ana Torres ", Credentials("mx@correo.com", "vidanueva123"), mainCurrency = "MXN")
+        h.repository.signUp(" Ana Torres ", Credentials("mx@correo.com", "vidanueva123"))
 
         assertEquals("POST https://auth.test/v1/register", calls[0].first)
         assertEquals(
@@ -129,7 +129,7 @@ class RemoteAuthRepositoryTest {
             if (request.url.host == "auth.test") sent = request.bodyText()
             json(tokensBody(), HttpStatusCode.Created)
         }
-        h.repository.signUp(" ", Credentials("ana.t@correo.com", "vidanueva123"), "PEN")
+        h.repository.signUp(" ", Credentials("ana.t@correo.com", "vidanueva123"))
         assertTrue(sent, sent.contains("\"full_name\":\"ana.t\""))
     }
 
@@ -139,7 +139,7 @@ class RemoteAuthRepositoryTest {
             if (request.url.host == "auth.test") json(tokensBody(), HttpStatusCode.Created)
             else throw IOException("offline")
         }
-        h.repository.signUp("Ana", Credentials("ana@correo.com", "vidanueva123"), "PEN")
+        h.repository.signUp("Ana", Credentials("ana@correo.com", "vidanueva123"))
         assertEquals(SessionState.SignedIn("ana@correo.com"), h.session.session.value)
     }
 
@@ -184,7 +184,7 @@ class RemoteAuthRepositoryTest {
         )
         expected.forEach { (code, invalid) ->
             val h = Harness { json(errorBody(code), HttpStatusCode.BadRequest) }
-            val failure = expectFailure { h.repository.signUp("Ana", Credentials("x", "y"), "PEN") }
+            val failure = expectFailure { h.repository.signUp("Ana", Credentials("x", "y")) }
             assertEquals(code, invalid, failure.invalid)
         }
     }
@@ -364,7 +364,7 @@ class RemoteAuthRepositoryTest {
             }
         }
         val nonce = h.repository.googleNonce()
-        h.repository.signInWithGoogle(idToken, nonce, mainCurrency = "USD")
+        h.repository.signInWithGoogle(idToken, nonce)
 
         assertEquals("n-1", nonce)
         assertEquals(
@@ -385,10 +385,10 @@ class RemoteAuthRepositoryTest {
             else if (sent.contains("password")) json(tokensBody())
             else json(errorBody("password_required_to_link"), HttpStatusCode.Conflict)
         }
-        val failure = expectFailure { h.repository.signInWithGoogle(token, "n-1", "PEN") }
+        val failure = expectFailure { h.repository.signInWithGoogle(token, "n-1") }
         assertEquals(DataError.GOOGLE_LINK_REQUIRED, failure.error)
 
-        h.repository.signInWithGoogle(token, "n-1", "PEN", password = "vidanueva123")
+        h.repository.signInWithGoogle(token, "n-1", password = "vidanueva123")
         assertTrue(sent, sent.contains("\"password\":\"vidanueva123\""))
         assertEquals(SessionState.SignedIn("ana@gmail.com"), h.session.session.value)
     }

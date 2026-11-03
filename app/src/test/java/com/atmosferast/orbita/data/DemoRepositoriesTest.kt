@@ -2,7 +2,6 @@ package com.atmosferast.orbita.data
 
 import com.atmosferast.orbita.core.PEN
 import com.atmosferast.orbita.core.USD
-import com.atmosferast.orbita.core.defaultCurrencyFor
 import com.atmosferast.orbita.data.demo.DemoAccountsRepository
 import com.atmosferast.orbita.data.demo.DemoAuthRepository
 import com.atmosferast.orbita.domain.model.Credentials
@@ -10,7 +9,6 @@ import com.atmosferast.orbita.domain.model.SessionState
 import com.atmosferast.orbita.domain.model.validateEmail
 import com.atmosferast.orbita.domain.model.validateNewPassword
 import com.atmosferast.orbita.domain.model.validatePasswordChange
-import java.util.Locale
 import com.atmosferast.orbita.data.demo.DemoCategoriesRepository
 import com.atmosferast.orbita.data.demo.DemoCreditRepository
 import com.atmosferast.orbita.data.demo.DemoSettingsRepository
@@ -328,7 +326,7 @@ class DemoRepositoriesTest {
     @Test
     fun `deleting the account ends the session and leaves none of what was done`() = runTest {
         val auth = DemoAuthRepository(store)
-        auth.signUp("Ana", Credentials("ana@correo.com", "12345678"), mainCurrency = "MXN")
+        auth.signUp("Ana", Credentials("ana@correo.com", "12345678"))
         assertEquals(SessionState.SignedIn("ana@correo.com"), auth.session.first())
         entries.deleteMovement("m-lunch")
         accounts.create(AccountDraft("Yape", AccountType.OTHER, PEN, BigDecimal("50"), true))
@@ -364,17 +362,6 @@ class DemoRepositoriesTest {
         auth.verifyResetCode("nadie@correo.com", "123456")
         auth.resetPassword("nadie@correo.com", "123456", "12345678")
         assertEquals(SessionState.SignedOut, auth.session.first())
-    }
-
-    @Test
-    fun `the currency offered on sign-up is the one of the region, or soles`() {
-        assertEquals("MXN", defaultCurrencyFor(Locale.forLanguageTag("es-MX")))
-        assertEquals("USD", defaultCurrencyFor(Locale.US))
-        assertEquals("EUR", defaultCurrencyFor(Locale.forLanguageTag("es-ES")))
-        assertEquals(PEN, defaultCurrencyFor(Locale.forLanguageTag("es-PE")))
-        // A region whose currency the app does not support, and a locale without a region.
-        assertEquals(PEN, defaultCurrencyFor(Locale.JAPAN))
-        assertEquals(PEN, defaultCurrencyFor(Locale.forLanguageTag("es")))
     }
 
     /** The reason [action] failed for; fails the test if it did not. */

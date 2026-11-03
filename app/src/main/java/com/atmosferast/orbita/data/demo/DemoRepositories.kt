@@ -106,9 +106,9 @@ class DemoAuthRepository @Inject constructor(private val store: DemoStore) : Aut
         state.value = SessionState.SignedIn(credentials.email.trim().ifBlank { SampleData.userEmail })
     }
 
-    // The sample data is the same for everyone, so the name and the currency picked on sign-up
-    // change nothing here; with the API the user starts with them.
-    override suspend fun signUp(name: String, credentials: Credentials, mainCurrency: String) =
+    // The sample data is the same for everyone, so the name picked on sign-up
+    // changes nothing here.
+    override suspend fun signUp(name: String, credentials: Credentials) =
         signIn(credentials)
 
     override suspend fun signOut() {
@@ -131,7 +131,6 @@ class DemoAuthRepository @Inject constructor(private val store: DemoStore) : Aut
     override suspend fun signInWithGoogle(
         idToken: String,
         nonce: String,
-        mainCurrency: String,
         password: String?,
     ) = throw DataException(DataError.GOOGLE_UNAVAILABLE)
 

@@ -43,10 +43,10 @@ class RemoteAuthRepository @Inject constructor(
     }
 
     /**
-     * atm-auth-api takes no currency: [mainCurrency] is not sent. The time zone of the phone
+     * atm-auth-api takes no currency (the profile starts on PEN). The time zone of the phone
      * is applied to the profile that atm-orbita-api creates on the first request.
      */
-    override suspend fun signUp(name: String, credentials: Credentials, mainCurrency: String) {
+    override suspend fun signUp(name: String, credentials: Credentials) {
         val email = credentials.email.trim()
         val response = networkCall {
             api.httpClient.post(api.authUrl("register")) {
@@ -116,7 +116,6 @@ class RemoteAuthRepository @Inject constructor(
     override suspend fun signInWithGoogle(
         idToken: String,
         nonce: String,
-        mainCurrency: String,
         password: String?,
     ) {
         val response = networkCall {

@@ -107,7 +107,6 @@
     <string name="auth_have_account">¿Ya tienes cuenta?</string>
     <string name="auth_go_login">Inicia sesión</string>
     <string name="auth_error_credentials">Correo o contraseña incorrectos.</string>
-    <string name="auth_currency_hint">Es la moneda de tus cuentas. Podrás cambiarla después en Ajustes.</string>
     <string name="auth_forgot_link">¿Olvidaste tu contraseña?</string>
     <string name="auth_forgot_title">Recupera tu contraseña</string>
     <string name="auth_forgot_subtitle">Escribe tu correo y te enviaremos un código para crear una contraseña nueva.</string>

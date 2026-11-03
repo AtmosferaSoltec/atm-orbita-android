@@ -112,10 +112,10 @@ interface AuthRepository {
     suspend fun signIn(credentials: Credentials)
 
     /**
-     * [name] is how the app calls the user (up to 60 characters). [mainCurrency] is the one
-     * they picked on sign-up: their profile and their first account ("Efectivo") start on it.
+     * [name] is how the app calls the user (up to 60 characters). The API creates every new
+     * profile on soles; the main currency is not chosen here.
      */
-    suspend fun signUp(name: String, credentials: Credentials, mainCurrency: String)
+    suspend fun signUp(name: String, credentials: Credentials)
     suspend fun signOut()
 
     /**
@@ -140,11 +140,11 @@ interface AuthRepository {
     suspend fun googleNonce(): String
 
     /**
-     * Signs in with a Google ID token, creating the account (on [mainCurrency]) the first time.
+     * Signs in with a Google ID token, creating the account the first time.
      * An account that already has that email fails with [DataError.GOOGLE_LINK_REQUIRED] until
      * its [password] is given once, to link Google to it.
      */
-    suspend fun signInWithGoogle(idToken: String, nonce: String, mainCurrency: String, password: String? = null)
+    suspend fun signInWithGoogle(idToken: String, nonce: String, password: String? = null)
 
     /**
      * Deletes the user and every piece of their data for good, and ends the session. It asks

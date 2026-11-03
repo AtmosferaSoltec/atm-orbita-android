@@ -31,7 +31,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atmosferast.orbita.R
 import com.atmosferast.orbita.core.PEN
 import com.atmosferast.orbita.core.USD
-import com.atmosferast.orbita.core.defaultCurrencyFor
 import com.atmosferast.orbita.domain.model.Account
 import com.atmosferast.orbita.domain.model.Category
 import com.atmosferast.orbita.domain.model.CreditCard
@@ -81,7 +80,6 @@ import com.atmosferast.orbita.ui.feature.transfer.TransferScreen
 import com.atmosferast.orbita.ui.feature.transfer.TransferViewModel
 import com.atmosferast.orbita.ui.theme.Background
 import java.math.BigDecimal
-import java.util.Locale
 import kotlinx.coroutines.flow.collectLatest
 
 private sealed interface Screen {
@@ -165,7 +163,6 @@ private fun AuthFlow(app: AppViewModel) {
     val googleClientId by app.googleClientId.collectAsStateWithLifecycle()
     val googleLinking by app.googleLinking.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val defaultCurrency = remember { defaultCurrencyFor(Locale.getDefault()) }
 
     fun go(next: AuthStep) {
         app.clearAuthError()
@@ -180,9 +177,9 @@ private fun AuthFlow(app: AppViewModel) {
             val register = step == AuthStep.REGISTER
             AuthScreen(
                 register = register,
-                onSubmit = { name, email, password, currency ->
+                onSubmit = { name, email, password ->
                     passwordChanged = false
-                    if (register) app.signUp(name, email, password, currency)
+                    if (register) app.signUp(name, email, password)
                     else app.signIn(email, password)
                 },
                 onSwitch = {
@@ -191,15 +188,14 @@ private fun AuthFlow(app: AppViewModel) {
                 },
                 error = errorText,
                 notice = if (passwordChanged) stringResource(R.string.auth_reset_done) else null,
-                defaultCurrency = defaultCurrency,
                 onForgotPassword = { go(AuthStep.FORGOT) },
                 // The account picker is shown over this Activity.
-                onGoogle = if (googleClientId == null) null else { currency ->
+                onGoogle = if (googleClientId == null) null else ({
                     passwordChanged = false
-                    app.continueWithGoogle(currency) { clientId, nonce ->
+                    app.continueWithGoogle { clientId, nonce ->
                         requestGoogleIdToken(context, clientId, nonce)
                     }
-                },
+                }),
                 busy = busy,
                 googleLinking = googleLinking,
                 onLinkGoogle = app::linkGoogle,
